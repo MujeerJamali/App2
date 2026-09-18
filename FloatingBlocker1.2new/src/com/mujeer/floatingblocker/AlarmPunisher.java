@@ -2,7 +2,9 @@ package com.mujeer.floatingblocker;
 
 import android.content.Context;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The single place that decides what happens to one Alarm occurrence:
@@ -44,10 +46,20 @@ public class AlarmPunisher {
             return; // no punishment while the schedule is currently unlocked
         }
 
+        Set<String> blockIdsOnBreak = new HashSet<String>();
+        for (HolidayBreak h : new HolidayBreaksStorage(context).loadBreaks()) {
+            if (h.isActiveNow(now)) {
+                blockIdsOnBreak.addAll(h.affectedBlockIds);
+            }
+        }
+
         BlockPunishmentStorage punishmentStorage = new BlockPunishmentStorage(context);
         BlocksStorage blocksStorage = new BlocksStorage(context);
         List<Block> allBlocks = blocksStorage.loadBlocks();
         for (String blockId : alarm.affectedBlockIds) {
+            if (blockIdsOnBreak.contains(blockId)) {
+                continue; // this Block is on an active Holiday Break right now - punishment doesn't apply to it
+            }
             Block block = findBlock(allBlocks, blockId);
             if (block != null) {
                 punishmentStorage.applyPunishment(block, now);

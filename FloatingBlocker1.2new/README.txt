@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.34 (Alarm punishment now also skips Blocks currently on a Holiday Break)
+===================================================================================
+
 Floating Blocker - version 4.33 (NEW: barcode-dismiss Alarms that punish missed wake-ups by widening Blocks)
 ===================================================================================
 
@@ -51,6 +54,21 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.34
+-----------------------
+- FIXED (4.33 follow-up): AlarmPunisher.resolveMissed() now explicitly
+  skips any Block that's currently on an active Holiday Break at the
+  moment a miss is resolved, same per-block check computeActiveBlockedPackages()
+  already used to let a Break override a Block's normal schedule. Before
+  this, a punished Block on Break would still have gotten a stored widen
+  window - harmless in practice (the Break already overrides it at
+  enforcement time, every time computeActiveBlockedPackages() runs), but
+  now it's an explicit rule instead of an incidental side effect, and the
+  widen window is never even recorded for that Block in the first place.
+- The already-existing "skipped entirely if the whole Lock Schedule is
+  currently unlocked" rule from 4.33 is unchanged - this adds the Holiday
+  Break exception alongside it, per-Block rather than all-or-nothing.
 
 WHAT CHANGED IN 4.33
 -----------------------
