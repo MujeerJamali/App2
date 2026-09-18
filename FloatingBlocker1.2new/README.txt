@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.24 (diagnostic log now shows which app each packet belongs to)
+===================================================================================
+
 Floating Blocker - version 4.23 (real root cause found: CleanBrowsing outage/rate-limit, no fallback DNS)
 ===================================================================================
 
@@ -21,6 +24,28 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.24
+-----------------------
+- DIAGNOSTIC IMPROVEMENT, not a fix - because 4.23 didn't actually fix the
+  underlying problem. A diagnostic taken right after 4.23 showed the DNS
+  pipeline completely healthy (CleanBrowsing resolving in 162ms, every
+  query in the log succeeding, no fallback ever needed, self-test passing)
+  while Chrome was STILL broken - proving the DNS-forwarding/CleanBrowsing
+  theory from 4.23, while real, was never the (or not the only) actual
+  cause of "some apps work, others don't". The live log had no way to show
+  WHICH app a given packet or query belonged to, so there was no way to
+  tell "Chrome's traffic never reached the tunnel at all" apart from "it
+  reached the tunnel and something else went wrong" - both looked
+  identical in the log.
+- ADDED: every DNS query, new TCP connection, and new UDP flow logged by
+  DnsVpnService now includes "app=<package name>" (via
+  ConnectivityManager.getConnectionOwnerUid - the same per-connection
+  owner lookup already used to decide what's blocked, just also used for
+  log attribution now). The next diagnostic taken while something is
+  actually broken will show directly whether the failing app's own
+  traffic is showing up in this log at all - that's the key fact still
+  missing to find the real cause.
 
 WHAT CHANGED IN 4.23
 -----------------------

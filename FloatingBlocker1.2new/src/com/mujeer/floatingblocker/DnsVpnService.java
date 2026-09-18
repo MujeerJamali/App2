@@ -365,6 +365,7 @@ public class DnsVpnService extends VpnService implements Runnable {
                 if (isOwningAppBlocked(ChecksumUtil.PROTOCOL_TCP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort)) {
                     return; // owning app is currently in an active Block - no internet for it, silently
                 }
+                log("[TCP " + key + "] new connection, app=" + describeOwningApp(ChecksumUtil.PROTOCOL_TCP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort));
                 session = new TcpSession(this, key, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort, tunOut);
                 tcpSessions.put(key, session);
                 session.start();
@@ -405,6 +406,7 @@ public class DnsVpnService extends VpnService implements Runnable {
                 if (!newSession.start()) {
                     return; // couldn't open/protect the relay socket - drop this datagram
                 }
+                log("[UDP " + key + "] new flow, app=" + describeOwningApp(ChecksumUtil.PROTOCOL_UDP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort));
                 udpSessions.put(key, newSession);
                 session = newSession;
             }
@@ -444,6 +446,39 @@ public class DnsVpnService extends VpnService implements Runnable {
      * lookup hiccup silently breaks some other app's internet, which is a
      * worse failure than occasionally missing an enforcement window.
      */
+    /**
+     * Best-effort human-readable name of the app that owns this connection
+     * (e.g. "com.android.chrome"), for LOG ATTRIBUTION ONLY - never used for
+     * any blocking decision (see isOwningAppBlocked for that). Added
+     * specifically because the diagnostic log previously showed packets and
+     * queries with no indication of which app they belonged to, making it
+     * impossible to tell "this app's traffic never reached the tunnel at
+     * all" apart from "it reached the tunnel and something else went
+     * wrong" - the two look identical without this. Returns "unknown" if
+     * the owning uid/package can't be determined for any reason.
+     */
+    private String describeOwningApp(int protocol, byte[] localIp, int localPort, byte[] remoteIp, int remotePort) {
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
+            if (cm == null) {
+                return "unknown";
+            }
+            java.net.InetSocketAddress local = new java.net.InetSocketAddress(InetAddress.getByAddress(localIp), localPort);
+            java.net.InetSocketAddress remote = new java.net.InetSocketAddress(InetAddress.getByAddress(remoteIp), remotePort);
+            int uid = cm.getConnectionOwnerUid(protocol, local, remote);
+            if (uid < 0) {
+                return "unknown";
+            }
+            String[] packages = getPackageManager().getPackagesForUid(uid);
+            if (packages == null || packages.length == 0) {
+                return "uid:" + uid;
+            }
+            return packages[0];
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
     private boolean isOwningAppBlocked(int protocol, byte[] localIp, int localPort, byte[] remoteIp, int remotePort) {
         try {
             android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
@@ -537,7 +572,8 @@ public class DnsVpnService extends VpnService implements Runnable {
         }
 
         String domain = DnsMessage.parseQuestionName(parsed.payload, parsed.payloadLength);
-        log("QUERY domain=" + domain + " srcPort=" + parsed.sourcePort);
+        String owningApp = describeOwningApp(ChecksumUtil.PROTOCOL_UDP, parsed.sourceIp, parsed.sourcePort, parsed.destIp, parsed.destPort);
+        log("QUERY domain=" + domain + " srcPort=" + parsed.sourcePort + " app=" + owningApp);
 
         byte[] responsePayload;
         if (domain != null && isDomainBlocked(domain)) {
