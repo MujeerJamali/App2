@@ -224,8 +224,9 @@ public class DiagnosticActivity extends Activity {
         sb.append("- If direct tests succeeded but the self-test failed some other way: the bug is inside DnsVpnService's pipeline itself, not the network or Android's VPN routing - check the live log below for the exact line where it stopped (parse failure, forward exception, or buildResponsePacket failure).\n");
         sb.append("- If the self-test SUCCEEDS: the real query pipeline (parse -> block-check -> forward/NXDOMAIN -> build response) works. If real browsing still seems unfiltered or broken, the issue is specific to how traffic from other apps gets routed into the tunnel, not this pipeline.\n");
         sb.append("- Real TCP/UDP packet counts above at 0 after you've actually browsed something means other apps' traffic still isn't reaching the tun interface at all - a routing problem, not anything inside DnsVpnService's own code.\n");
-        sb.append("- If the live log shows 'protect(socket) returned FALSE' or a 'forwardToRealDns EXCEPTION': the forwarding socket itself is failing inside the service.\n");
+        sb.append("- If the live log shows 'protect(socket) returned FALSE' or a 'forwardToRealDns(...) EXCEPTION': the forwarding socket itself is failing inside the service.\n");
         sb.append("- If the network's own DNS server succeeded but CleanBrowsing/Google/Cloudflare (direct) all failed: this network only allows its own resolver and blocks external DNS servers specifically.\n");
+        sb.append("- If the direct CleanBrowsing test above failed but Google/Cloudflare (direct) succeeded: CleanBrowsing specifically (our primary upstream) is down or rate-limited on this network right now - not a bug in this app. The VPN automatically retries via a fallback resolver (Cloudflare Family, 1.1.1.2) when this happens, so browsing should recover on its own; a 'trying fallback' line in the live log confirms it kicked in.\n");
 
         return sb.toString();
     }

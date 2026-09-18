@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.23 (real root cause found: CleanBrowsing outage/rate-limit, no fallback DNS)
+===================================================================================
+
 Floating Blocker - version 4.22 (fixed: 4.21's shared UDP thread pool starved Chrome/video behind slow DNS)
 ===================================================================================
 
@@ -18,6 +21,38 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.23
+-----------------------
+- ACTUAL ROOT CAUSE FOUND for "some apps work, others (especially Chrome)
+  don't" - and it was never the 4.21/4.22 threading changes at all. A live
+  diagnostic caught it directly: the diagnostic's OWN direct probe to
+  CleanBrowsing (185.228.168.168, our ONLY upstream DNS resolver at the
+  time) timed out after 4s - completely bypassing the VPN and every line of
+  code touched in 4.21/4.22 - while the exact same diagnostic's direct
+  probes to Google, Cloudflare, and the network's own router DNS all
+  succeeded normally. The live pipeline log showed the identical
+  SocketTimeoutException happening inside forwardToRealDns at the same
+  time. CleanBrowsing was simply unreachable/rate-limited on this network
+  at that moment - nothing wrong with this app's code, but this app had
+  ZERO fallback: every query that landed in that window just failed
+  outright, with no way to recover it. A browser loading a page touches
+  many distinct domains per load, so it was far more likely to hit that
+  failure window than a low-request-volume app like Facebook Lite - that
+  alone fully explains "some apps work, others don't" without needing any
+  threading explanation.
+- FIXED: forwardToRealDns now tries CleanBrowsing first as before, but on
+  timeout/failure automatically retries once against a fallback resolver -
+  Cloudflare's Family filter (1.1.1.2, blocks malware + adult content).
+  Deliberately NOT a plain unfiltered resolver like 8.8.8.8/1.1.1.1 - a
+  fallback should never silently remove the content filtering this app
+  exists for. Per-attempt timeout reduced from 5s to 3s so a
+  primary-then-fallback worst case stays around 6s instead of a full 10s.
+- DiagnosticActivity's "How to read this" section now specifically calls
+  out this exact failure pattern (CleanBrowsing direct test fails while
+  Google/Cloudflare direct succeed) so it's identifiable at a glance in
+  future, instead of needing a full manual read-through of the raw log
+  like this time.
 
 WHAT CHANGED IN 4.22
 -----------------------

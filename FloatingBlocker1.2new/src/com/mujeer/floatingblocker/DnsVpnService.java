@@ -31,8 +31,9 @@ import java.util.Set;
  *   this closes a real gap where an app hardcoding a different DNS server
  *   could have bypassed filtering entirely): parsed, checked against the
  *   blocked-websites list, answered with a local NXDOMAIN if blocked, or
- *   forwarded to CleanBrowsing (UPSTREAM_DNS) and the real answer relayed
- *   back - unchanged from the original design, see processPacket() below.
+ *   forwarded to CleanBrowsing (UPSTREAM_DNS), falling back to Cloudflare
+ *   Family (UPSTREAM_DNS_FALLBACK) if that times out/fails, and the real
+ *   answer relayed back - see processPacket() and forwardToRealDns() below.
  * - Everything else UDP (QUIC/HTTP3 on 443, and anything else): generic
  *   NAT-style relay - see UdpRelaySession.
  * - TCP: relayed via a locally-terminated TCP connection per flow - see
@@ -74,6 +75,20 @@ public class DnsVpnService extends VpnService implements Runnable {
 
     private static final String VPN_ADDRESS = "10.0.0.2";
     private static final String UPSTREAM_DNS = "185.228.168.168"; // CleanBrowsing Family Filter
+    // Used ONLY if the primary times out/fails. Cloudflare's Family filter
+    // (malware + adult content) - deliberately not a plain unfiltered
+    // resolver like 8.8.8.8/1.1.1.1, so a fallback never silently drops the
+    // content filtering this app exists for. A single upstream with no
+    // fallback at all is a real single point of failure: if CleanBrowsing
+    // is temporarily unreachable/rate-limited on a given network (seen for
+    // real - a live diagnostic showed direct probes to CleanBrowsing timing
+    // out while Google/Cloudflare/the network's own DNS all succeeded),
+    // every query that happens to land in that window just fails outright,
+    // with no way to recover it. A page loading many distinct domains
+    // (a browser) is far more likely to hit that window than a
+    // low-request-volume app, which is exactly the "some apps work, others
+    // don't" pattern this was causing.
+    private static final String UPSTREAM_DNS_FALLBACK = "1.1.1.2";
 
     private static final int MAX_TCP_SESSIONS = 300;
     private static final int MAX_UDP_SESSIONS = 300;
@@ -617,8 +632,18 @@ public class DnsVpnService extends VpnService implements Runnable {
         return false;
     }
 
-    /** Forwards the raw DNS query to the real upstream resolver and returns its response payload, or null on any failure. */
+    /** Forwards the raw DNS query to the real upstream resolver and returns its response payload, or null on total failure. Tries UPSTREAM_DNS first; only on timeout/failure does it retry once against UPSTREAM_DNS_FALLBACK - see that constant's comment for why. */
     private byte[] forwardToRealDns(byte[] query, int length) {
+        byte[] result = forwardToRealDns(query, length, UPSTREAM_DNS);
+        if (result == null) {
+            log("    primary upstream (" + UPSTREAM_DNS + ") failed - trying fallback (" + UPSTREAM_DNS_FALLBACK + ")");
+            result = forwardToRealDns(query, length, UPSTREAM_DNS_FALLBACK);
+        }
+        return result;
+    }
+
+    /** One attempt against one specific upstream resolver. 3s timeout (not the old 5s) so a primary-then-fallback worst case stays around 6s instead of 10s. */
+    private byte[] forwardToRealDns(byte[] query, int length, String upstreamIp) {
         DatagramSocket socket = null;
         try {
             socket = new DatagramSocket();
@@ -626,9 +651,9 @@ public class DnsVpnService extends VpnService implements Runnable {
             if (!protected_) {
                 log("    protect(socket) returned FALSE");
             }
-            socket.setSoTimeout(5000);
+            socket.setSoTimeout(3000);
 
-            DatagramPacket outPacket = new DatagramPacket(query, length, InetAddress.getByName(UPSTREAM_DNS), 53);
+            DatagramPacket outPacket = new DatagramPacket(query, length, InetAddress.getByName(upstreamIp), 53);
             socket.send(outPacket);
 
             byte[] responseBuffer = new byte[512];
@@ -639,8 +664,8 @@ public class DnsVpnService extends VpnService implements Runnable {
             System.arraycopy(responseBuffer, 0, result, 0, inPacket.getLength());
             return result;
         } catch (Exception e) {
-            log("    forwardToRealDns EXCEPTION: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            return null; // upstream timeout/failure - the query is simply dropped, the browser will retry
+            log("    forwardToRealDns(" + upstreamIp + ") EXCEPTION: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            return null; // upstream timeout/failure - caller decides whether to fall back or give up
         } finally {
             if (socket != null) {
                 socket.close();
