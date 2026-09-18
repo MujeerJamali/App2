@@ -87,7 +87,7 @@
     <!-- Blocked Websites -->
     <string name="websites_button">Blocked Websites</string>
     <string name="websites_screen_title">Blocked Websites</string>
-    <string name="websites_desc">Domains added here are blocked entirely (the whole domain, not a specific page) whenever the DNS Filter VPN is running - which is always, unless VPN Safety is engaged below.</string>
+    <string name="websites_desc">Domains added here are recorded, but nothing currently enforces this list - the VPN-based filter that used to block them has been removed.</string>
     <string name="msg_websites_locked">Removing a website can only be done during an unlocked time. Adding one is always allowed.</string>
     <string name="website_hint">Type or paste a website or URL</string>
     <string name="add_website_button">+ Add</string>
@@ -97,24 +97,4 @@
     <string name="confirm_block_website_title">Block this website?</string>
     <string name="confirm_block_website_message">Block the entire domain \"%1$s\"? This blocks the whole domain, not just this specific page.</string>
     <string name="confirm_block_website_yes">Block it</string>
-
-    <!-- VPN Safety (separate from Master Safety - governs the DNS Filter VPN specifically) -->
-    <string name="vpn_safety_engage_button">VPN Safety: OFF (tap to shut off the VPN and restore normal internet)</string>
-    <string name="vpn_safety_disengage_button">VPN Safety: ON, VPN is OFF (tap to turn the VPN and website filtering back on)</string>
-    <string name="vpn_safety_deleted_button">VPN Safety: permanently removed</string>
-    <string name="vpn_safety_delete_forever_button">Delete VPN Safety Forever</string>
-
-    <string name="diagnostic_button">Network Diagnostics</string>
-    <string name="diagnostic_screen_title">Network Diagnostics</string>
-    <string name="diagnostic_run_button">Run Diagnostics Again</string>
-    <string name="diagnostic_copy_button">Copy Report to Clipboard</string>
-    <string name="diagnostic_live_start_button">Start Live Monitoring</string>
-    <string name="diagnostic_live_stop_button">Stop Live Monitoring</string>
-    <string name="msg_diagnostic_running">Running diagnostics, this can take up to 30 seconds…</string>
-    <string name="msg_diagnostic_copied">Report copied to clipboard</string>
-    <string name="msg_vpn_safety_deleted">VPN Safety has been permanently removed. It cannot be used again.</string>
-    <string name="msg_vpn_safety_delete_blocked_engaged">Turn VPN Safety back OFF first (turn the VPN and filtering back on), then you can delete it forever.</string>
-    <string name="msg_vpn_safety_already_deleted">VPN Safety was already removed forever.</string>
-    <string name="confirm_delete_vpn_safety_title">Delete VPN Safety Forever?</string>
-    <string name="confirm_delete_vpn_safety_message">This cannot be undone. You will never be able to shut off the VPN again, ever - if it ever breaks your internet again, this will be the only way back in, and it will be gone.</string>
 </resources>

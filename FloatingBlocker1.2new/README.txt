@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.32 (VPN removed from this app entirely - back to app-suspension-only blocking)
+===================================================================================
+
 Floating Blocker - version 4.31 (DISALLOW_CONFIG_VPN re-enforced - VPN-based blocking abandoned)
 ===================================================================================
 
@@ -45,6 +48,43 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.32
+-----------------------
+- FOLLOW-UP TO 4.31: not just re-enforcing DISALLOW_CONFIG_VPN - this app's
+  own VPN is now gone entirely, by explicit request. DnsVpnService (the
+  hand-rolled DNS-filtering/TCP-UDP-relay engine this whole project's
+  history - versions 4.7 through 4.29 - was built around) is deleted,
+  along with everything that only existed to support it:
+  - DnsVpnService.java, TcpSession.java, UdpRelaySession.java,
+    IpV4UdpPacket.java, TcpPacket.java, DnsMessage.java, ChecksumUtil.java
+    (the packet-relay engine itself)
+  - VpnSafetyStorage.java and the "VPN Safety" / "Delete VPN Safety
+    Forever" buttons on the main screen (a kill switch for a VPN that no
+    longer exists has nothing left to switch)
+  - DiagnosticActivity.java and the "Network Diagnostics" screen (it
+    existed specifically to debug DnsVpnService's pipeline - nothing left
+    to diagnose)
+  - The <service> declaration for DnsVpnService in the manifest
+  - The INTERNET and ACCESS_NETWORK_STATE permissions (nothing in this
+    app talks to the network anymore at all)
+- App-suspension-based blocking (Blocks, Lock Schedule, Holiday Breaks,
+  Master Safety) is completely unaffected - none of it ever depended on
+  the VPN. This is the app's actual, real blocking mechanism and it's
+  untouched.
+- IMPORTANT - Blocked Websites is now unenforced. The list (Blocks >
+  Blocked Websites) still exists and can still be edited, but nothing
+  currently blocks the domains on it - that enforcement was entirely
+  DnsVpnService's job, and no replacement exists. The screen's own
+  description now says this directly. If domain-level blocking is wanted
+  again later, it needs a new mechanism - not necessarily VPN-based.
+- WHY: a full-tunnel VPN (this app's own DNS-filter engine, and separately
+  the WireGuard/AmneziaWG self-hosted-server replacement explored in
+  4.30/4.31) breaks banking apps, which do their own VPN-detection as a
+  fraud-prevention measure. That's a hard blocker for daily-driver use,
+  independent of how well any particular VPN engine is built or
+  configured - this isn't a bug to fix, it's why VPN-based blocking is
+  being abandoned as an approach entirely.
 
 WHAT CHANGED IN 4.31
 -----------------------
