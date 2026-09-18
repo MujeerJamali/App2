@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/holiday_breaks_desc"
+        android:paddingBottom="16dp" />
+
+    <TextView
+        android:id="@+id/txtLockedMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/msg_holiday_breaks_locked"
+        android:paddingBottom="16dp"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnAddHolidayBreak"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/add_holiday_break_button" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:id="@+id/breaksContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="12dp" />
+    </ScrollView>
+
+</LinearLayout>

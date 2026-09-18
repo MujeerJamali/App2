@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Self-Control</string>
+
+    <!-- Main screen -->
+    <string name="device_owner_active">Device Owner: ACTIVE (full protection on)</string>
+    <string name="device_owner_not_active">Device Owner: NOT ACTIVE — protection is off</string>
+    <string name="blocks_active">Blocks: Active (tap to pause)</string>
+    <string name="blocks_paused">Blocks: Paused (tap to continue)</string>
+    <string name="msg_cannot_pause_now">You can only pause Blocks during an unlocked time. Check your Lock Schedule.</string>
+    <string name="blocks_button">Blocks</string>
+    <string name="lock_schedule_button">Lock Schedule</string>
+    <string name="safety_engage_button">Emergency Safety: OFF (tap to disable everything)</string>
+    <string name="safety_disengage_button">Emergency Safety: ON (tap to turn protection back on)</string>
+    <string name="safety_deleted_button">Emergency Safety: permanently removed</string>
+    <string name="safety_delete_forever_button">Delete Emergency Safety Forever</string>
+    <string name="msg_safety_deleted">Emergency Safety has been permanently removed. It cannot be used again.</string>
+    <string name="msg_safety_delete_blocked_engaged">Turn Emergency Safety back ON first, then you can delete it forever.</string>
+    <string name="msg_safety_already_deleted">Emergency Safety was already removed forever.</string>
+    <string name="confirm_delete_safety_title">Delete Emergency Safety Forever?</string>
+    <string name="confirm_delete_safety_message">This cannot be undone. You will never be able to use Emergency Safety again, ever.</string>
+    <string name="confirm_delete_safety_yes">Yes, delete forever</string>
+    <string name="confirm_delete_safety_cancel">Cancel</string>
+
+    <!-- DNS Filter Lock -->
+
+
+    <!-- Battery Optimization Exemption -->
+    <string name="battery_exempt_off">Battery Optimization: Not exempt (tap to fix)</string>
+    <string name="battery_exempt_on">Battery Optimization: Exempt</string>
+    <string name="msg_battery_already_exempt">Already exempt from battery optimization.</string>
+
+    <!-- Lock Schedule screen -->
+    <string name="lock_schedule_screen_title">Lock Schedule</string>
+    <string name="lock_schedule_desc">During these times, Blocks cannot be weakened: no deleting a Block, no removing an app or time range from one, and this schedule itself cannot be edited. Adding a new Block, or adding an app or time range to an existing one, is always allowed, any time. Outside these times, everything is open.</string>
+    <string name="msg_lock_editing_locked">You can only change this schedule during an unlocked time.</string>
+    <string name="start_time_label">Start</string>
+    <string name="end_time_label">End</string>
+    <string name="add_time_range_button">Add Time Range</string>
+    <string name="remove_button">Remove</string>
+    <string name="save_button">Save</string>
+    <string name="msg_add_at_least_one_range">Pick a start time, end time, and at least one day.</string>
+    <string name="msg_ranges_saved">Saved.</string>
+    <string name="pick_days_title">Pick days</string>
+    <string name="ok_button">OK</string>
+    <string name="cancel_button">Cancel</string>
+
+    <!-- Blocks list screen -->
+    <string name="blocks_screen_title">Blocks</string>
+    <string name="add_block_button">+ Add Block</string>
+    <string name="msg_blocks_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="block_subtitle_format">%1$d time range(s), %2$d app(s) blocked</string>
+    <string name="delete_button">Delete</string>
+
+    <!-- Block edit screen -->
+    <string name="block_edit_screen_title">Edit Block</string>
+    <string name="block_name_hint">Block name (e.g. Work Hours)</string>
+    <string name="block_ranges_label">Time ranges (when this Block is active)</string>
+    <string name="block_apps_label">Apps blocked during this Block</string>
+    <string name="add_app_button">+ Add App</string>
+    <string name="msg_enter_block_name">Enter a name for this Block.</string>
+    <string name="delete_block_button">Delete This Block</string>
+    <string name="own_app_always_allowed_note">Floating Blocker itself can never be added to a block list.</string>
+    <string name="msg_some_removals_skipped">Some app removals were not applied - that can only be done during an unlocked time. New apps you added were still saved.</string>
+
+    <!-- Holiday Breaks -->
+    <string name="holiday_breaks_button">Holiday Breaks</string>
+    <string name="holiday_breaks_screen_title">Holiday Breaks</string>
+    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is only allowed during an unlocked Lock Schedule time. Cancelling one early is always allowed, any time.</string>
+    <string name="msg_holiday_breaks_locked">Creating a Holiday Break is only allowed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="add_holiday_break_button">+ Add Holiday Break</string>
+    <string name="cancel_break_button">Cancel Break</string>
+    <string name="confirm_cancel_break_message">Cancel this Holiday Break now? The affected Blocks will resume their normal schedule immediately.</string>
+    <string name="holiday_break_edit_screen_title">New Holiday Break</string>
+    <string name="break_name_hint">Break name (e.g. Eid Trip)</string>
+    <string name="msg_enter_break_name">Enter a name for this Holiday Break.</string>
+    <string name="break_start_label">Starts</string>
+    <string name="break_end_label">Ends</string>
+    <string name="pick_date_button">Pick Date</string>
+    <string name="pick_time_button">Pick Time</string>
+    <string name="select_blocks_button">Select Blocks</string>
+    <string name="msg_no_blocks_to_select">You don\'t have any Blocks yet - create one first under Blocks.</string>
+    <string name="msg_break_end_before_start">The end date/time must be after the start date/time.</string>
+    <string name="msg_select_at_least_one_block">Select at least one Block for this break to affect.</string>
+    <string name="msg_break_saved">Holiday Break saved.</string>
+
+    <!-- Blocked Websites -->
+    <string name="websites_button">Blocked Websites</string>
+    <string name="websites_screen_title">Blocked Websites</string>
+    <string name="websites_desc">Domains added here are blocked entirely (the whole domain, not a specific page) whenever the DNS Filter VPN is running - which is always, unless VPN Safety is engaged below.</string>
+    <string name="msg_websites_locked">Removing a website can only be done during an unlocked time. Adding one is always allowed.</string>
+    <string name="website_hint">Type or paste a website or URL</string>
+    <string name="add_website_button">+ Add</string>
+    <string name="msg_invalid_website">Could not find a valid website/domain in that.</string>
+    <string name="msg_website_added">Added to the blocked list.</string>
+    <string name="share_website_label">Block with Self-Control</string>
+    <string name="confirm_block_website_title">Block this website?</string>
+    <string name="confirm_block_website_message">Block the entire domain \"%1$s\"? This blocks the whole domain, not just this specific page.</string>
+    <string name="confirm_block_website_yes">Block it</string>
+
+    <!-- VPN Safety (separate from Master Safety - governs the DNS Filter VPN specifically) -->
+    <string name="vpn_safety_engage_button">VPN Safety: OFF (tap to shut off the VPN and restore normal internet)</string>
+    <string name="vpn_safety_disengage_button">VPN Safety: ON, VPN is OFF (tap to turn the VPN and website filtering back on)</string>
+    <string name="vpn_safety_deleted_button">VPN Safety: permanently removed</string>
+    <string name="vpn_safety_delete_forever_button">Delete VPN Safety Forever</string>
+
+    <string name="diagnostic_button">Network Diagnostics</string>
+    <string name="diagnostic_screen_title">Network Diagnostics</string>
+    <string name="diagnostic_run_button">Run Diagnostics Again</string>
+    <string name="diagnostic_copy_button">Copy Report to Clipboard</string>
+    <string name="msg_diagnostic_running">Running diagnostics, this can take up to 30 seconds…</string>
+    <string name="msg_diagnostic_copied">Report copied to clipboard</string>
+    <string name="msg_vpn_safety_deleted">VPN Safety has been permanently removed. It cannot be used again.</string>
+    <string name="msg_vpn_safety_delete_blocked_engaged">Turn VPN Safety back OFF first (turn the VPN and filtering back on), then you can delete it forever.</string>
+    <string name="msg_vpn_safety_already_deleted">VPN Safety was already removed forever.</string>
+    <string name="confirm_delete_vpn_safety_title">Delete VPN Safety Forever?</string>
+    <string name="confirm_delete_vpn_safety_message">This cannot be undone. You will never be able to shut off the VPN again, ever - if it ever breaks your internet again, this will be the only way back in, and it will be gone.</string>
+</resources>
