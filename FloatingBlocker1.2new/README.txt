@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.29 (real root cause found: the VPN tunnel was restarting roughly every minute)
+===================================================================================
+
 Floating Blocker - version 4.28 (new leading theory: silently-dropped IPv6 connection attempts, now logged)
 ===================================================================================
 
@@ -36,6 +39,43 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.29
+-----------------------
+- ACTUAL ROOT CAUSE FOUND, after 4.21-4.28 chased (and ruled out one by one,
+  each with real evidence) thread starvation, a single point of failure in
+  DNS forwarding, Block-list drops, network validation, and silently-dropped
+  IPv6 - none of which were it. A live diagnostic capture caught the real
+  thing directly: a working "Via" browser session (three established
+  connections loading Wikipedia, a fourth just-established connection to
+  Google) got torn down ALL AT ONCE - "client sent RST" on every single one
+  simultaneously - immediately followed by an unrelated Instagram flow
+  failing to write to the tunnel with EIO (I/O error). That is not four
+  separate app-level failures - it is the VPN tunnel itself being torn down
+  and recreated out from under everything using it at that exact instant.
+- Background apps (WhatsApp, Instagram) silently reconnect when this
+  happens and look completely unaffected. A browser's one-shot page load
+  caught mid-flight when it happens just fails outright, with no retry -
+  which is exactly the "some things work, some randomly don't" pattern
+  reported throughout this app's entire history, on every network, every
+  browser, every Android build tested.
+- WHY it was restarting: BlockEnforcer.applyVpnLockdownAndServiceState()
+  runs on every reapply cycle - every time the app is opened, every
+  settings save, AND a periodic safety-net alarm that fires roughly every
+  60 seconds whenever any Block exists (see scheduleNextAlarm). Every
+  single one of those calls unconditionally called
+  DevicePolicyManager.setAlwaysOnVpnPackage() again, even when the value
+  being set was byte-for-byte identical to what was already configured.
+  Android does not appear to treat a redundant call as a no-op - it
+  restarts the VPN network's association regardless, tearing down every
+  live connection through it. With a Block configured, this was happening
+  roughly once a minute, indefinitely, for as long as the app has existed.
+- FIXED: applyVpnLockdownAndServiceState() now reads the CURRENT always-on
+  assignment first (DevicePolicyManager.getAlwaysOnVpnPackage()) and only
+  calls setAlwaysOnVpnPackage() when it actually needs to change - VPN
+  Safety just got toggled, or the assignment is missing/wrong for some
+  other reason. On every other reapply cycle (the vast majority of them),
+  this is now a no-op, and the tunnel stays up uninterrupted.
 
 WHAT CHANGED IN 4.28
 -----------------------

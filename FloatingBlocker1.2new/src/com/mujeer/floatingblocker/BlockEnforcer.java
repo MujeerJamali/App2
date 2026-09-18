@@ -202,35 +202,61 @@ public class BlockEnforcer {
         boolean vpnSafetyEngaged = new VpnSafetyStorage(context).isEngaged();
         Intent vpnIntent = new Intent(context, DnsVpnService.class);
 
+        // Read the CURRENT always-on assignment before touching it. This method
+        // runs on every reapply cycle - every app open, every settings save, and
+        // a periodic safety-net alarm roughly every 60s (see scheduleNextAlarm) -
+        // so it fires far more often than the always-on state actually needs to
+        // change. Calling setAlwaysOnVpnPackage() even when the value passed is
+        // identical to what's already set was found (via a live diagnostic
+        // capture) to restart the VPN network anyway - every in-flight
+        // connection through the tunnel got torn down simultaneously, regardless
+        // of which app owned it. Background apps (WhatsApp, Instagram) silently
+        // reconnect and look unaffected; a browser's one-shot page load caught
+        // mid-flight just fails, which is what looked like "some sites randomly
+        // don't load" throughout this app's whole history. Only calling this
+        // when the assignment is actually wrong avoids restarting a tunnel that
+        // was already correctly configured.
+        String currentAlwaysOn = null;
+        try {
+            currentAlwaysOn = dpm.getAlwaysOnVpnPackage(admin);
+        } catch (Exception e) {
+            // Best effort - if we can't read the current state, fall through and
+            // just (re)apply unconditionally below, same as before this fix.
+        }
+
         if (vpnSafetyEngaged) {
-            try {
-                dpm.setAlwaysOnVpnPackage(admin, null, false); // fully release - no forced VPN
-            } catch (Exception e) { /* best effort */ }
+            if (currentAlwaysOn != null) {
+                try {
+                    dpm.setAlwaysOnVpnPackage(admin, null, false); // fully release - no forced VPN
+                } catch (Exception e) { /* best effort */ }
+            }
             try {
                 context.stopService(vpnIntent);
             } catch (Exception e) { /* best effort */ }
         } else {
-            try {
-                // false = NOT lockdown. Lockdown requires ALL traffic from every
-                // other app to go through this VPN's tun interface or be dropped -
-                // it does not distinguish "covered by one of our routes" from
-                // "we chose not to route it". Since the Builder only routes the
-                // single virtual DNS address (see DnsVpnService's class comment
-                // for why - this app deliberately does NOT relay general traffic),
-                // lockdown would silently blackhole every other app's actual web
-                // traffic while DNS itself kept working - internet looks totally
-                // dead even though the filter is functioning perfectly. Always-on
-                // (without lockdown) still forces this service to be the assigned
-                // VPN and to relaunch automatically; it just also lets traffic this
-                // app never claimed fall back to the real network, which is exactly
-                // what the DNS-only design has always assumed. The trade-off: if
-                // this service is ever killed, DNS quietly reverts to the network's
-                // own unfiltered resolver instead of Android blocking all internet -
-                // fails open, not closed. Tamper-resistance instead comes from
-                // DISALLOW_CONFIG_VPN, uninstall-blocked, and this service being
-                // restarted (START_STICKY / BootReceiver) rather than from lockdown.
-                dpm.setAlwaysOnVpnPackage(admin, ownPackage, false);
-            } catch (Exception e) { /* best effort - VPN feature just won't be enforced if this fails */ }
+            if (!ownPackage.equals(currentAlwaysOn)) {
+                try {
+                    // false = NOT lockdown. Lockdown requires ALL traffic from every
+                    // other app to go through this VPN's tun interface or be dropped -
+                    // it does not distinguish "covered by one of our routes" from
+                    // "we chose not to route it". Since the Builder only routes the
+                    // single virtual DNS address (see DnsVpnService's class comment
+                    // for why - this app deliberately does NOT relay general traffic),
+                    // lockdown would silently blackhole every other app's actual web
+                    // traffic while DNS itself kept working - internet looks totally
+                    // dead even though the filter is functioning perfectly. Always-on
+                    // (without lockdown) still forces this service to be the assigned
+                    // VPN and to relaunch automatically; it just also lets traffic this
+                    // app never claimed fall back to the real network, which is exactly
+                    // what the DNS-only design has always assumed. The trade-off: if
+                    // this service is ever killed, DNS quietly reverts to the network's
+                    // own unfiltered resolver instead of Android blocking all internet -
+                    // fails open, not closed. Tamper-resistance instead comes from
+                    // DISALLOW_CONFIG_VPN, uninstall-blocked, and this service being
+                    // restarted (START_STICKY / BootReceiver) rather than from lockdown.
+                    dpm.setAlwaysOnVpnPackage(admin, ownPackage, false);
+                } catch (Exception e) { /* best effort - VPN feature just won't be enforced if this fails */ }
+            }
             try {
                 context.startService(vpnIntent);
             } catch (Exception e) { /* best effort */ }
