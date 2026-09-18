@@ -180,7 +180,15 @@ public class BlockEnforcer {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET);
         } catch (Exception e) { /* best effort */ }
         try {
-            dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_VPN);
+            // TEMPORARILY DISABLED (was addUserRestriction) while migrating this
+            // app's own VPN engine to WireGuard: the official WireGuard app is
+            // being used to validate the new server before that integration is
+            // written, and DISALLOW_CONFIG_VPN blocks ANY third-party VPN -
+            // including the one being tested for the app's own replacement
+            // engine - from ever being authorized. Re-enable (switch back to
+            // addUserRestriction) once WireGuard is integrated directly into
+            // this app, at which point this restriction becomes correct again.
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_VPN);
         } catch (Exception e) { /* best effort */ }
         try {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER);
