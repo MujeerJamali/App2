@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.25 (found: Chrome's DNS works but its connections may be silently Block-dropped)
+===================================================================================
+
 Floating Blocker - version 4.24 (diagnostic log now shows which app each packet belongs to)
 ===================================================================================
 
@@ -24,6 +27,37 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.25
+-----------------------
+- LIKELY REAL FINDING, from reading a live diagnostic with 4.24's new
+  app-attribution logging: Chrome's DNS query for google.com appeared in
+  the log and succeeded normally (app=com.android.chrome, 540ms, response
+  written back to tun) - but NO TCP or UDP connection for Chrome appeared
+  anywhere else in the same window. Chrome resolved a real IP and then
+  never even attempted to open the actual page-load connection through the
+  tunnel, as far as this app's own log could show.
+- ROOT CAUSE (found by re-reading dispatchUdp/dispatchTcp with this in
+  mind): DNS queries (port 53) are NEVER checked against
+  isOwningAppBlocked() at all - only regular TCP connections and non-DNS
+  UDP flows are. And when isOwningAppBlocked() DOES return true for one of
+  those, the code silently returns with NO log line whatsoever. So if an
+  app ends up in an active Block's package list - deliberately, or via the
+  auto-add-new-installs feature, which has had at least one real bug
+  before (see 4.20) - the exact symptom is: its DNS keeps resolving fine
+  (never checked), while every actual connection just vanishes with zero
+  trace. That matches every report in this whole troubleshooting session:
+  DNS always looked healthy, specific apps' real traffic just disappeared.
+- FIXED (diagnostic-only, not yet confirmed as THE root cause): the
+  silent Block-drop in dispatchTcp, dispatchUdp, and the idle-session
+  reaper now all log which app got dropped and why. The next diagnostic
+  taken while something is broken will show definitively whether this is
+  what's actually happening.
+- IF THIS IS CONFIRMED: the real fix is checking (and if needed, editing)
+  the Blocks list in the app itself - Blocks > each Block > its app list -
+  to make sure Chrome/whatever isn't in there by accident. This isn't
+  something a code patch should silently override, since deliberately
+  blocking an app is the entire point of this app's Blocks feature.
 
 WHAT CHANGED IN 4.24
 -----------------------

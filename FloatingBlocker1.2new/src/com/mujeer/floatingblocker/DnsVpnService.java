@@ -363,7 +363,8 @@ public class DnsVpnService extends VpnService implements Runnable {
                     return;
                 }
                 if (isOwningAppBlocked(ChecksumUtil.PROTOCOL_TCP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort)) {
-                    return; // owning app is currently in an active Block - no internet for it, silently
+                    log("[TCP " + key + "] DROPPED - app=" + describeOwningApp(ChecksumUtil.PROTOCOL_TCP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort) + " is currently in an active Block");
+                    return; // owning app is currently in an active Block - no internet for it
                 }
                 log("[TCP " + key + "] new connection, app=" + describeOwningApp(ChecksumUtil.PROTOCOL_TCP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort));
                 session = new TcpSession(this, key, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort, tunOut);
@@ -400,7 +401,8 @@ public class DnsVpnService extends VpnService implements Runnable {
                     return;
                 }
                 if (isOwningAppBlocked(ChecksumUtil.PROTOCOL_UDP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort)) {
-                    return; // owning app is currently in an active Block - no internet for it, silently
+                    log("[UDP " + key + "] DROPPED - app=" + describeOwningApp(ChecksumUtil.PROTOCOL_UDP, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort) + " is currently in an active Block");
+                    return; // owning app is currently in an active Block - no internet for it
                 }
                 UdpRelaySession newSession = new UdpRelaySession(this, key, probe.sourceIp, probe.sourcePort, probe.destIp, probe.destPort, tunOut);
                 if (!newSession.start()) {
@@ -533,6 +535,9 @@ public class DnsVpnService extends VpnService implements Runnable {
                     TcpSession s = it.next();
                     boolean idle = now - s.getLastActivityMillis() > TCP_IDLE_TIMEOUT_MS;
                     boolean nowBlocked = !idle && isOwningAppBlocked(ChecksumUtil.PROTOCOL_TCP, s.getClientIp(), s.getClientPort(), s.getRemoteIp(), s.getRemotePort());
+                    if (nowBlocked) {
+                        log("[TCP] reaper closing - app=" + describeOwningApp(ChecksumUtil.PROTOCOL_TCP, s.getClientIp(), s.getClientPort(), s.getRemoteIp(), s.getRemotePort()) + " is now in an active Block");
+                    }
                     if (idle || nowBlocked) {
                         it.remove();
                         s.close();
@@ -545,6 +550,9 @@ public class DnsVpnService extends VpnService implements Runnable {
                     UdpRelaySession s = it.next();
                     boolean idle = now - s.getLastActivityMillis() > UDP_IDLE_TIMEOUT_MS;
                     boolean nowBlocked = !idle && isOwningAppBlocked(ChecksumUtil.PROTOCOL_UDP, s.getClientIp(), s.getClientPort(), s.getRemoteIp(), s.getRemotePort());
+                    if (nowBlocked) {
+                        log("[UDP] reaper closing - app=" + describeOwningApp(ChecksumUtil.PROTOCOL_UDP, s.getClientIp(), s.getClientPort(), s.getRemoteIp(), s.getRemotePort()) + " is now in an active Block");
+                    }
                     if (idle || nowBlocked) {
                         it.remove();
                         s.close();
