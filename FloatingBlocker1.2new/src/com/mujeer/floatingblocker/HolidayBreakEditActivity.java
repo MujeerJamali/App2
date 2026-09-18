@@ -57,16 +57,12 @@ public class HolidayBreakEditActivity extends Activity {
         btnSelectBlocks = (Button) findViewById(R.id.btnSelectBlocks);
         btnSaveBreak = (Button) findViewById(R.id.btnSaveBreak);
 
-        boolean creationAllowed = lockScheduleStorage.isEditingAllowed();
-        txtLockedMessage.setVisibility(creationAllowed ? View.GONE : View.VISIBLE);
-        editBreakName.setEnabled(creationAllowed);
-        btnPickStartDate.setEnabled(creationAllowed);
-        btnPickStartTime.setEnabled(creationAllowed);
-        btnPickEndDate.setEnabled(creationAllowed);
-        btnPickEndTime.setEnabled(creationAllowed);
-        btnSelectBlocks.setEnabled(creationAllowed);
-        btnSaveBreak.setEnabled(creationAllowed);
-
+        // Whether creation is actually allowed depends on the chosen start
+        // time (see isOnLaterAppDay), so nothing is disabled up front here -
+        // updateButtonLabels() (called after every date/time pick, and once
+        // now for the initial default) keeps txtLockedMessage in sync with
+        // whatever start time is currently selected. The real check happens
+        // again in onSaveClicked() regardless.
         updateButtonLabels();
 
         btnPickStartDate.setOnClickListener(new View.OnClickListener() {
@@ -118,6 +114,33 @@ public class HolidayBreakEditActivity extends Activity {
         btnPickStartTime.setText(formatTime(startCal) + "\n" + getString(R.string.pick_time_button));
         btnPickEndDate.setText(formatDate(endCal) + "\n" + getString(R.string.pick_date_button));
         btnPickEndTime.setText(formatTime(endCal) + "\n" + getString(R.string.pick_time_button));
+        boolean allowed = lockScheduleStorage.isEditingAllowed()
+                || isOnLaterAppDay(startCal.getTimeInMillis(), System.currentTimeMillis());
+        txtLockedMessage.setVisibility(allowed ? View.GONE : View.VISIBLE);
+    }
+
+    /**
+     * True if momentMillis falls on a later "app-day" than referenceMillis,
+     * where the day boundary is 2:00 AM instead of midnight - so e.g.
+     * 1:30 AM still counts as the previous day, but 2:00 AM onward counts
+     * as the new one. Used to let a Holiday Break be created even during a
+     * locked Lock Schedule period, as long as its start doesn't take effect
+     * until a genuinely later day - it can't weaken anything happening now.
+     */
+    private static boolean isOnLaterAppDay(long momentMillis, long referenceMillis) {
+        return appDayStartMillis(momentMillis) > appDayStartMillis(referenceMillis);
+    }
+
+    private static long appDayStartMillis(long momentMillis) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(momentMillis);
+        c.add(Calendar.HOUR_OF_DAY, -2);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        c.add(Calendar.HOUR_OF_DAY, 2);
+        return c.getTimeInMillis();
     }
 
     private String formatDate(Calendar c) {
@@ -168,7 +191,9 @@ public class HolidayBreakEditActivity extends Activity {
     }
 
     private void onSaveClicked() {
-        if (!lockScheduleStorage.isEditingAllowed()) {
+        boolean allowed = lockScheduleStorage.isEditingAllowed()
+                || isOnLaterAppDay(startCal.getTimeInMillis(), System.currentTimeMillis());
+        if (!allowed) {
             Toast.makeText(this, R.string.msg_holiday_breaks_locked, Toast.LENGTH_LONG).show();
             return;
         }

@@ -66,8 +66,8 @@
     <!-- Holiday Breaks -->
     <string name="holiday_breaks_button">Holiday Breaks</string>
     <string name="holiday_breaks_screen_title">Holiday Breaks</string>
-    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is only allowed during an unlocked Lock Schedule time. Cancelling one early is always allowed, any time.</string>
-    <string name="msg_holiday_breaks_locked">Creating a Holiday Break is only allowed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is allowed during an unlocked Lock Schedule time, or any time if its start doesn\'t take effect until a later day (a day starts at 2:00 AM for this purpose, so 1:30 AM still counts as the day before). Cancelling one early is always allowed, any time.</string>
+    <string name="msg_holiday_breaks_locked">This can only be created during an unlocked time, unless its start is on a later day (a day starts at 2:00 AM) - check your Lock Schedule, or pick a later start date/time.</string>
     <string name="add_holiday_break_button">+ Add Holiday Break</string>
     <string name="cancel_break_button">Cancel Break</string>
     <string name="confirm_cancel_break_message">Cancel this Holiday Break now? The affected Blocks will resume their normal schedule immediately.</string>

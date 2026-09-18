@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.35 (Holiday Breaks starting on a later day can now be created while locked)
+===================================================================================
+
 Floating Blocker - version 4.34 (Alarm punishment now also skips Blocks currently on a Holiday Break)
 ===================================================================================
 
@@ -54,6 +57,29 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.35
+-----------------------
+- NEW EXCEPTION to Holiday Break creation: previously it required the Lock
+  Schedule to currently be unlocked, full stop. Now it's also allowed
+  during a locked period if the break's chosen START doesn't take effect
+  until a later "app-day" - and for this specific purpose, a day is
+  defined as starting at 2:00 AM instead of midnight, so e.g. 1:30 AM
+  still counts as the day before, while 2:00 AM onward counts as the new
+  one. The reasoning: a break that only starts on a genuinely later day
+  can't weaken anything happening right now, so gating it behind "is the
+  schedule unlocked THIS EXACT MOMENT" was blocking harmless future
+  planning for no real reason.
+- This is purely an ADDITIONAL way creation becomes allowed - the existing
+  unlocked-Lock-Schedule path still works exactly as before, unchanged.
+  Nothing about how an already-created break is enforced changed at all
+  (still starts/ends at its exact stored millis, same as always) -
+  ONLY the creation-time permission check gained this one exception.
+- The on-screen note and locked-message string now explain the 2:00 AM
+  rule directly, and update live as you change the picked start date/time
+  (previously the whole form was just disabled outright while locked,
+  which no longer makes sense once whether it's allowed depends on what
+  start time you end up picking).
 
 WHAT CHANGED IN 4.34
 -----------------------
