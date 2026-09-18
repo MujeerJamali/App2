@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.31 (DISALLOW_CONFIG_VPN re-enforced - VPN-based blocking abandoned)
+===================================================================================
+
 Floating Blocker - version 4.30 (TEMPORARY: DISALLOW_CONFIG_VPN released during WireGuard migration testing)
 ===================================================================================
 
@@ -42,6 +45,24 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.31
+-----------------------
+- VPN-BASED BLOCKING PLAN ABANDONED: after 4.30's temporary release of
+  DISALLOW_CONFIG_VPN (to test WireGuard/AmneziaWG apps against a real
+  self-hosted server), the whole idea of running this app's traffic
+  through a full-tunnel VPN was dropped - a full VPN breaks banking apps
+  (a real, common fraud-prevention check many of them do), which makes it
+  unworkable as a daily-driver device restriction, regardless of which VPN
+  engine or how well it's configured.
+- FIXED (reverted 4.30): that restriction is back to being actively
+  enforced (addUserRestriction, not cleared) every cycle, same as every
+  version before 4.30. No third-party VPN app - including the ones used
+  for 4.30's testing - can be authorized on this device anymore. This
+  closes the temporary gap 4.30 deliberately left open.
+- The self-hosted WireGuard/AmneziaWG server itself (Oracle Cloud) is
+  untouched by this change - it's just no longer anything this app points
+  at or depends on.
 
 WHAT CHANGED IN 4.30
 -----------------------
