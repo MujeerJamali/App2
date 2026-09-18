@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.22 (fixed: 4.21's shared UDP thread pool starved Chrome/video behind slow DNS)
+===================================================================================
+
 Floating Blocker - version 4.21 (fixed: UDP-packet thread storm causing intermittent Chrome DNS failures)
 ===================================================================================
 
@@ -15,6 +18,41 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.22
+-----------------------
+- REAL FIX for a regression 4.21 itself introduced: right after that update,
+  reports came in of "Facebook Lite works, but Facebook videos won't play,
+  Chrome doesn't work, and other apps sometimes don't work" - worse than
+  before, not better. Root cause: 4.21 fixed the old per-UDP-packet raw-
+  Thread storm by moving ALL UDP dispatch (DNS queries AND everything else)
+  onto one shared 64-thread pool. That merged two very different workloads
+  onto the same pool: DNS forwarding, which legitimately blocks for up to
+  5s waiting on the upstream resolver, and generic UDP relay dispatch
+  (overwhelmingly QUIC/HTTP3 - what Chrome, video streaming, and most
+  modern apps actually use for real data transfer), where each task is
+  meant to be near-instant. A burst of slow DNS lookups could occupy every
+  worker in the shared pool for seconds at a time, and every OTHER queued
+  UDP packet - including live QUIC data for a connection Chrome or a video
+  player already had open - queued up behind them. Facebook Lite (plain
+  HTTP over TCP, which bypasses this pool entirely - TCP is handled
+  inline) kept working fine throughout, which is exactly the split that
+  was reported.
+- FIXED: DNS forwarding and generic UDP relay dispatch now run on two
+  SEPARATE bounded pools (DNS_FORWARD_THREADS=32, UDP_DISPATCH_THREADS=64
+  in DnsVpnService), chosen via a cheap peek at the UDP destination port
+  before the full packet parse. A burst of slow DNS lookups can no longer
+  block the fast relay path Chrome/video actually depend on for data, and
+  vice versa.
+- FIXED (found while investigating the above, not yet reported as its own
+  symptom): the UDP dispatch pool being shut down mid-flight (normal VPN
+  Safety toggle or service restart) could throw an uncaught
+  RejectedExecutionException on the tun-read thread. Android's default
+  behavior is to kill the ENTIRE app process on ANY uncaught exception on
+  ANY thread, not just that feature - meaning a plain VPN restart could, in
+  principle, crash the whole app and briefly take real internet down with
+  it while it restarted. Both dispatch pools' submissions are now
+  defensively guarded against this.
 
 WHAT CHANGED IN 4.21
 -----------------------

@@ -30,6 +30,23 @@ public class IpV4UdpPacket {
         return data[9] & 0xFF;
     }
 
+    /** Quick peek at just the UDP destination port, without fully parsing - lets DnsVpnService route a packet to the right dispatch pool (DNS vs generic relay) before paying for a full parse. Returns -1 if this isn't a parseable IPv4/UDP packet. */
+    public static int peekUdpDestPort(byte[] data, int length) {
+        if (length < 20) {
+            return -1;
+        }
+        int versionAndIhl = data[0] & 0xFF;
+        if ((versionAndIhl >> 4) != 4) {
+            return -1;
+        }
+        int ipHeaderLength = (versionAndIhl & 0x0F) * 4;
+        if (ipHeaderLength < 20 || length < ipHeaderLength + 4) {
+            return -1;
+        }
+        int udpStart = ipHeaderLength;
+        return ((data[udpStart + 2] & 0xFF) << 8) | (data[udpStart + 3] & 0xFF);
+    }
+
     /** Parses a raw packet read from the VPN's TUN interface. Returns null if it isn't IPv4/UDP or is malformed. */
     public static IpV4UdpPacket parse(byte[] data, int length) {
         if (length < 20) {

@@ -81,19 +81,35 @@ public class DnsVpnService extends VpnService implements Runnable {
     private static final long UDP_IDLE_TIMEOUT_MS = 2 * 60 * 1000;
     private static final long REAP_INTERVAL_MS = 30 * 1000;
 
-    // How many UDP packets (DNS queries AND every relayed non-DNS datagram -
-    // QUIC/HTTP3 is UDP too) can be dispatched concurrently. Previously each
-    // packet got its own brand-new raw Thread - fine at low volume, but a
-    // real device easily produces thousands of UDP packets per session
-    // (QUIC alone), and creating a fresh OS thread for every single one of
-    // them causes real scheduling contention: a DNS query queued behind a
-    // burst of unrelated QUIC-triggered thread creation can end up taking
-    // seconds instead of the ~200-800ms a direct query to the same upstream
-    // takes, and Chrome (and other apps) interpret that delay as DNS being
-    // broken outright (DNS_PROBE_FINISHED_BAD_CONFIG) rather than just slow.
-    // A bounded pool keeps genuinely concurrent dispatch (so one slow
-    // upstream reply still never blocks the next query, per the class
-    // comment) without unbounded thread creation being the bottleneck.
+    // UDP packet dispatch runs on TWO separate bounded pools, not one -
+    // this split matters and used to be a single shared pool, which was
+    // itself a real bug (see below).
+    //
+    // - DNS_FORWARD_THREADS: only for port-53 queries. Each one blocks for
+    //   up to 5s waiting on the upstream resolver (forwardToRealDns) - that
+    //   blocking is inherent and fine, DNS query volume from all apps
+    //   combined is naturally much lower than total UDP packet volume.
+    // - UDP_DISPATCH_THREADS: everything else - overwhelmingly QUIC/HTTP3,
+    //   which is most of what Chrome, video streaming, and most modern
+    //   apps actually use for real data transfer. Each task here is meant
+    //   to be near-instant (a session lookup + non-blocking send).
+    //
+    // These must NOT share one pool. They did, briefly (a single 64-thread
+    // pool for all UDP packets), fixing an earlier bug where every UDP
+    // packet got its own brand-new raw Thread (thousands of them per
+    // session, causing real scheduling contention). But mixing DNS's
+    // inherently-blocking work into the SAME pool as the high-volume,
+    // latency-sensitive relay dispatch work created a worse bug: a burst of
+    // slow DNS lookups could occupy every worker for up to 5s each, and
+    // every OTHER queued UDP packet - including live QUIC data for a
+    // connection Chrome or a video player already had open - had to wait
+    // behind them. TCP-only/lighter apps (e.g. Facebook Lite, which
+    // bypasses this pool entirely - TCP is dispatched inline, see run())
+    // kept working fine while QUIC-heavy apps stalled completely. Two
+    // separate pools means a burst of slow DNS lookups can never block the
+    // fast relay path Chrome/video actually depend on for data, and vice
+    // versa.
+    private static final int DNS_FORWARD_THREADS = 32;
     private static final int UDP_DISPATCH_THREADS = 64;
 
     // In-memory diagnostic trail of the most recent queries handled by this
@@ -165,6 +181,7 @@ public class DnsVpnService extends VpnService implements Runnable {
     private volatile boolean running = false;
     private FileOutputStream tunOut;
     private java.util.concurrent.ExecutorService udpDispatchExecutor;
+    private java.util.concurrent.ExecutorService dnsForwardExecutor;
 
     private final Object tcpSessionsLock = new Object();
     private final Map<String, TcpSession> tcpSessions = new HashMap<String, TcpSession>();
@@ -218,6 +235,7 @@ public class DnsVpnService extends VpnService implements Runnable {
         running = true;
         runningInstance = this;
         udpDispatchExecutor = java.util.concurrent.Executors.newFixedThreadPool(UDP_DISPATCH_THREADS);
+        dnsForwardExecutor = java.util.concurrent.Executors.newFixedThreadPool(DNS_FORWARD_THREADS);
         workerThread = new Thread(this);
         workerThread.start();
         reaperThread = new Thread(new Runnable() {
@@ -283,23 +301,28 @@ public class DnsVpnService extends VpnService implements Runnable {
                 dispatchTcp(packetCopy, length);
             } else if (protocol == ChecksumUtil.PROTOCOL_UDP) {
                 udpPacketsCount.incrementAndGet();
-                // Each UDP datagram is independent (no ordering guarantee to
-                // preserve), so it's dispatched onto a bounded worker pool
-                // (UDP_DISPATCH_THREADS) rather than tun's own read thread -
-                // one slow upstream response still never blocks the next
-                // incoming query from being read. See UDP_DISPATCH_THREADS'
-                // comment for why this is a fixed pool now, not a raw
-                // Thread-per-packet.
-                udpDispatchExecutor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            dispatchUdp(packetCopy, packetCopy.length);
-                        } catch (Exception e) {
-                            log("UNCAUGHT in dispatchUdp: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                // Routed to one of two separate pools based on a cheap peek
+                // at the destination port - see DNS_FORWARD_THREADS/
+                // UDP_DISPATCH_THREADS' comment for why DNS forwarding and
+                // generic relay dispatch must never share one pool.
+                boolean isDns = IpV4UdpPacket.peekUdpDestPort(buffer, length) == 53;
+                java.util.concurrent.ExecutorService executor = isDns ? dnsForwardExecutor : udpDispatchExecutor;
+                try {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                dispatchUdp(packetCopy, packetCopy.length);
+                            } catch (Exception e) {
+                                log("UNCAUGHT in dispatchUdp: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                            }
                         }
-                    }
-                });
+                    });
+                } catch (java.util.concurrent.RejectedExecutionException e) {
+                    // Pool already shut down (service stopping) - drop this one packet rather
+                    // than let an uncaught exception here kill this thread (and, per Android's
+                    // default uncaught-exception handling, the entire app process with it).
+                }
             } else {
                 otherProtocolCount.incrementAndGet(); // ICMP echo/ping etc. - not handled, just counted so it's visible rather than mysterious
             }
@@ -637,6 +660,9 @@ public class DnsVpnService extends VpnService implements Runnable {
         }
         if (udpDispatchExecutor != null) {
             udpDispatchExecutor.shutdownNow();
+        }
+        if (dnsForwardExecutor != null) {
+            dnsForwardExecutor.shutdownNow();
         }
         synchronized (tcpSessionsLock) {
             for (TcpSession s : new ArrayList<TcpSession>(tcpSessions.values())) {
