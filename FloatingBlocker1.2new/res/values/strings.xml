@@ -108,6 +108,8 @@
     <string name="diagnostic_screen_title">Network Diagnostics</string>
     <string name="diagnostic_run_button">Run Diagnostics Again</string>
     <string name="diagnostic_copy_button">Copy Report to Clipboard</string>
+    <string name="diagnostic_live_start_button">Start Live Monitoring</string>
+    <string name="diagnostic_live_stop_button">Stop Live Monitoring</string>
     <string name="msg_diagnostic_running">Running diagnostics, this can take up to 30 seconds…</string>
     <string name="msg_diagnostic_copied">Report copied to clipboard</string>
     <string name="msg_vpn_safety_deleted">VPN Safety has been permanently removed. It cannot be used again.</string>

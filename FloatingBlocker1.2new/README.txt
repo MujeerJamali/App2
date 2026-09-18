@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.27 (diagnostic can now run live, updating continuously until you stop it)
+===================================================================================
+
 Floating Blocker - version 4.26 (diagnostic now reports whether Android has validated the VPN network)
 ===================================================================================
 
@@ -30,6 +33,28 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.27
+-----------------------
+- NEW: "Start Live Monitoring" button on the Diagnostics screen. Previously
+  every diagnostic was a single snapshot - you had to reproduce a failure,
+  THEN open Diagnostics, by which point the exact failing moment was often
+  already gone or buried under whatever happened after. Live monitoring
+  keeps the traffic counters and live log refreshing on-screen every ~1
+  second (auto-scrolling to the newest entries) so you can start it BEFORE
+  reproducing the problem and watch it happen in real time, and it keeps
+  running until you tap "Stop Live Monitoring" - not a fixed duration.
+- Only the traffic counters + log actually repeat every second - the real
+  network probes (direct DNS queries to CleanBrowsing/Google/Cloudflare,
+  the self-test, raw TCP tests) still run ONCE per Start/Run press, not
+  every tick. Repeating those every second would hammer external DNS
+  servers for no reason, which is a real concern given a live diagnostic
+  earlier in this app's history directly caught CleanBrowsing itself
+  rate-limiting this network.
+- Leaving the Diagnostics screen automatically stops live monitoring
+  (it would otherwise leak the screen's views and keep waking the app up
+  in the background for nothing) - come back and tap Start again to
+  resume watching.
 
 WHAT CHANGED IN 4.26
 -----------------------

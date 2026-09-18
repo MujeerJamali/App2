@@ -10,7 +10,10 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -68,9 +71,38 @@ public class DiagnosticActivity extends Activity {
 
     private static final String VPN_VIRTUAL_DNS = "10.0.0.2";
 
+    // How often the live tail (counters + log) refreshes once live monitoring is
+    // started. Cheap - pure in-memory reads, no network I/O - so this is safe to
+    // run indefinitely, unlike the one-off probes in buildStaticSection() which
+    // hit real DNS servers and shouldn't be repeated every second.
+    private static final long LIVE_REFRESH_INTERVAL_MS = 1000;
+
     private TextView txtReport;
+    private ScrollView scrollReport;
     private Button btnRun;
     private Button btnCopy;
+    private Button btnLive;
+
+    private final Handler liveHandler = new Handler(Looper.getMainLooper());
+    private boolean liveActive = false;
+    private String cachedStaticSection = "";
+
+    private final Runnable liveTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!liveActive) {
+                return;
+            }
+            txtReport.setText(cachedStaticSection + buildLiveTailSection());
+            scrollReport.post(new Runnable() {
+                @Override
+                public void run() {
+                    scrollReport.fullScroll(android.view.View.FOCUS_DOWN);
+                }
+            });
+            liveHandler.postDelayed(this, LIVE_REFRESH_INTERVAL_MS);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,12 +110,15 @@ public class DiagnosticActivity extends Activity {
         setContentView(R.layout.activity_diagnostic);
 
         txtReport = (TextView) findViewById(R.id.txtDiagnosticReport);
+        scrollReport = (ScrollView) findViewById(R.id.scrollDiagnosticReport);
         btnRun = (Button) findViewById(R.id.btnRunDiagnostic);
         btnCopy = (Button) findViewById(R.id.btnCopyDiagnostic);
+        btnLive = (Button) findViewById(R.id.btnLiveDiagnostic);
 
         btnRun.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
+                stopLiveMonitoring();
                 runDiagnostics();
             }
         });
@@ -99,31 +134,95 @@ public class DiagnosticActivity extends Activity {
             }
         });
 
+        btnLive.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                if (liveActive) {
+                    stopLiveMonitoring();
+                } else {
+                    startLiveMonitoring();
+                }
+            }
+        });
+
         runDiagnostics();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Stop the repeating refresh when leaving the screen - the Handler holds
+        // a reference to this Activity's Views via liveTick, so leaving it
+        // running would leak the Activity and keep waking the app up in the
+        // background for no reason. Live monitoring is meant to run "while I'm
+        // watching", not silently forever.
+        stopLiveMonitoring();
     }
 
     private void runDiagnostics() {
         btnRun.setEnabled(false);
         btnCopy.setEnabled(false);
+        btnLive.setEnabled(false);
         txtReport.setText(R.string.msg_diagnostic_running);
 
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String report = buildReport();
+                final String staticSection = buildStaticSection();
+                final String fullReport = staticSection + buildLiveTailSection();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        txtReport.setText(report);
+                        cachedStaticSection = staticSection;
+                        txtReport.setText(fullReport);
                         btnRun.setEnabled(true);
                         btnCopy.setEnabled(true);
+                        btnLive.setEnabled(true);
                     }
                 });
             }
         }).start();
     }
 
-    private String buildReport() {
+    /** Starts (or restarts) live monitoring: runs the one-off probes once, then refreshes just the traffic counters + log every LIVE_REFRESH_INTERVAL_MS until stopLiveMonitoring() is called (Stop button, leaving the screen, or pressing Run again). */
+    private void startLiveMonitoring() {
+        btnRun.setEnabled(false);
+        btnCopy.setEnabled(false);
+        btnLive.setEnabled(false);
+        txtReport.setText(R.string.msg_diagnostic_running);
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final String staticSection = buildStaticSection();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        cachedStaticSection = staticSection;
+                        liveActive = true;
+                        btnRun.setEnabled(true);
+                        btnCopy.setEnabled(true);
+                        btnLive.setEnabled(true);
+                        btnLive.setText(R.string.diagnostic_live_stop_button);
+                        liveHandler.post(liveTick); // first tick runs immediately, then reschedules itself
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** Stops live monitoring if running. Safe to call even when it isn't (Run button, onPause, etc. all call this unconditionally). */
+    private void stopLiveMonitoring() {
+        if (!liveActive) {
+            return;
+        }
+        liveActive = false;
+        liveHandler.removeCallbacks(liveTick);
+        btnLive.setText(R.string.diagnostic_live_start_button);
+    }
+
+    /** Everything that involves a real one-off network probe (direct DNS/TCP tests, the in-process self-test) - computed ONCE per Run/Start Live press, never repeated automatically, so live monitoring doesn't hammer external DNS servers every second. */
+    private String buildStaticSection() {
         StringBuilder sb = new StringBuilder();
         sb.append("Self-Control network diagnostic\n");
         sb.append("Time: ").append(new java.util.Date().toString()).append("\n");
@@ -213,21 +312,7 @@ public class DiagnosticActivity extends Activity {
         sb.append("\n--- Through Self-Control's own VPN (in-process pipeline test) ---\n");
         sb.append("Runs a synthetic query through DnsVpnService's real parse/block-check/forward/reply code directly, without going over a socket or touching the tun interface - see this file's class comment for why.\n\n");
         sb.append(selfTest("google.com"));
-        sb.append("\nTun traffic seen from OTHER apps since the service last started (proof the tunnel is actively capturing real traffic, separate from the self-test above):\n");
-        sb.append("  Total packets read from tun: ").append(DnsVpnService.getTotalPacketsRead()).append("\n");
-        sb.append("  Of those, routine IPv6 noise (filtered, not logged individually): ").append(DnsVpnService.getIpv6NoiseCount()).append("\n");
-        sb.append("  Real TCP packets (web browsing, apps): ").append(DnsVpnService.getTcpPacketsCount()).append("\n");
-        sb.append("  Real UDP packets (DNS, QUIC/HTTP3, etc.): ").append(DnsVpnService.getUdpPacketsCount()).append("\n");
-        sb.append("  Other protocol (ICMP/ping etc, not handled): ").append(DnsVpnService.getOtherProtocolCount()).append("\n");
-        sb.append("\nLive log from inside DnsVpnService (most recent activity, IPv6 noise excluded):\n");
-        List<String> serviceLog = DnsVpnService.getRecentLog();
-        if (serviceLog.isEmpty()) {
-            sb.append("  (empty - service may not have processed anything yet, or isn't running)\n");
-        } else {
-            for (String line : serviceLog) {
-                sb.append("  ").append(line).append("\n");
-            }
-        }
+        sb.append("(Live traffic counters and the log itself are at the bottom of this report, and refresh every ~1s while live monitoring is running.)\n");
 
         sb.append("\n--- Raw TCP connectivity tests ---\n");
         sb.append("Checks whether the internet works at all, separate from DNS/port 53.\n\n");
@@ -246,6 +331,31 @@ public class DiagnosticActivity extends Activity {
         sb.append("- If the network's own DNS server succeeded but CleanBrowsing/Google/Cloudflare (direct) all failed: this network only allows its own resolver and blocks external DNS servers specifically.\n");
         sb.append("- If the direct CleanBrowsing test above failed but Google/Cloudflare (direct) succeeded: CleanBrowsing specifically (our primary upstream) is down or rate-limited on this network right now - not a bug in this app. The VPN automatically retries via a fallback resolver (Cloudflare Family, 1.1.1.2) when this happens, so browsing should recover on its own; a 'trying fallback' line in the live log confirms it kicked in.\n");
 
+        return sb.toString();
+    }
+
+    /** Just the traffic counters + live log - pure in-memory reads, no network I/O, safe to call every second indefinitely. This is what live monitoring refreshes repeatedly; buildStaticSection() (the real probes) never re-runs on its own. */
+    private String buildLiveTailSection() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n--- Live tun traffic + log (updated ")
+                .append(new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()))
+                .append(liveActive ? " - refreshing every ~1s, tap Stop Live to freeze" : "")
+                .append(") ---\n");
+        sb.append("Tun traffic seen from OTHER apps since the service last started (proof the tunnel is actively capturing real traffic):\n");
+        sb.append("  Total packets read from tun: ").append(DnsVpnService.getTotalPacketsRead()).append("\n");
+        sb.append("  Of those, routine IPv6 noise (filtered, not logged individually): ").append(DnsVpnService.getIpv6NoiseCount()).append("\n");
+        sb.append("  Real TCP packets (web browsing, apps): ").append(DnsVpnService.getTcpPacketsCount()).append("\n");
+        sb.append("  Real UDP packets (DNS, QUIC/HTTP3, etc.): ").append(DnsVpnService.getUdpPacketsCount()).append("\n");
+        sb.append("  Other protocol (ICMP/ping etc, not handled): ").append(DnsVpnService.getOtherProtocolCount()).append("\n");
+        sb.append("\nLive log from inside DnsVpnService (most recent activity, IPv6 noise excluded):\n");
+        List<String> serviceLog = DnsVpnService.getRecentLog();
+        if (serviceLog.isEmpty()) {
+            sb.append("  (empty - service may not have processed anything yet, or isn't running)\n");
+        } else {
+            for (String line : serviceLog) {
+                sb.append("  ").append(line).append("\n");
+            }
+        }
         return sb.toString();
     }
 
