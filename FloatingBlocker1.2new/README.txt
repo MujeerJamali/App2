@@ -1,3 +1,6 @@
+Claude connection test - this line confirms Claude Code can read and edit this repo.
+===================================================================================
+
 Floating Blocker - version 4.17 (full-traffic VPN: real TCP/UDP relay, not DNS-only)
 ===================================================================================
 
