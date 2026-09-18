@@ -190,6 +190,62 @@ public class DnsVpnService extends VpnService implements Runnable {
         return sb.toString().trim();
     }
 
+    /**
+     * Logs what's actually inside an IPv6 packet that just got silently
+     * dropped (see the call site's comment for why this exists). Only logs
+     * TCP/UDP ones - routine ICMPv6 NDP/MLD housekeeping (next-header
+     * anything else) is genuinely just noise and would drown out the
+     * signal. Best-effort/defensive like every other parser in this app -
+     * never throws, worst case just doesn't log anything for a malformed
+     * packet.
+     */
+    private void logIpv6Packet(byte[] data, int length) {
+        try {
+            if (length < 40) {
+                return; // shorter than a fixed IPv6 header - not worth a log line
+            }
+            int nextHeader = data[6] & 0xFF;
+            if (nextHeader != ChecksumUtil.PROTOCOL_TCP && nextHeader != ChecksumUtil.PROTOCOL_UDP) {
+                return; // ICMPv6 etc. - routine housekeeping, not an app's data traffic
+            }
+            if (length < 44) {
+                return; // not enough room for even a source/dest port pair
+            }
+            byte[] src = new byte[16];
+            byte[] dest = new byte[16];
+            System.arraycopy(data, 8, src, 0, 16);
+            System.arraycopy(data, 24, dest, 0, 16);
+            int srcPort = ((data[40] & 0xFF) << 8) | (data[41] & 0xFF);
+            int destPort = ((data[42] & 0xFF) << 8) | (data[43] & 0xFF);
+
+            String protoName = (nextHeader == ChecksumUtil.PROTOCOL_TCP) ? "TCP" : "UDP";
+            String extra = "";
+            if (nextHeader == ChecksumUtil.PROTOCOL_TCP && length >= 40 + 14) {
+                int flags = data[40 + 13] & 0xFF;
+                if ((flags & 0x02) != 0 && (flags & 0x10) == 0) {
+                    extra = " SYN (new connection attempt)";
+                }
+            }
+            String owningApp = describeOwningApp(nextHeader, src, srcPort, dest, destPort);
+            log("[IPv6] " + protoName + " app=" + owningApp + " -> [" + ipv6ToString(dest) + "]:" + destPort
+                    + extra + " - NOT relayed, this VPN has no IPv6 route");
+        } catch (Exception e) {
+            // Best effort - a bug in this diagnostic logging must never break the tun read loop itself.
+        }
+    }
+
+    private static String ipv6ToString(byte[] addr) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 16; i += 2) {
+            if (i > 0) {
+                sb.append(':');
+            }
+            int word = ((addr[i] & 0xFF) << 8) | (addr[i + 1] & 0xFF);
+            sb.append(Integer.toHexString(word));
+        }
+        return sb.toString();
+    }
+
     private ParcelFileDescriptor vpnInterface;
     private Thread workerThread;
     private Thread reaperThread;
@@ -286,15 +342,20 @@ public class DnsVpnService extends VpnService implements Runnable {
             totalPacketsRead.incrementAndGet();
 
             if (((buffer[0] & 0xFF) >> 4) == 6) {
-                // Routine IPv6 background traffic (Neighbor Discovery, Multicast
-                // Listener Discovery, etc.) - this VPN never adds an IPv6 address,
-                // route, or allowFamily(AF_INET6), and Android's documented default
-                // for an unaddressed family is to block it rather than let it fall
-                // through to the real network, so IPv6 packets end up handed to us
-                // here. We don't handle IPv6 at all - just count these instead of
-                // spamming the detailed log, so a real TCP/UDP flow isn't pushed out
-                // of the limited log buffer by this.
+                // This VPN never adds an IPv6 address/route, so these are never
+                // relayed - see class comment. Previously assumed to be routine
+                // background noise (NDP/MLD etc.) and only ever counted, never
+                // individually logged. That assumption was never actually
+                // verified against a real browser failure: if an app's dual-stack
+                // resolver gets a real AAAA answer (which we DO forward correctly,
+                // since DNS is plain UDP/53 regardless of record type) and prefers
+                // IPv6 for the actual connection (standard Happy-Eyeballs
+                // behavior), that connection attempt would land here and vanish
+                // silently - DNS visibly working, the real connection leaving
+                // zero trace anywhere, which is exactly the symptom this was
+                // added to actually test rather than assume away.
                 ipv6NoiseCount.incrementAndGet();
+                logIpv6Packet(buffer, length);
                 continue;
             }
 

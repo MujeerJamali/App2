@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.28 (new leading theory: silently-dropped IPv6 connection attempts, now logged)
+===================================================================================
+
 Floating Blocker - version 4.27 (diagnostic can now run live, updating continuously until you stop it)
 ===================================================================================
 
@@ -33,6 +36,42 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.28
+-----------------------
+- A live capture ruled out Google-specific behavior directly: loading
+  wikipedia.org (unrelated to Google entirely) failed with the exact same
+  DNS_PROBE_FINISHED_BAD_CONFIG error, and the log around that moment
+  showed www.wikipedia.org queried from TWO different source ports almost
+  simultaneously - the classic signature of a dual-stack resolver sending
+  separate A (IPv4) and AAAA (IPv6) queries. Both got real answers and
+  were forwarded correctly. After that, same pattern as every previous
+  capture: no TCP or UDP connection for actually fetching the page ever
+  appeared anywhere in the log, for any app attribution, at all.
+- NEW LEADING THEORY: this VPN has a known, already-documented limitation
+  - it never declares any IPv6 address or route, so IPv6-version packets
+  landing on the tun interface were only ever silently counted
+  ("ipv6NoiseCount"), never individually logged, on the unverified
+  assumption they were just routine background noise (NDP/MLD etc). If a
+  browser's dual-stack connection logic gets a real IPv6 answer (which
+  this app DOES forward correctly, since DNS is plain UDP/53 regardless of
+  A vs AAAA) and prefers IPv6 for the actual page-load connection
+  (standard "Happy Eyeballs" behavior in modern browsers when a real
+  AAAA record exists), that connection attempt would land in this exact
+  silent-count-only path and vanish with zero trace - matching "DNS
+  visibly works, the real connection leaves no trace anywhere" exactly,
+  for every site/app combination observed so far (Google, Wikipedia,
+  Facebook's own CDN, Anthropic's API - all real, modern, IPv6-enabled
+  services; WhatsApp/Instagram/Facebook Lite, which don't race IPv6 the
+  same way, keep working).
+- NOT YET CONFIRMED - this is a theory pending direct evidence, deliberately
+  not accompanied by a speculative "fix" this time. FIXED (diagnostic-only):
+  what used to be an anonymous, undifferentiated counter now logs the real
+  destination, protocol, owning app, and whether it's a TCP SYN (i.e. a
+  genuine new connection attempt, not routine housekeeping) for every IPv6
+  TCP/UDP packet silently dropped this way. The next capture during a real
+  failure should show definitively whether this is actually what's
+  happening.
 
 WHAT CHANGED IN 4.27
 -----------------------
