@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.30 (TEMPORARY: DISALLOW_CONFIG_VPN released during WireGuard migration testing)
+===================================================================================
+
 Floating Blocker - version 4.29 (real root cause found: the VPN tunnel was restarting roughly every minute)
 ===================================================================================
 
@@ -39,6 +42,34 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.30
+-----------------------
+- CONTEXT: this app's whole custom VPN engine (DnsVpnService's hand-rolled
+  TCP/UDP relay) is being replaced with the official WireGuard protocol -
+  a real, standard remote VPN server, not custom packet-relay code. Step
+  one is proving the new server works at all, using the official WireGuard
+  Android app before writing the real integration into this app.
+- PROBLEM HIT: applyPermanentDeviceOwnerProtections() has always
+  unconditionally applied UserManager.DISALLOW_CONFIG_VPN as a permanent,
+  every-cycle restriction (real tamper-resistance - stops anyone from
+  bypassing Blocks by just installing a different VPN app). That's exactly
+  right for the finished product, but it also means Android silently
+  refuses to authorize ANY third-party VPN app - including the official
+  WireGuard app being used to test the replacement server - with no
+  in-app toggle to release it. ("VPN service not authorized by user" in
+  WireGuard, with no obvious cause, is what this restriction looks like
+  from the other app's side.)
+- FIXED (temporarily): that one addUserRestriction() call now calls
+  clearUserRestriction() instead, so any third-party VPN - specifically
+  the WireGuard app - can be authorized again while the new engine is
+  being built and tested against the real server.
+- THIS IS NOT THE FINAL STATE. Once WireGuard is integrated directly into
+  this app (replacing DnsVpnService, same package, same Device Owner),
+  DISALLOW_CONFIG_VPN needs to go back to being actively enforced -
+  otherwise this specific protection is simply off, permanently, on any
+  device running this build. Revert this one line back to
+  addUserRestriction() as part of that integration work, not before.
 
 WHAT CHANGED IN 4.29
 -----------------------
