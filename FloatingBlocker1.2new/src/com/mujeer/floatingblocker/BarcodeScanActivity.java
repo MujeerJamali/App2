@@ -186,7 +186,7 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             return;
         }
         decodeInFlight = true;
-        Camera.Size size = cam.getParameters().getPreviewSize();
+        final Camera.Size size = cam.getParameters().getPreviewSize();
         new Thread(new Runnable() {
             @Override
             public void run() {
