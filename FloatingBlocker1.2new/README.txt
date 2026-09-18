@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.21 (fixed: UDP-packet thread storm causing intermittent Chrome DNS failures)
+===================================================================================
+
 Floating Blocker - version 4.17 (full-traffic VPN: real TCP/UDP relay, not DNS-only)
 ===================================================================================
 
@@ -12,6 +15,37 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.21
+-----------------------
+- LIKELY REAL FIX for intermittent "Chrome says DNS_PROBE_FINISHED_BAD_CONFIG,
+  other apps sometimes don't load" while every diagnostic test (direct DNS,
+  the in-process self-test, raw TCP) reports success: DnsVpnService was
+  spawning a brand-new raw Thread for EVERY single UDP packet it read off
+  the tun interface - not one thread per flow, one thread per packet. That
+  includes every DNS query AND every other UDP packet (QUIC/HTTP3, which is
+  most of what modern Chrome traffic actually is). A real diagnostic
+  session showed 5,000+ UDP packets, meaning 5,000+ raw OS threads created
+  in one sitting - and the live pipeline log showed DNS forwards that
+  should take ~200-800ms (confirmed by the diagnostic's own direct-probe
+  timings to the same upstream) instead taking 3.8-4.1 seconds under load.
+  That's thread-scheduling contention, not network latency - enough of it
+  that Chrome (and other apps) legitimately give up and report DNS as
+  broken outright rather than just slow.
+- FIXED: UDP packet dispatch now runs on a bounded fixed thread pool
+  (UDP_DISPATCH_THREADS = 64) instead of an unbounded Thread-per-packet.
+  One slow upstream DNS response still can't block the next query (the
+  original point of dispatching UDP off the tun-read thread at all) -
+  concurrency is preserved, just capped instead of unbounded.
+- INCREASED the in-app diagnostic log buffer (DiagnosticActivity's live
+  pipeline log) from the last 60 events to the last 400. At real traffic
+  volumes (thousands of packets per session) 60 entries got overwritten
+  within seconds, which meant the exact moment something actually failed
+  was almost always already evicted by the time you opened Diagnostics to
+  look. 400 gives a much better chance the failure itself is still in the
+  visible window.
+- Diagnostic report text size increased (12sp -> 15sp) - easier to actually
+  read the report on-device without zooming, per direct request.
 
 WHAT CHANGED IN 4.20
 -----------------------

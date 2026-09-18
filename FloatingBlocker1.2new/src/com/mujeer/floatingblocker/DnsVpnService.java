@@ -81,12 +81,27 @@ public class DnsVpnService extends VpnService implements Runnable {
     private static final long UDP_IDLE_TIMEOUT_MS = 2 * 60 * 1000;
     private static final long REAP_INTERVAL_MS = 30 * 1000;
 
+    // How many UDP packets (DNS queries AND every relayed non-DNS datagram -
+    // QUIC/HTTP3 is UDP too) can be dispatched concurrently. Previously each
+    // packet got its own brand-new raw Thread - fine at low volume, but a
+    // real device easily produces thousands of UDP packets per session
+    // (QUIC alone), and creating a fresh OS thread for every single one of
+    // them causes real scheduling contention: a DNS query queued behind a
+    // burst of unrelated QUIC-triggered thread creation can end up taking
+    // seconds instead of the ~200-800ms a direct query to the same upstream
+    // takes, and Chrome (and other apps) interpret that delay as DNS being
+    // broken outright (DNS_PROBE_FINISHED_BAD_CONFIG) rather than just slow.
+    // A bounded pool keeps genuinely concurrent dispatch (so one slow
+    // upstream reply still never blocks the next query, per the class
+    // comment) without unbounded thread creation being the bottleneck.
+    private static final int UDP_DISPATCH_THREADS = 64;
+
     // In-memory diagnostic trail of the most recent queries handled by this
     // service, so DiagnosticActivity can show exactly what happened inside
     // the real pipeline for a real query - there's no practical logcat
     // access on this device, so this is the only way to see past "it
     // failed" into "it failed HERE, with THIS exception".
-    private static final int MAX_LOG_ENTRIES = 60;
+    private static final int MAX_LOG_ENTRIES = 400;
     private static final java.util.LinkedList<String> recentLog = new java.util.LinkedList<String>();
     private static final java.util.concurrent.atomic.AtomicInteger ipv6NoiseCount = new java.util.concurrent.atomic.AtomicInteger(0);
     private static final java.util.concurrent.atomic.AtomicInteger totalPacketsRead = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -149,6 +164,7 @@ public class DnsVpnService extends VpnService implements Runnable {
     private Thread reaperThread;
     private volatile boolean running = false;
     private FileOutputStream tunOut;
+    private java.util.concurrent.ExecutorService udpDispatchExecutor;
 
     private final Object tcpSessionsLock = new Object();
     private final Map<String, TcpSession> tcpSessions = new HashMap<String, TcpSession>();
@@ -201,6 +217,7 @@ public class DnsVpnService extends VpnService implements Runnable {
         }
         running = true;
         runningInstance = this;
+        udpDispatchExecutor = java.util.concurrent.Executors.newFixedThreadPool(UDP_DISPATCH_THREADS);
         workerThread = new Thread(this);
         workerThread.start();
         reaperThread = new Thread(new Runnable() {
@@ -267,10 +284,13 @@ public class DnsVpnService extends VpnService implements Runnable {
             } else if (protocol == ChecksumUtil.PROTOCOL_UDP) {
                 udpPacketsCount.incrementAndGet();
                 // Each UDP datagram is independent (no ordering guarantee to
-                // preserve), so - same as before - each gets its own short-lived
-                // thread so one slow upstream response never blocks the next
-                // incoming query from being read.
-                new Thread(new Runnable() {
+                // preserve), so it's dispatched onto a bounded worker pool
+                // (UDP_DISPATCH_THREADS) rather than tun's own read thread -
+                // one slow upstream response still never blocks the next
+                // incoming query from being read. See UDP_DISPATCH_THREADS'
+                // comment for why this is a fixed pool now, not a raw
+                // Thread-per-packet.
+                udpDispatchExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         try {
@@ -279,7 +299,7 @@ public class DnsVpnService extends VpnService implements Runnable {
                             log("UNCAUGHT in dispatchUdp: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                         }
                     }
-                }).start();
+                });
             } else {
                 otherProtocolCount.incrementAndGet(); // ICMP echo/ping etc. - not handled, just counted so it's visible rather than mysterious
             }
@@ -614,6 +634,9 @@ public class DnsVpnService extends VpnService implements Runnable {
         }
         if (reaperThread != null) {
             reaperThread.interrupt();
+        }
+        if (udpDispatchExecutor != null) {
+            udpDispatchExecutor.shutdownNow();
         }
         synchronized (tcpSessionsLock) {
             for (TcpSession s : new ArrayList<TcpSession>(tcpSessions.values())) {
