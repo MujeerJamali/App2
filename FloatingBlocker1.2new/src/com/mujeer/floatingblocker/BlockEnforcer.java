@@ -55,6 +55,7 @@ public class BlockEnforcer {
         applyBootstrapToolsLock(context, dpm, admin);
         checkForNewlyInstalledApps(context, ownPackage);
         cleanUpExpiredBreaks(new HolidayBreaksStorage(context));
+        checkForMissedAlarms(context);
 
         List<Block> blocks = new BlocksStorage(context).loadBlocks();
         Set<String> allManaged = new HashSet<String>();
@@ -117,17 +118,47 @@ public class BlockEnforcer {
             }
         }
 
+        BlockPunishmentStorage punishmentStorage = new BlockPunishmentStorage(context);
         int nowMinutes = LockScheduleStorage.currentMinutesOfDay();
         int nowDay = LockScheduleStorage.currentDayOfWeek();
         for (Block b : blocks) {
             if (blockIdsOnBreak.contains(b.id)) {
                 continue; // this Block is on a Holiday Break right now - skip it
             }
-            if (b.isActiveNow(nowMinutes, nowDay)) {
+            // A missed Alarm can widen this Block's current/next occurrence by
+            // an hour on each side, one time only - see BlockPunishmentStorage.
+            if (b.isActiveNow(nowMinutes, nowDay) || punishmentStorage.isWidenedActive(b.id, now)) {
                 desiredSuspended.addAll(b.blockedPackages);
             }
         }
         return desiredSuspended;
+    }
+
+    /**
+     * Catches up on any Alarm occurrence whose full 10-minute ring window
+     * has already elapsed but was never resolved - most notably because the
+     * phone was powered off through the whole window, so neither
+     * AlarmRingReceiver nor the punishment-deadline alarm ever got to run.
+     * Walks forward one occurrence at a time from each Alarm's last
+     * resolved occurrence, punishing every fully-elapsed one it finds,
+     * and stops as soon as it reaches one that's still within its live
+     * grace period (that one is left for the normal live path to resolve).
+     */
+    private static void checkForMissedAlarms(Context context) {
+        long now = System.currentTimeMillis();
+        long ringMillis = Alarm.RING_MINUTES * 60L * 1000L;
+        AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
+        for (Alarm alarm : new AlarmsStorage(context).loadAlarms()) {
+            long cursor = runtime.getLastHandledOccurrence(alarm.id);
+            while (true) {
+                long next = alarm.nextOccurrenceAfter(cursor);
+                if (next <= 0 || next > now || now < next + ringMillis) {
+                    break;
+                }
+                AlarmPunisher.resolveMissed(context, alarm, next);
+                cursor = next;
+            }
+        }
     }
 
     /**

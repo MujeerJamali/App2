@@ -50,6 +50,8 @@ public class MainActivity extends Activity {
         Button btnLockSchedule = (Button) findViewById(R.id.btnLockSchedule);
         Button btnHolidayBreaks = (Button) findViewById(R.id.btnHolidayBreaks);
         Button btnWebsites = (Button) findViewById(R.id.btnWebsites);
+        Button btnAlarms = (Button) findViewById(R.id.btnAlarms);
+        Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
 
         btnBatteryExemption.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
@@ -106,6 +108,20 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(MainActivity.this, WebsitesListActivity.class));
             }
         });
+
+        btnAlarms.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, AlarmsListActivity.class));
+            }
+        });
+
+        btnBarcodes.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, BarcodesListActivity.class));
+            }
+        });
     }
 
     @Override
@@ -114,6 +130,7 @@ public class MainActivity extends Activity {
         // Cheap and idempotent - makes sure anything changed in Blocks/Lock
         // Schedule screens, or elsewhere, is reflected immediately.
         BlockEnforcer.reapplyAndReschedule(this);
+        AlarmScheduler.rescheduleAll(this);
         refreshUi();
     }
 

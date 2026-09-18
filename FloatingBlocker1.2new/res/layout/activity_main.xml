@@ -56,6 +56,20 @@
             android:layout_marginTop="12dp"
             android:text="@string/websites_button" />
 
+        <Button
+            android:id="@+id/btnAlarms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/alarms_button" />
+
+        <Button
+            android:id="@+id/btnBarcodes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/barcodes_button" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

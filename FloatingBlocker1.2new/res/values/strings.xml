@@ -97,4 +97,53 @@
     <string name="confirm_block_website_title">Block this website?</string>
     <string name="confirm_block_website_message">Block the entire domain \"%1$s\"? This blocks the whole domain, not just this specific page.</string>
     <string name="confirm_block_website_yes">Block it</string>
+
+    <!-- Registered Barcodes -->
+    <string name="barcodes_button">Registered Barcodes</string>
+    <string name="barcodes_screen_title">Registered Barcodes</string>
+    <string name="barcodes_desc">Scan a barcode or QR code once here to register it. Alarms can then require scanning one of these exact codes to be dismissed.</string>
+    <string name="msg_barcodes_locked">Removing a barcode can only be done during an unlocked time. Registering a new one is always allowed.</string>
+    <string name="scan_new_barcode_button">+ Scan New Barcode</string>
+    <string name="barcode_label_hint">Label (e.g. Kitchen fridge)</string>
+    <string name="barcode_scanned_title">Barcode scanned</string>
+    <string name="barcode_default_label">Barcode</string>
+    <string name="msg_barcode_registered">Barcode registered.</string>
+    <string name="msg_no_barcodes_to_select">You don\'t have any registered barcodes yet - scan one first under Registered Barcodes.</string>
+
+    <!-- Barcode scanning screen -->
+    <string name="barcode_scan_register_instructions">Point the camera at the barcode or QR code you want to register.</string>
+    <string name="barcode_scan_dismiss_instructions">Scan the correct barcode to stop the alarm.</string>
+    <string name="barcode_scan_wrong_code">That\'s not the right code - keep scanning.</string>
+    <string name="msg_camera_permission_required">Camera permission is required to scan a barcode.</string>
+    <string name="msg_camera_unavailable">Could not open the camera.</string>
+
+    <!-- Alarms -->
+    <string name="alarms_button">Alarms</string>
+    <string name="alarms_screen_title">Alarms</string>
+    <string name="add_alarm_button">+ Add Alarm</string>
+    <string name="msg_alarms_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="alarm_subtitle_format">%1$d trigger(s), %2$d block(s) punished on miss</string>
+    <string name="delete_alarm_button">Delete This Alarm</string>
+
+    <!-- Alarm edit screen -->
+    <string name="alarm_edit_screen_title">Edit Alarm</string>
+    <string name="alarm_name_hint">Alarm name (e.g. Morning wake-up)</string>
+    <string name="alarm_triggers_label">Rings at (pick a time, then Add Trigger to choose its days)</string>
+    <string name="add_trigger_button">+ Add Trigger</string>
+    <string name="alarm_barcodes_label">Any of these barcodes dismisses this alarm</string>
+    <string name="select_barcodes_button">Select Barcodes</string>
+    <string name="alarm_affected_blocks_label">Missing it for 10 minutes widens these Blocks by 1 hour each side, once</string>
+    <string name="msg_time_picked">Time picked - now tap Add Trigger to choose its days.</string>
+    <string name="msg_pick_time_first">Pick a time first.</string>
+    <string name="msg_enter_alarm_name">Enter a name for this Alarm.</string>
+    <string name="msg_add_at_least_one_trigger">Add at least one trigger.</string>
+    <string name="msg_select_at_least_one_barcode">Select at least one barcode that can dismiss this alarm.</string>
+    <string name="msg_alarm_saved">Alarm saved.</string>
+
+    <!-- Alarm ringing screen -->
+    <string name="alarm_ringing_title">ALARM RINGING</string>
+    <string name="alarm_ringing_text">Scan the correct barcode to stop it</string>
+    <string name="alarm_ring_scan_hint">No snooze, no back button - scanning the correct barcode is the only way to stop this.</string>
+    <string name="scan_to_dismiss_button">Scan Barcode to Dismiss</string>
+    <string name="alarm_notification_channel_name">Alarm ringing</string>
 </resources>

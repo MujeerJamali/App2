@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mujeer.floatingblocker"
-    android:versionCode="32"
-    android:versionName="4.32">
+    android:versionCode="33"
+    android:versionName="4.33">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -10,6 +10,14 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -51,6 +59,27 @@
             android:label="@string/websites_screen_title" />
 
         <activity
+            android:name=".BarcodesListActivity"
+            android:label="@string/barcodes_screen_title" />
+
+        <activity
+            android:name=".BarcodeScanActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".AlarmsListActivity"
+            android:label="@string/alarms_screen_title" />
+
+        <activity
+            android:name=".AlarmEditActivity"
+            android:label="@string/alarm_edit_screen_title" />
+
+        <activity
+            android:name=".AlarmRingActivity"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance" />
+
+        <activity
             android:name=".ShareWebsiteActivity"
             android:label="@string/share_website_label"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
@@ -90,6 +119,23 @@
             android:enabled="true"
             android:exported="false"
             android:directBootAware="true" />
+
+        <receiver
+            android:name=".AlarmRingReceiver"
+            android:enabled="true"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <receiver
+            android:name=".AlarmPunishmentDeadlineReceiver"
+            android:enabled="true"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <service
+            android:name=".AlarmRingService"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 

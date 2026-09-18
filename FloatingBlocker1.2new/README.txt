@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.33 (NEW: barcode-dismiss Alarms that punish missed wake-ups by widening Blocks)
+===================================================================================
+
 Floating Blocker - version 4.32 (VPN removed from this app entirely - back to app-suspension-only blocking)
 ===================================================================================
 
@@ -48,6 +51,48 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.33
+-----------------------
+- NEW: "Alarms" - inspired by "I Can't Wake Up!"-style alarm apps, but with
+  exactly one dismiss method and nothing else: scanning a registered
+  barcode/QR code. No snooze, no back button, no swipe-to-dismiss. An Alarm
+  can have several triggers (each its own time + set of days, e.g. 6:00 AM
+  weekdays and 8:00 AM weekends), and any one of several registered
+  barcodes you choose can dismiss it - register a barcode once (under the
+  new "Registered Barcodes" screen) by scanning it, then place that object
+  somewhere that actually requires getting up.
+- NEW: missing an Alarm (no correct scan within 10 minutes of it ringing)
+  punishes the Blocks you chose for that Alarm: each one's current/next
+  occurrence gets widened by 1 hour earlier on the start and 1 hour later
+  on the end (e.g. 6:00 AM-6:00 PM becomes 5:00 AM-7:00 PM), capped so a
+  single occurrence never exceeds a full 24-hour day. This is deliberately
+  ONE-TIME, not permanent - it applies to that one occurrence only, and
+  the Block reverts to its normal configured schedule the next time
+  around, achieved by never touching the Block's own stored ranges at all
+  (see BlockPunishmentStorage) - just a temporary, self-expiring override
+  consulted at evaluation time.
+- The punishment is skipped entirely if the moment the 10-minute window
+  expires falls during a currently UNLOCKED Lock Schedule period.
+- Missing an Alarm because the phone was powered off through its entire
+  ring window still punishes it - BlockEnforcer now catches up on any
+  fully-elapsed, never-resolved Alarm occurrence the next time the app or
+  device wakes up (see checkForMissedAlarms), walking forward through any
+  backlog one occurrence at a time.
+- Uses ZXing's core barcode-decoding library (a single, dependency-free
+  jar - no native code, no AAR, nothing like the AmneziaWG library
+  situation from 4.30) paired with the classic Camera API for the actual
+  scanning, kept deliberately in the same "plain SDK, zero real
+  dependencies" style as the rest of this app.
+- New permissions: CAMERA (for scanning), VIBRATE/WAKE_LOCK/
+  FOREGROUND_SERVICE/USE_FULL_SCREEN_INTENT (for the ringing screen and
+  sound/vibration while an Alarm is active).
+- HONEST LIMIT: like every app on Android, this cannot truly prevent
+  force-stopping Self-Control itself from Settings, or powering the phone
+  off - Device Owner has no API for either. The phone-off case is
+  specifically handled by the missed-alarm catch-up above; force-stop
+  during an active ring isn't preventable by any app, same limitation this
+  README has always been honest about for Settings access generally.
 
 WHAT CHANGED IN 4.32
 -----------------------
