@@ -139,6 +139,23 @@ public class DiagnosticActivity extends Activity {
             } else {
                 NetworkCapabilities caps = cm.getNetworkCapabilities(active);
                 sb.append("Transport: ").append(describeTransports(caps)).append("\n");
+                if (caps != null) {
+                    boolean hasInternet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                    boolean validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                    boolean captivePortal = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL);
+                    sb.append("Android's own validation of this network: INTERNET capability=").append(hasInternet)
+                            .append(", VALIDATED=").append(validated)
+                            .append(captivePortal ? ", CAPTIVE_PORTAL=true" : "").append("\n");
+                    if (!validated) {
+                        sb.append("  -> Android has NOT marked this network as validated (its own connectivity probe\n")
+                          .append("     hasn't succeeded, or hasn't run yet). Chrome and some other apps deliberately\n")
+                          .append("     refuse to load pages over an unvalidated network, even though DNS and other\n")
+                          .append("     apps may still work fine over it - this can look exactly like 'DNS works but\n")
+                          .append("     Chrome does nothing' without being a bug in this app's own packet handling.\n");
+                    }
+                } else {
+                    sb.append("Android's own validation of this network: could not read NetworkCapabilities (null)\n");
+                }
                 LinkProperties props = cm.getLinkProperties(active);
                 if (props != null) {
                     sb.append("Interface: ").append(props.getInterfaceName()).append("\n");
@@ -219,6 +236,7 @@ public class DiagnosticActivity extends Activity {
         sb.append(tcpConnectTest("Google DNS-over-TCP", "8.8.8.8", 53));
 
         sb.append("\n--- How to read this ---\n");
+        sb.append("- If 'Android's own validation of this network' above shows VALIDATED=false: this is very likely THE cause of 'DNS/some apps work, Chrome (or other apps) show nothing' - Chrome specifically is known to refuse to load pages over a network Android hasn't validated, even while DNS lookups and simpler apps go ahead anyway. Not a bug in this app's own packet handling if so.\n");
         sb.append("- If ALL direct/TCP tests above failed (UDP and TCP, every destination): the network itself has no working internet right now - not something this app can fix.\n");
         sb.append("- If direct tests succeeded but the self-test failed with 'DnsVpnService is not currently running': the service itself isn't up - that's the actual problem, not any single query.\n");
         sb.append("- If direct tests succeeded but the self-test failed some other way: the bug is inside DnsVpnService's pipeline itself, not the network or Android's VPN routing - check the live log below for the exact line where it stopped (parse failure, forward exception, or buildResponsePacket failure).\n");

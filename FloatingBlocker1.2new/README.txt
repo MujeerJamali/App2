@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.26 (diagnostic now reports whether Android has validated the VPN network)
+===================================================================================
+
 Floating Blocker - version 4.25 (found: Chrome's DNS works but its connections may be silently Block-dropped)
 ===================================================================================
 
@@ -27,6 +30,28 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.26
+-----------------------
+- 4.25's Block-drop logging came back completely clean (no DROPPED/reaper
+  lines at all) on a live diagnostic where Chrome's DNS still succeeded but
+  NO TCP or UDP connection for com.android.chrome appeared anywhere else in
+  the log - ruling out the Block-list theory directly. Chrome's actual
+  page-load connection isn't reaching this app's code at all - not
+  mishandled, not dropped, just never arriving - meaning whatever's wrong
+  is between Chrome and this app's tun interface, not inside DnsVpnService.
+- ADDED: the diagnostic now reports whether Android has actually marked
+  the active (VPN) network as VALIDATED (NetworkCapabilities.
+  NET_CAPABILITY_VALIDATED), alongside the INTERNET and CAPTIVE_PORTAL
+  capabilities. This is a real, separate Android mechanism: the OS runs
+  its own connectivity probe on every network including a VPN's, and
+  Chrome specifically is known to refuse to load pages over a network
+  that hasn't been validated yet, even while DNS lookups and other apps
+  may proceed regardless. If VALIDATED=false shows up, that's very likely
+  the actual explanation for "DNS/some apps work, Chrome shows nothing" -
+  and it would mean the fix is in how/whether this VPN's Builder responds
+  to Android's own validation probe, not in packet-by-packet relay logic
+  that's already been gone through in detail without finding a bug there.
 
 WHAT CHANGED IN 4.25
 -----------------------
