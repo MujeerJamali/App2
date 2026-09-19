@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.37 (real root cause found: barcode decoding was scanning a sideways image)
+===================================================================================
+
 Floating Blocker - version 4.36 (NEW: flashlight toggle on the barcode scan screen)
 ===================================================================================
 
@@ -60,6 +63,22 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.37
+-----------------------
+- ACTUAL ROOT CAUSE FOUND for "camera shows, but never detects any
+  barcode": camera.setDisplayOrientation(90) only rotates what's rendered
+  on screen for the user to see - it does NOT rotate the raw preview
+  buffer delivered to onPreviewFrame(). That buffer stays in the camera
+  sensor's native (landscape) orientation regardless, so every decode
+  attempt was analyzing a sideways image the whole time. A QR code's
+  detector is rotation-tolerant enough to sometimes survive this, but a
+  real 1D barcode essentially never does - matching exactly what was
+  reported (nothing detected, ever).
+- FIXED: the raw NV21 buffer is now rotated 90 degrees clockwise (the
+  standard, well-known NV21 rotation routine) to match
+  setDisplayOrientation(90) before being handed to ZXing, so the decoder
+  now sees the same upright orientation the user sees on screen.
 
 WHAT CHANGED IN 4.36
 -----------------------

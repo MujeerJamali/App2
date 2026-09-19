@@ -233,8 +233,18 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             @Override
             public void run() {
                 try {
+                    // setDisplayOrientation(90) only rotates what's shown on
+                    // screen - the raw preview buffer camera hands us is
+                    // still in the sensor's native (landscape) orientation.
+                    // Rotate it to match what's actually on screen, or
+                    // decoding is effectively scanning a sideways image -
+                    // survivable for a rotation-tolerant QR detector, but
+                    // not for a real 1D barcode.
+                    byte[] rotated = rotateNV21Clockwise90(data, size.width, size.height);
+                    int rotatedWidth = size.height;
+                    int rotatedHeight = size.width;
                     PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(
-                            data, size.width, size.height, 0, 0, size.width, size.height, false);
+                            rotated, rotatedWidth, rotatedHeight, 0, 0, rotatedWidth, rotatedHeight, false);
                     BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
                     final Result result = reader.decodeWithState(bitmap);
                     runOnUiThread(new Runnable() {
@@ -253,6 +263,27 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
                 }
             }
         }).start();
+    }
+
+    /** Standard NV21 90-degree-clockwise rotation - matches setDisplayOrientation(90) above. Output is height x width. */
+    private static byte[] rotateNV21Clockwise90(byte[] data, int width, int height) {
+        byte[] rotated = new byte[data.length];
+        int frameSize = width * height;
+
+        int i = 0;
+        for (int x = 0; x < width; x++) {
+            for (int y = height - 1; y >= 0; y--) {
+                rotated[i++] = data[y * width + x];
+            }
+        }
+        i = frameSize;
+        for (int x = 0; x < width; x += 2) {
+            for (int y = height - 1; y >= 0; y -= 2) {
+                rotated[i++] = data[frameSize + (y * width) + x];
+                rotated[i++] = data[frameSize + (y * width) + (x + 1)];
+            }
+        }
+        return rotated;
     }
 
     private void onDecoded(String value) {
