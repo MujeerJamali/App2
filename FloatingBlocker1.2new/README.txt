@@ -64,6 +64,32 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.38
+-----------------------
+- TEMPORARY DIAGNOSTIC BUILD: the 4.37 orientation fix alone did not
+  resolve "barcode scanning still not working" as reported after
+  rebuilding, so there's at least one more bug still present. Rather
+  than guess again, the barcode scan screen now shows live on-screen
+  diagnostics (same philosophy as the rest of this app - no logcat
+  reliance, since that's not practically accessible on a non-rooted
+  device): preview size and format (compared against the NV21 format
+  ZXing decoding assumes), a running count of camera preview frames
+  received, a running count of decode attempts made, and the most
+  recent decode error/result (including the previously-silent "no code
+  in this frame" case).
+- If the camera fails to open, the screen no longer immediately closes
+  - it now stays open showing the exact failure so it can actually be
+  read, instead of an instant close with nothing visible.
+- A sanity check was added before decoding: if the raw frame buffer is
+  smaller than the claimed preview width x height, that's now reported
+  as a specific error instead of silently failing or crashing.
+- This diagnostic readout temporarily replaces the normal
+  scan-instructions/wrong-code text on this screen - accepted for this
+  debug build so the real remaining cause can be pinned down from what
+  gets reported back (camera never opening vs. zero frames arriving
+  vs. a real exception vs. a preview-format mismatch vs. a buffer-size
+  mismatch).
+
 WHAT CHANGED IN 4.37
 -----------------------
 - ACTUAL ROOT CAUSE FOUND for "camera shows, but never detects any

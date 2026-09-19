@@ -7,6 +7,8 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
@@ -58,6 +60,27 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     private boolean torchOn = false;
     private Set<String> acceptedValues;
 
+    // Temporary on-screen diagnostics - this app deliberately avoids relying on
+    // logcat (see DiagnosticActivity's original design note: not practically
+    // accessible on a non-rooted device), so when something like "camera shows
+    // but never decodes" needs debugging, the counters/last-error need to be
+    // visible directly on screen instead.
+    private final Handler diagnosticHandler = new Handler(Looper.getMainLooper());
+    private volatile long framesReceived = 0;
+    private volatile long decodeAttempts = 0;
+    private volatile String lastDecodeError = "(none)";
+    private volatile String previewSizeText = "(camera not open yet)";
+    private final Runnable diagnosticTick = new Runnable() {
+        @Override
+        public void run() {
+            txtStatus.setText("Preview size: " + previewSizeText
+                    + "\nFrames received: " + framesReceived
+                    + "\nDecode attempts: " + decodeAttempts
+                    + "\nLast decode error: " + lastDecodeError);
+            diagnosticHandler.postDelayed(this, 500);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,6 +131,8 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
         }
+
+        diagnosticHandler.post(diagnosticTick);
     }
 
     @Override
@@ -161,6 +186,10 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             torchOn = false;
             btnFlashlight.setText(R.string.flashlight_on_button);
 
+            Camera.Size actualSize = params.getPreviewSize();
+            previewSizeText = actualSize.width + "x" + actualSize.height
+                    + " (format=" + params.getPreviewFormat() + ", ImageFormat.NV21=" + android.graphics.ImageFormat.NV21 + ")";
+
             camera.setParameters(params);
             camera.setDisplayOrientation(90);
             camera.setPreviewDisplay(surfaceView.getHolder());
@@ -173,9 +202,11 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             camera.startPreview();
         } catch (Exception e) {
             Log.e("BarcodeScanActivity", "Could not start camera", e);
+            // Deliberately NOT finishing here while diagnosing - staying on
+            // screen with the error visible in previewSizeText is more
+            // useful right now than an instant close the user can't read.
+            previewSizeText = "FAILED TO OPEN: " + e.getClass().getSimpleName() + ": " + e.getMessage();
             Toast.makeText(this, R.string.msg_camera_unavailable, Toast.LENGTH_LONG).show();
-            setResult(RESULT_CANCELED);
-            finish();
         }
     }
 
@@ -224,6 +255,7 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     }
 
     private void handlePreviewFrame(final byte[] data, Camera cam) {
+        framesReceived++;
         if (decodeInFlight) {
             return;
         }
@@ -232,7 +264,12 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         new Thread(new Runnable() {
             @Override
             public void run() {
+                decodeAttempts++;
                 try {
+                    if (data.length < size.width * size.height) {
+                        lastDecodeError = "buffer too small: " + data.length + " bytes for " + size.width + "x" + size.height;
+                        return;
+                    }
                     // setDisplayOrientation(90) only rotates what's shown on
                     // screen - the raw preview buffer camera hands us is
                     // still in the sensor's native (landscape) orientation.
@@ -254,9 +291,10 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
                         }
                     });
                 } catch (NotFoundException e) {
-                    // No code in this frame - completely normal, just try the next one.
+                    lastDecodeError = "NotFoundException (normal - no code in frame)";
                 } catch (Exception e) {
                     Log.e("BarcodeScanActivity", "Decode error", e);
+                    lastDecodeError = e.getClass().getSimpleName() + ": " + e.getMessage();
                 } finally {
                     reader.reset();
                     decodeInFlight = false;
@@ -304,11 +342,13 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     protected void onPause() {
         super.onPause();
         stopCamera();
+        diagnosticHandler.removeCallbacks(diagnosticTick);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        diagnosticHandler.post(diagnosticTick);
         if (camera == null && surfaceView.getHolder().getSurface() != null
                 && surfaceView.getHolder().getSurface().isValid()
                 && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
