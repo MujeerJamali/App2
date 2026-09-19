@@ -12,8 +12,9 @@ import java.util.Set;
 /**
  * A simple list of blocked domains (not full URLs - whole domains only,
  * per design: never block a specific page, always the entire domain).
- * Enforcement itself isn't built yet - this is just the storage +
- * management UI, ready for whatever enforcement mechanism gets added.
+ * Enforced via Chrome's URLBlocklist managed policy (see
+ * BlockEnforcer.applyContentFilteringProtections) - a plain domain here,
+ * e.g. "example.com", blocks that host and every subdomain of it.
  */
 public class BlockedWebsitesStorage {
 

@@ -87,7 +87,7 @@
     <!-- Blocked Websites -->
     <string name="websites_button">Blocked Websites</string>
     <string name="websites_screen_title">Blocked Websites</string>
-    <string name="websites_desc">Domains added here are recorded, but nothing currently enforces this list - the VPN-based filter that used to block them has been removed.</string>
+    <string name="websites_desc">Domains added here are blocked in Chrome (and every subdomain of them), pushed in as a Chrome content policy - no DNS or VPN involved. Chrome also blocks adult/explicit sites in general, forces SafeSearch and restricted YouTube, and Incognito is disabled. Every other common browser is kept permanently unusable so this can\'t just be switched around.</string>
     <string name="msg_websites_locked">Removing a website can only be done during an unlocked time. Adding one is always allowed.</string>
     <string name="website_hint">Type or paste a website or URL</string>
     <string name="add_website_button">+ Add</string>

@@ -64,6 +64,41 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.42
+-----------------------
+- NEW: adult-content blocking, with no DNS, VPN, Accessibility Service or
+  Usage Stats involved. Two permanent protections, always on, not tied to
+  Blocks or Lock Schedule:
+  1. Chrome managed policy, pushed straight into Chrome via
+     setApplicationRestrictions (the same mechanism real enterprise MDM
+     apps use): blocks mature/explicit sites in general
+     (SafeSitesFilterBehavior), forces Google SafeSearch, forces YouTube's
+     Strict restricted mode, and disables Incognito. This is enforced
+     inside Chrome itself, so it applies to every tab Chrome opens - not
+     something this app has to watch for.
+  2. Every other common browser (Firefox, Opera, Samsung Internet, Brave,
+     Edge, DuckDuckGo, UC Browser, Vivaldi, Kiwi, Mi Browser, Yandex, Tor
+     Browser, Chrome's own Beta/Dev/Canary channels, and more) is kept
+     permanently suspended, so Chrome can't just be swapped out for one
+     that doesn't have the policy. Self-healing - a newly installed
+     browser gets suspended again on the next periodic check (within
+     about a minute).
+- The existing "Blocked Websites" list is now actually enforced for the
+  first time - it used to just be recorded with nothing acting on it
+  (leftover from when the VPN-based filter was removed). Domains there
+  are now pushed into Chrome's URLBlocklist policy: a domain blocks that
+  host and every subdomain of it. Adding/removing a domain now applies
+  immediately instead of waiting for the next unrelated enforcement pass.
+- The background periodic check (roughly once a minute while the screen
+  is on, throttled back automatically by Android's own Doze system
+  otherwise) now always runs, even for a user with zero Blocks configured
+  - needed so these new permanent protections (and the existing Device
+  Owner ones) keep self-healing regardless of whether any Blocks exist.
+- Known gap, inherent to this approach rather than a bug: in-app browsers
+  and WebViews inside other apps (e.g. a link opened inside Reddit,
+  Instagram, X) aren't covered by a Chrome-only policy - only Chrome
+  itself, and only Chrome, is being locked down and filtered here.
+
 WHAT CHANGED IN 4.41
 -----------------------
 - FIXED: "alarm is ringing and vibrating but there's no place to scan

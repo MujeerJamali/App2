@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.Bundle;
 import android.os.UserManager;
 
 import java.util.ArrayList;
@@ -85,6 +86,12 @@ public class BlockEnforcer {
                 // Already unsuspended, or never was - fine either way.
             }
         }
+
+        // Runs last, deliberately - if a user ever put one of these browser
+        // packages into a Block of their own, the Block-schedule-based
+        // unsuspend right above this could otherwise win the race and
+        // briefly leave it unsuspended. This always has the final say.
+        applyContentFilteringProtections(context, dpm, admin);
     }
 
     /**
@@ -213,6 +220,79 @@ public class BlockEnforcer {
         try {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER);
         } catch (Exception e) { /* best effort */ }
+    }
+
+    private static final String CHROME_PACKAGE = "com.android.chrome";
+
+    /**
+     * Every other common browser - kept suspended permanently so Chrome is
+     * the only browser that can actually be used, which is what makes the
+     * policy below mean anything (a policy pushed only into Chrome does
+     * nothing if a different browser is sitting right there to switch to).
+     * Includes Chrome's own Beta/Dev/Canary channels, since those are
+     * separate app packages that would NOT receive the policy pushed to
+     * the stable com.android.chrome package below.
+     */
+    private static final String[] OTHER_BROWSER_PACKAGES = {
+            "org.mozilla.firefox",
+            "org.mozilla.firefox.beta",
+            "org.mozilla.focus",
+            "org.mozilla.klar",
+            "com.opera.browser",
+            "com.opera.browser.beta",
+            "com.opera.mini.native",
+            "com.opera.gx",
+            "com.opera.touch",
+            "com.sec.android.app.sbrowser",
+            "com.sec.android.app.sbrowser.beta",
+            "com.brave.browser",
+            "com.brave.browser_beta",
+            "com.microsoft.emmx",
+            "com.duckduckgo.mobile.android",
+            "com.UCMobile.intl",
+            "com.vivaldi.browser",
+            "com.kiwibrowser.browser",
+            "com.mi.globalbrowser",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "com.chrome.canary",
+            "org.torproject.torbrowser",
+            "com.ecosia.android",
+            "com.yandex.browser",
+            "com.jio.web",
+    };
+
+    /**
+     * Adult-content blocking with none of DNS / VPN / Accessibility Service
+     * / Usage Stats involved: managed policies pushed straight into Chrome
+     * via setApplicationRestrictions (the same mechanism real enterprise
+     * MDM apps use - Chrome itself reads and enforces these, so it keeps
+     * working even inside Incognito or a tab this app never sees), plus
+     * every other common browser kept permanently suspended so Chrome
+     * can't just be swapped out. Both halves are re-applied every cycle,
+     * same as the other permanent protections above - cheap, and
+     * self-healing if anything ever gets cleared or a new browser shows up.
+     */
+    private static void applyContentFilteringProtections(Context context, DevicePolicyManager dpm, ComponentName admin) {
+        try {
+            Set<String> blockedDomains = new BlockedWebsitesStorage(context).loadDomains();
+            Bundle restrictions = new Bundle();
+            if (!blockedDomains.isEmpty()) {
+                restrictions.putStringArray("URLBlocklist", blockedDomains.toArray(new String[0]));
+            }
+            restrictions.putInt("SafeSitesFilterBehavior", 1); // 1 = block mature/explicit sites
+            restrictions.putBoolean("ForceGoogleSafeSearch", true);
+            restrictions.putInt("ForceYouTubeRestrict", 2); // 2 = Strict restricted mode
+            restrictions.putInt("IncognitoModeAvailability", 1); // 1 = disabled
+            dpm.setApplicationRestrictions(admin, CHROME_PACKAGE, restrictions);
+        } catch (Exception e) {
+            // Best effort - Chrome may not be installed, or this OEM build may ignore these keys.
+        }
+        try {
+            dpm.setPackagesSuspended(admin, OTHER_BROWSER_PACKAGES, true);
+        } catch (Exception e) {
+            // Best effort - fine for any package in the list that isn't installed.
+        }
     }
 
     /**
@@ -366,20 +446,21 @@ public class BlockEnforcer {
         List<HolidayBreak> holidayBreaks = new HolidayBreaksStorage(context).loadBreaks();
         long nextTransition = computeNextTransitionMillis(blocks, holidayBreaks);
 
-        // Guarantee a check at minimum every ~1 minute (for new-install
-        // detection) whenever there's at least one Block to add new installs
-        // to. 1 minute is Android's own documented ceiling for how often
-        // setExactAndAllowWhileIdle can fire during normal (screen-on) use -
-        // asking for less than that wouldn't get delivered any faster
-        // anyway. While the phone is genuinely idle (Doze), Android
-        // automatically throttles this back to roughly every 15 minutes on
-        // its own regardless of what we request here - that protection is
-        // built into the OS, not something we need to manage ourselves.
-        long nextAlarm = nextTransition;
-        if (!blocks.isEmpty()) {
-            long periodicCheck = System.currentTimeMillis() + (60 * 1000L);
-            nextAlarm = (nextTransition > 0) ? Math.min(nextTransition, periodicCheck) : periodicCheck;
-        }
+        // Guarantee a check at minimum every ~1 minute - for new-install
+        // detection when there's at least one Block, and unconditionally
+        // for the permanent, not-tied-to-any-Block protections (Device
+        // Owner restrictions, Chrome content policy, other-browser lock)
+        // so those stay self-healing even for a user with zero Blocks
+        // configured. 1 minute is Android's own documented ceiling for how
+        // often setExactAndAllowWhileIdle can fire during normal
+        // (screen-on) use - asking for less than that wouldn't get
+        // delivered any faster anyway. While the phone is genuinely idle
+        // (Doze), Android automatically throttles this back to roughly
+        // every 15 minutes on its own regardless of what we request here -
+        // that protection is built into the OS, not something we need to
+        // manage ourselves.
+        long periodicCheck = System.currentTimeMillis() + (60 * 1000L);
+        long nextAlarm = (nextTransition > 0) ? Math.min(nextTransition, periodicCheck) : periodicCheck;
 
         if (nextAlarm > 0) {
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextAlarm, pi);
