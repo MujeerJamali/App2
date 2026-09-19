@@ -64,6 +64,24 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.40
+-----------------------
+- The 4.39 fix stopped the crash on every decode attempt (confirmed by
+  the diagnostics: "Last decode error" now correctly shows the normal
+  NotFoundException instead of a crash), but scanning a real barcode
+  still wasn't succeeding - photos of the attempt showed the barcode
+  held at a visible angle/tilt in frame. ZXing's default decode mode
+  is a fast/light pass tuned for a clean, well-aligned code; it's much
+  less tolerant of skew and blur than that.
+- Enabled ZXing's TRY_HARDER decode hint, which makes the readers do a
+  more thorough scan (more tolerant of angle, blur and noise) at the
+  cost of some extra CPU time per attempt - acceptable here since only
+  one decode runs at a time, on a background thread.
+- If scanning still doesn't succeed after this, try holding the phone
+  so the barcode's bars are roughly horizontal/parallel with the
+  screen's top and bottom edges (not tilted diagonally), filling a
+  good portion of the frame, held steady long enough to focus.
+
 WHAT CHANGED IN 4.39
 -----------------------
 - ACTUAL REMAINING ROOT CAUSE FOUND (via the 4.38 on-screen diagnostics):

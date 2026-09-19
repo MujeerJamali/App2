@@ -20,14 +20,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -84,6 +87,15 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // TRY_HARDER makes ZXing's readers do a more thorough scan instead
+        // of the fast/light default pass - real phone-camera shots of a
+        // barcode held at even a modest angle or slightly blurred tend to
+        // fail the fast path. Worth the extra per-frame CPU time here since
+        // only one decode runs at a time, on a background thread.
+        Map<DecodeHintType, Object> hints = new EnumMap<DecodeHintType, Object>(DecodeHintType.class);
+        hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+        reader.setHints(hints);
 
         String[] acceptedArr = getIntent().getStringArrayExtra(EXTRA_ACCEPTED_VALUES);
         if (acceptedArr != null) {
