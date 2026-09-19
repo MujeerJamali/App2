@@ -64,6 +64,24 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.44
+-----------------------
+- NEW: an Alarm no longer rings at all while any Holiday Break is active
+  - not just this Alarm's own affected Blocks' breaks, any active break
+  - at the exact moment it was due. No sound, no vibration, no lock
+    screen takeover, and it's not treated as missed either, so nothing
+    gets punished once the break ends. This is a different, broader rule
+    than the existing "punishment doesn't apply to a Block on an active
+    break" one from 4.34 - that one only ever affected whether a specific
+    Block got widened; this one stops the Alarm from ringing in the first
+    place.
+  - Applies to the live trigger (AlarmRingReceiver) and to the catch-up
+    scan for occurrences missed while the phone was off - the same
+    Holiday-Break check runs against each occurrence's own actual time,
+    not just "right now", so a phone that was off through an occurrence
+    that fell inside a break window is handled the same way it would
+    have been handled live.
+
 WHAT CHANGED IN 4.43
 -----------------------
 - Browser lockdown from 4.42 relied only on a fixed list of known browser

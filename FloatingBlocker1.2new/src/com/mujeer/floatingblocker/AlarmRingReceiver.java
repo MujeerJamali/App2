@@ -32,6 +32,17 @@ public class AlarmRingReceiver extends BroadcastReceiver {
         }
 
         long occurrenceMillis = System.currentTimeMillis();
+
+        if (AlarmPunisher.isSuppressedByHolidayBreak(context, occurrenceMillis)) {
+            // A Holiday Break is active right now - this occurrence doesn't
+            // ring at all (no sound, no vibration, no lock screen), and
+            // isn't treated as missed either, so nothing gets punished once
+            // the break ends and the catch-up scan looks back at it.
+            new AlarmRuntimeStorage(context).setLastHandledOccurrence(alarmId, occurrenceMillis);
+            AlarmScheduler.scheduleNextForAlarm(context, alarm);
+            return;
+        }
+
         new AlarmRuntimeStorage(context).setRingingOccurrence(alarmId, occurrenceMillis);
 
         Intent serviceIntent = new Intent(context, AlarmRingService.class);

@@ -162,7 +162,15 @@ public class BlockEnforcer {
                 if (next <= 0 || next > now || now < next + ringMillis) {
                     break;
                 }
-                AlarmPunisher.resolveMissed(context, alarm, next);
+                // A Holiday Break active at the occurrence's own time means
+                // it never should have rung in the first place (same rule
+                // AlarmRingReceiver applies live) - not just unpunished, but
+                // not counted as missed at all.
+                if (AlarmPunisher.isSuppressedByHolidayBreak(context, next)) {
+                    runtime.setLastHandledOccurrence(alarm.id, next);
+                } else {
+                    AlarmPunisher.resolveMissed(context, alarm, next);
+                }
                 cursor = next;
             }
         }

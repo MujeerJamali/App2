@@ -29,6 +29,23 @@ public class AlarmPunisher {
         AlarmRingService.stopIfRingingFor(context, alarmId, occurrenceMillis);
     }
 
+    /**
+     * True if ANY Holiday Break at all - not just ones covering this
+     * Alarm's own affected Blocks - is active at the given moment. An
+     * Alarm never rings while this is true (see AlarmRingReceiver and
+     * BlockEnforcer.checkForMissedAlarms): a Holiday Break means "leave me
+     * alone during this window", and that includes not being woken up or
+     * forced to scan a barcode at all, not just not being punished.
+     */
+    public static boolean isSuppressedByHolidayBreak(Context context, long atMillis) {
+        for (HolidayBreak h : new HolidayBreaksStorage(context).loadBreaks()) {
+            if (h.isActiveNow(atMillis)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void resolveMissed(Context context, Alarm alarm, long occurrenceMillis) {
         AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
         if (occurrenceMillis <= runtime.getLastHandledOccurrence(alarm.id)) {
