@@ -117,8 +117,20 @@ public class AlarmRingService extends Service {
                 .setContentText(getString(R.string.alarm_ringing_text))
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setOngoing(true)
+                .setCategory(Notification.CATEGORY_ALARM)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setFullScreenIntent(fullScreenPendingIntent, true)
-                .setContentIntent(fullScreenPendingIntent);
+                .setContentIntent(fullScreenPendingIntent)
+                // The full-screen takeover only launches automatically when
+                // the screen is off/locked - if it's already on and
+                // unlocked when the alarm fires, Android shows just this
+                // notification instead, so it needs its own obvious,
+                // tappable way in rather than relying on the user noticing
+                // a plain banner is tappable.
+                .addAction(new Notification.Action.Builder(
+                        android.R.drawable.ic_lock_idle_alarm,
+                        getString(R.string.scan_to_dismiss_button),
+                        fullScreenPendingIntent).build());
 
         startForeground(NOTIFICATION_ID, builder.build());
     }

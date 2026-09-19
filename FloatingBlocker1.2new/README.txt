@@ -64,6 +64,30 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.41
+-----------------------
+- FIXED: "alarm is ringing and vibrating but there's no place to scan
+  the barcode and dismiss it." The sound/vibration run from the
+  foreground service directly and don't depend on the notification, so
+  they always work - but the full-screen ringing screen only launches
+  automatically when the phone's screen was off or locked at the
+  moment the alarm fired. If the screen was already on and unlocked
+  (e.g. actively using the phone, or testing), Android suppresses the
+  automatic full-screen takeover and shows only a small notification
+  instead - easy to miss if you don't realize it's tappable.
+- The alarm notification now has its own explicit "Scan Barcode to
+  Dismiss" action button, so there's always a visible, obvious way in
+  even when the full-screen screen doesn't appear on its own. Also
+  marked the notification as an alarm-category, publicly-visible
+  notification so it's treated with the same priority/lock-screen
+  visibility as a normal alarm clock's notification.
+- If tapping that notification action still doesn't get you to a scan
+  screen, that would point to something else (like the notification
+  not showing at all, e.g. due to a device-specific battery/autostart
+  restriction) - let me know exactly what you do or don't see when the
+  next alarm fires (any notification banner at all? was the phone
+  locked or already unlocked/in use at the time?).
+
 WHAT CHANGED IN 4.40
 -----------------------
 - The 4.39 fix stopped the crash on every decode attempt (confirmed by
