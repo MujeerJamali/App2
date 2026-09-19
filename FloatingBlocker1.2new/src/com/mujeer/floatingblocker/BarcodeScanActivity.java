@@ -316,7 +316,14 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         }
         i = frameSize;
         for (int x = 0; x < width; x += 2) {
-            for (int y = height - 1; y >= 0; y -= 2) {
+            // The chroma (VU) plane only has height/2 rows, each still
+            // `width` bytes wide (interleaved V/U pairs) - unlike the Y
+            // plane above, y here must index into that half-height plane,
+            // not the full-resolution row range. Using height-1..0 here
+            // (matching the Y-plane loop) reads/writes far past the actual
+            // chroma plane and throws ArrayIndexOutOfBoundsException on
+            // every single frame - which is exactly what was happening.
+            for (int y = height / 2 - 1; y >= 0; y--) {
                 rotated[i++] = data[frameSize + (y * width) + x];
                 rotated[i++] = data[frameSize + (y * width) + (x + 1)];
             }

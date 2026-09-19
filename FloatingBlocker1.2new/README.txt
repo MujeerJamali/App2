@@ -64,6 +64,28 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.39
+-----------------------
+- ACTUAL REMAINING ROOT CAUSE FOUND (via the 4.38 on-screen diagnostics):
+  every single decode attempt was throwing
+  ArrayIndexOutOfBoundsException, not just failing to find a code. The
+  NV21 90-degree rotation helper added in 4.37 had a bug in its own
+  chroma (VU) plane loop - it indexed that plane using the same
+  full-resolution row range as the Y plane (height rows), but the
+  chroma plane for NV21 only actually has height/2 rows. That mismatch
+  read/wrote past the end of the buffer on every frame, before ZXing
+  ever got a valid image to look at.
+- FIXED: the chroma loop now correctly indexes only the height/2 rows
+  the chroma plane actually has, matching the standard, well-known
+  NV21 rotation algorithm. This is what was actually breaking barcode
+  scanning - the 4.37 fix corrected the right idea (the buffer does
+  need rotating), but the rotation code itself had this bug the whole
+  time.
+- The 4.38 on-screen diagnostics are left in place for this build so
+  the fix can be confirmed directly (frames received/decode attempts
+  climbing with no repeating exception, and a successful scan actually
+  finishing the screen).
+
 WHAT CHANGED IN 4.38
 -----------------------
 - TEMPORARY DIAGNOSTIC BUILD: the 4.37 orientation fix alone did not
