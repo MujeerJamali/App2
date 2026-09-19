@@ -64,6 +64,43 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.45
+-----------------------
+- NEW: an optional "Location Override" (new screen, off by default). When
+  turned on, Lock Schedule's editing-protection, all Blocks, and Alarms
+  stop applying whenever you're more than 20km from a home location you
+  set (stand there and tap "Set This As Home" - no maps library needed).
+  If your location can't be determined for any reason - permission not
+  granted, Location turned off, no fix available - everything stays
+  exactly as it would without this feature; restrictions still apply.
+  That fail-safe direction is deliberate and matches how every other
+  "can't tell" case in this app already behaves.
+- Deliberately NOT affected by this, regardless of location: the
+  permanent Device Owner protections (uninstall block, VPN block, safe
+  boot/factory reset/add-user block, the Chrome content policy, the
+  other-browsers lock) and the Termux/Shizuku/debugging-features
+  anti-tamper locks. Those exist to protect the app itself, not to
+  enforce a schedule, so they stay on no matter where the phone is.
+- Changing an ALREADY-SET home location is gated by the true Lock
+  Schedule state, not by this same location override - on purpose. If it
+  used the location override too, being far from home would unlock the
+  ability to redefine what "home" means, and a single trip could
+  permanently disable the whole feature (reset home to wherever you
+  currently are while the override has already kicked in, and your real
+  home becomes "far away" forever after that). First-time setup, with no
+  location saved yet, is always allowed, same as every other "add" in
+  this app.
+- Location permission (fine + background) is granted silently via Device
+  Owner - no runtime prompt - only while the feature is turned on, and
+  released back to the normal default otherwise, so nothing is held onto
+  for no reason. Uses plain framework LocationManager, not Play Services
+  (no Gradle dependency to build against here); a cached fix older than
+  15 minutes is treated as "not found" rather than trusted.
+- Known limitation: no location history is kept, so resolving a missed
+  Alarm from while the phone was off uses today's current location as a
+  best-effort stand-in for "was I far from home when it actually rang",
+  not the true location at that past moment.
+
 WHAT CHANGED IN 4.44
 -----------------------
 - NEW: an Alarm no longer rings at all while any Holiday Break is active

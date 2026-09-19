@@ -148,4 +148,20 @@
     <string name="alarm_ring_scan_hint">No snooze, no back button - scanning the correct barcode is the only way to stop this.</string>
     <string name="scan_to_dismiss_button">Scan Barcode to Dismiss</string>
     <string name="alarm_notification_channel_name">Alarm ringing</string>
+
+    <!-- Home Location Override -->
+    <string name="home_location_button">Location Override</string>
+    <string name="home_location_screen_title">Location Override</string>
+    <string name="home_location_desc">When turned on, Lock Schedule\'s editing-protection, all Blocks, and Alarms stop applying whenever you\'re more than 20km from the home location you set below - as if none of it existed while you\'re away. If your location can\'t be determined for any reason, everything stays exactly as it would without this feature - restrictions still apply. This never affects the permanent protections (this app can\'t be uninstalled, VPN stays blocked, other browsers stay locked, etc.) - those stay on no matter where you are.</string>
+    <string name="msg_home_location_locked">Changing an already-set home location can only be done during an unlocked time - check your Lock Schedule. (Being far from home doesn\'t unlock this specifically - otherwise a single trip could permanently break the feature.)</string>
+    <string name="home_location_status_not_set">No home location set yet.</string>
+    <string name="home_location_status_enabled">Enabled - home is %1$s</string>
+    <string name="home_location_status_disabled">Disabled - home is %1$s</string>
+    <string name="home_location_enable_button">Enable Location Override</string>
+    <string name="home_location_disable_button">Disable Location Override</string>
+    <string name="home_location_set_button">Set This As Home</string>
+    <string name="home_location_update_button">Update Home Location</string>
+    <string name="msg_home_location_set">Home location saved.</string>
+    <string name="msg_home_location_permission_needed">Location permission is needed to do this.</string>
+    <string name="msg_home_location_unavailable">Could not get your current location - make sure Location is turned on and try again.</string>
 </resources>

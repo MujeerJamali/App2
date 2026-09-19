@@ -51,6 +51,7 @@ public class BlockEnforcer {
         String ownPackage = context.getPackageName();
 
         applyPermanentDeviceOwnerProtections(context, dpm, admin, ownPackage);
+        applyLocationPermissionState(context, dpm, admin, ownPackage);
         releaseStrictPrivateDnsIfLocked(context, dpm, admin);
         applyDebuggingFeaturesLock(context, dpm, admin);
         applyBootstrapToolsLock(context, dpm, admin);
@@ -112,7 +113,8 @@ public class BlockEnforcer {
         BlocksPauseStorage pauseStorage = new BlocksPauseStorage(context);
 
         Set<String> desiredSuspended = new HashSet<String>();
-        boolean overridden = safetyStorage.isEngaged() || pauseStorage.isPaused();
+        boolean overridden = safetyStorage.isEngaged() || pauseStorage.isPaused()
+                || HomeLocationChecker.isFarFromHome(context);
         if (overridden) {
             return desiredSuspended;
         }
@@ -162,11 +164,12 @@ public class BlockEnforcer {
                 if (next <= 0 || next > now || now < next + ringMillis) {
                     break;
                 }
-                // A Holiday Break active at the occurrence's own time means
-                // it never should have rung in the first place (same rule
-                // AlarmRingReceiver applies live) - not just unpunished, but
-                // not counted as missed at all.
-                if (AlarmPunisher.isSuppressedByHolidayBreak(context, next)) {
+                // A Holiday Break active at the occurrence's own time, or
+                // currently being far enough from home, means it never
+                // should have rung in the first place (same rule
+                // AlarmRingReceiver applies live) - not just unpunished,
+                // but not counted as missed at all.
+                if (AlarmPunisher.isSuppressed(context, next)) {
                     runtime.setLastHandledOccurrence(alarm.id, next);
                 } else {
                     AlarmPunisher.resolveMissed(context, alarm, next);
@@ -228,6 +231,27 @@ public class BlockEnforcer {
         try {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER);
         } catch (Exception e) { /* best effort */ }
+    }
+
+    /**
+     * Location access is only ever needed for the optional home-location
+     * override (see HomeLocationChecker) - granted silently via Device
+     * Owner (no runtime prompt needed) only while that feature is turned
+     * on, and released back to the normal default otherwise, so this app
+     * doesn't hold location access for no reason when the feature isn't
+     * in use. ACCESS_BACKGROUND_LOCATION matters here specifically because
+     * the periodic checks that need this run from a BroadcastReceiver, not
+     * a foreground screen.
+     */
+    private static void applyLocationPermissionState(Context context, DevicePolicyManager dpm, ComponentName admin, String ownPackage) {
+        boolean needed = new HomeLocationStorage(context).isEnabled();
+        int state = needed ? DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED : DevicePolicyManager.PERMISSION_GRANT_STATE_DEFAULT;
+        try {
+            dpm.setPermissionGrantState(admin, ownPackage, android.Manifest.permission.ACCESS_FINE_LOCATION, state);
+        } catch (Exception e) { /* best effort */ }
+        try {
+            dpm.setPermissionGrantState(admin, ownPackage, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION, state);
+        } catch (Exception e) { /* best effort - not every OS version/OEM exposes this the same way */ }
     }
 
     private static final String CHROME_PACKAGE = "com.android.chrome";

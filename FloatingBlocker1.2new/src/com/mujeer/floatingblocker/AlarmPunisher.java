@@ -46,6 +46,20 @@ public class AlarmPunisher {
         return false;
     }
 
+    /**
+     * Everything that stops an Alarm from ringing at all: an active
+     * Holiday Break at the given time, OR being far enough from a
+     * configured home location that restrictions don't apply right now
+     * (see HomeLocationChecker). Unlike the Holiday Break check, the
+     * location check has no history to look back on - it only ever
+     * reflects the CURRENT position, regardless of what atMillis is, so a
+     * past occurrence being resolved after the fact uses today's current
+     * location as a best-effort stand-in.
+     */
+    public static boolean isSuppressed(Context context, long atMillis) {
+        return isSuppressedByHolidayBreak(context, atMillis) || HomeLocationChecker.isFarFromHome(context);
+    }
+
     public static void resolveMissed(Context context, Alarm alarm, long occurrenceMillis) {
         AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
         if (occurrenceMillis <= runtime.getLastHandledOccurrence(alarm.id)) {
@@ -59,8 +73,8 @@ public class AlarmPunisher {
 
         long now = System.currentTimeMillis();
         boolean currentlyUnlocked = !new LockScheduleStorage(context).isCurrentlyLocked();
-        if (currentlyUnlocked) {
-            return; // no punishment while the schedule is currently unlocked
+        if (currentlyUnlocked || HomeLocationChecker.isFarFromHome(context)) {
+            return; // no punishment while the schedule is currently unlocked, or while far enough from home
         }
 
         Set<String> blockIdsOnBreak = new HashSet<String>();

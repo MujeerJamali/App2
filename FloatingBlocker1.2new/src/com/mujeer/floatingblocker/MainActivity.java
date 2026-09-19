@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
         Button btnWebsites = (Button) findViewById(R.id.btnWebsites);
         Button btnAlarms = (Button) findViewById(R.id.btnAlarms);
         Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
+        Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
 
         btnBatteryExemption.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
@@ -120,6 +121,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 startActivity(new Intent(MainActivity.this, BarcodesListActivity.class));
+            }
+        });
+
+        btnHomeLocation.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, HomeLocationActivity.class));
             }
         });
     }
@@ -207,7 +215,7 @@ public class MainActivity extends Activity {
     private void onBlocksPauseClicked() {
         boolean currentlyPaused = blocksPauseStorage.isPaused();
         if (!currentlyPaused) {
-            if (lockScheduleStorage.isCurrentlyLocked()) {
+            if (lockScheduleStorage.isCurrentlyLocked() && !HomeLocationChecker.isFarFromHome(this)) {
                 Toast.makeText(this, R.string.msg_cannot_pause_now, Toast.LENGTH_LONG).show();
                 return;
             }
