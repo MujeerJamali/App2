@@ -64,6 +64,17 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.46
+-----------------------
+- Build fix: HomeLocationChecker.java failed to compile in AIDE with
+  "Method onProviderEnabled does not override method from its
+  superclass" (and same for onProviderDisabled) - AIDE's compiler (ECJ)
+  doesn't reliably recognize @Override on those two specific
+  LocationListener methods against newer android.jar versions, even
+  though the signature is correct. Removed @Override from just those
+  two (onLocationChanged and onStatusChanged, which compiled fine, keep
+  theirs) - still a correct interface implementation either way.
+
 WHAT CHANGED IN 4.45
 -----------------------
 - NEW: an optional "Location Override" (new screen, off by default). When

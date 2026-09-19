@@ -117,11 +117,14 @@ public class HomeLocationChecker {
                 public void onStatusChanged(String provider, int status, Bundle extras) {
                 }
 
-                @Override
+                // No @Override here - AIDE's compiler (ECJ) doesn't reliably
+                // recognize these two as valid overrides of LocationListener's
+                // default methods on newer android.jar versions, even though
+                // the signature is correct and this still properly implements
+                // the interface either way.
                 public void onProviderEnabled(String provider) {
                 }
 
-                @Override
                 public void onProviderDisabled(String provider) {
                 }
             }, Looper.getMainLooper());
