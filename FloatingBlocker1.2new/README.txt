@@ -64,6 +64,28 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.47
+-----------------------
+- NEW: any settings change made during a 20km-away Location Override
+  window is now temporary - it reverts the instant you're back in range,
+  as if it never happened. The moment the override turns on, everything
+  Lock Schedule normally protects gets snapshotted (Blocks, the schedule
+  itself, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms,
+  and the Blocks-paused toggle); the moment it turns back off, all of
+  that gets restored, discarding whatever changed in between - additions
+  included, not just removals/weakenings. The whole point of the window
+  is to not be stuck locked out while away, not to let changes made in it
+  stick without ever passing through a real unlocked period at home.
+- Not snapshotted/restored: Emergency Safety (already its own separate,
+  freely-togglable thing, untouched by Lock Schedule before this feature
+  existed too) and the home location/override toggle themselves (that'd
+  be circular).
+- Detected via a new persisted "was the override active last check" flag
+  (HomeLocationStorage), checked every enforcement cycle - the snapshot
+  and restore both run as the very first thing in that cycle, before
+  anything else reads Blocks/Holiday Breaks/Alarms, so a restore takes
+  effect immediately rather than a cycle late.
+
 WHAT CHANGED IN 4.46
 -----------------------
 - Build fix: HomeLocationChecker.java failed to compile in AIDE with

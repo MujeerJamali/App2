@@ -15,6 +15,7 @@ public class HomeLocationStorage {
     private static final String KEY_HAS_LOCATION = "has_location";
     private static final String KEY_LAT_BITS = "lat_bits";
     private static final String KEY_LON_BITS = "lon_bits";
+    private static final String KEY_WAS_OVERRIDE_ACTIVE = "was_override_active";
 
     private final SharedPreferences prefs;
 
@@ -48,5 +49,20 @@ public class HomeLocationStorage {
                 .putLong(KEY_LAT_BITS, Double.doubleToRawLongBits(lat))
                 .putLong(KEY_LON_BITS, Double.doubleToRawLongBits(lon))
                 .apply();
+    }
+
+    /**
+     * Whether the location override was active as of the last enforcement
+     * cycle - lets BlockEnforcer detect the exact moment it turns on
+     * (snapshot everything) or off again (restore everything), instead of
+     * just re-checking a live yes/no each time with no memory of what
+     * changed.
+     */
+    public boolean wasOverrideActiveLastCheck() {
+        return prefs.getBoolean(KEY_WAS_OVERRIDE_ACTIVE, false);
+    }
+
+    public void setOverrideActiveLastCheck(boolean active) {
+        prefs.edit().putBoolean(KEY_WAS_OVERRIDE_ACTIVE, active).apply();
     }
 }

@@ -52,6 +52,7 @@ public class BlockEnforcer {
 
         applyPermanentDeviceOwnerProtections(context, dpm, admin, ownPackage);
         applyLocationPermissionState(context, dpm, admin, ownPackage);
+        applyHomeLocationTransition(context);
         releaseStrictPrivateDnsIfLocked(context, dpm, admin);
         applyDebuggingFeaturesLock(context, dpm, admin);
         applyBootstrapToolsLock(context, dpm, admin);
@@ -252,6 +253,28 @@ public class BlockEnforcer {
         try {
             dpm.setPermissionGrantState(admin, ownPackage, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION, state);
         } catch (Exception e) { /* best effort - not every OS version/OEM exposes this the same way */ }
+    }
+
+    /**
+     * Detects the exact moment the location override turns on or off (see
+     * HomeLocationStorage.wasOverrideActiveLastCheck) and snapshots or
+     * restores everything Lock Schedule normally protects accordingly (see
+     * SettingsSnapshotStorage) - so any change made while "unlocked
+     * because far from home" is temporary, reverting the instant the
+     * override ends. Runs early in applyNow(), before anything else in
+     * this same cycle reads Blocks/Holiday Breaks/Alarms/etc., so a
+     * restore takes effect immediately rather than one cycle late.
+     */
+    private static void applyHomeLocationTransition(Context context) {
+        HomeLocationStorage storage = new HomeLocationStorage(context);
+        boolean farNow = HomeLocationChecker.isFarFromHome(context);
+        boolean wasFar = storage.wasOverrideActiveLastCheck();
+        if (farNow && !wasFar) {
+            SettingsSnapshotStorage.saveSnapshot(context);
+        } else if (!farNow && wasFar) {
+            SettingsSnapshotStorage.restoreSnapshot(context);
+        }
+        storage.setOverrideActiveLastCheck(farNow);
     }
 
     private static final String CHROME_PACKAGE = "com.android.chrome";
