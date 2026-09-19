@@ -1,6 +1,9 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+Floating Blocker - version 4.36 (NEW: flashlight toggle on the barcode scan screen)
+===================================================================================
+
 Floating Blocker - version 4.35 (Holiday Breaks starting on a later day can now be created while locked)
 ===================================================================================
 
@@ -57,6 +60,21 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.36
+-----------------------
+- NEW: a "Flashlight" toggle button on the barcode scan screen (top-right
+  corner), for scanning in the dark - relevant since a wake-up alarm's
+  barcode is exactly the kind of thing you'd be scanning first thing in
+  the morning with the lights off. Uses the same classic Camera API
+  already used for scanning (Camera.Parameters.FLASH_MODE_TORCH) - no new
+  permission needed (CAMERA already covers it) and no new dependency.
+- Only shown on devices that actually report torch support
+  (getSupportedFlashModes().contains(FLASH_MODE_TORCH)) - hidden entirely
+  otherwise rather than showing a button that would just fail. Always
+  starts off when the scan screen opens, and is force-turned-off whenever
+  the camera itself stops (leaving the screen, camera error, etc.) so it
+  can never get left on by accident.
 
 WHAT CHANGED IN 4.35
 -----------------------

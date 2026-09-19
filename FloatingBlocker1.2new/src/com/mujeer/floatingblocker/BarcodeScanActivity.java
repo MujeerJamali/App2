@@ -8,9 +8,11 @@ import android.graphics.Color;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -49,9 +51,11 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
 
     private SurfaceView surfaceView;
     private TextView txtStatus;
+    private Button btnFlashlight;
     private Camera camera;
     private final MultiFormatReader reader = new MultiFormatReader();
     private volatile boolean decodeInFlight = false;
+    private boolean torchOn = false;
     private Set<String> acceptedValues;
 
     @Override
@@ -81,6 +85,22 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         statusParams.gravity = android.view.Gravity.BOTTOM;
         root.addView(txtStatus, statusParams);
+
+        btnFlashlight = new Button(this);
+        btnFlashlight.setText(R.string.flashlight_on_button);
+        btnFlashlight.setVisibility(android.view.View.GONE); // shown only if the device actually supports a torch
+        btnFlashlight.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                toggleFlashlight();
+            }
+        });
+        FrameLayout.LayoutParams flashParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        flashParams.gravity = Gravity.TOP | Gravity.END;
+        flashParams.topMargin = 32;
+        flashParams.rightMargin = 32;
+        root.addView(btnFlashlight, flashParams);
 
         setContentView(root);
         surfaceView.getHolder().addCallback(this);
@@ -135,6 +155,12 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             if (focusModes != null && focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
                 params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             }
+            List<String> flashModes = params.getSupportedFlashModes();
+            boolean torchSupported = flashModes != null && flashModes.contains(Camera.Parameters.FLASH_MODE_TORCH);
+            btnFlashlight.setVisibility(torchSupported ? android.view.View.VISIBLE : android.view.View.GONE);
+            torchOn = false;
+            btnFlashlight.setText(R.string.flashlight_on_button);
+
             camera.setParameters(params);
             camera.setDisplayOrientation(90);
             camera.setPreviewDisplay(surfaceView.getHolder());
@@ -163,6 +189,22 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
                 // Best effort - activity is going away regardless.
             }
             camera = null;
+        }
+        torchOn = false;
+    }
+
+    private void toggleFlashlight() {
+        if (camera == null) {
+            return;
+        }
+        try {
+            Camera.Parameters params = camera.getParameters();
+            torchOn = !torchOn;
+            params.setFlashMode(torchOn ? Camera.Parameters.FLASH_MODE_TORCH : Camera.Parameters.FLASH_MODE_OFF);
+            camera.setParameters(params);
+            btnFlashlight.setText(torchOn ? R.string.flashlight_off_button : R.string.flashlight_on_button);
+        } catch (Exception e) {
+            Log.e("BarcodeScanActivity", "Could not toggle flashlight", e);
         }
     }
 

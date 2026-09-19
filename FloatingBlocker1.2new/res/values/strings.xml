@@ -116,6 +116,8 @@
     <string name="barcode_scan_wrong_code">That\'s not the right code - keep scanning.</string>
     <string name="msg_camera_permission_required">Camera permission is required to scan a barcode.</string>
     <string name="msg_camera_unavailable">Could not open the camera.</string>
+    <string name="flashlight_on_button">Flashlight</string>
+    <string name="flashlight_off_button">Flashlight Off</string>
 
     <!-- Alarms -->
     <string name="alarms_button">Alarms</string>
