@@ -64,6 +64,26 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.43
+-----------------------
+- Browser lockdown from 4.42 relied only on a fixed list of known browser
+  package names - a browser installed from Play Store that wasn't on that
+  list would have stayed completely unblocked. Switched to live
+  detection: every cycle, any app that resolves a plain, host-agnostic
+  http:// link gets suspended along with the named ones - that's the
+  exact same mechanism Android itself uses to decide what shows up in the
+  "Open with..." chooser, so it catches a newly installed or previously
+  unrecognized browser automatically instead of needing its package name
+  added by hand.
+- A small exclude-list (Google app/Assistant, Gmail, Google Drive, Google
+  Messages, Google Maps, Play Store) is never auto-suspended by this
+  detection, even if one of them happens to register a generic link
+  handler for its own link-preview purposes - avoids silently breaking
+  an app that isn't actually a standalone browser.
+- The fixed package-name list from 4.42 is kept too, as a backup for the
+  rare case a browser's own intent filter is built unusually enough to
+  not get picked up by the live check.
+
 WHAT CHANGED IN 4.42
 -----------------------
 - NEW: adult-content blocking, with no DNS, VPN, Accessibility Service or

@@ -91,7 +91,7 @@ public class BlockEnforcer {
         // packages into a Block of their own, the Block-schedule-based
         // unsuspend right above this could otherwise win the race and
         // briefly leave it unsuspended. This always has the final say.
-        applyContentFilteringProtections(context, dpm, admin);
+        applyContentFilteringProtections(context, dpm, admin, ownPackage);
     }
 
     /**
@@ -225,15 +225,14 @@ public class BlockEnforcer {
     private static final String CHROME_PACKAGE = "com.android.chrome";
 
     /**
-     * Every other common browser - kept suspended permanently so Chrome is
-     * the only browser that can actually be used, which is what makes the
-     * policy below mean anything (a policy pushed only into Chrome does
-     * nothing if a different browser is sitting right there to switch to).
-     * Includes Chrome's own Beta/Dev/Canary channels, since those are
-     * separate app packages that would NOT receive the policy pushed to
-     * the stable com.android.chrome package below.
+     * Known browser package names, kept as a belt-and-suspenders backup to
+     * the live detection below (in case some browser's own http intent
+     * filter is built unusually and doesn't get caught by that). Includes
+     * Chrome's own Beta/Dev/Canary channels, since those are separate app
+     * packages that would NOT receive the policy pushed to the stable
+     * com.android.chrome package below.
      */
-    private static final String[] OTHER_BROWSER_PACKAGES = {
+    private static final String[] KNOWN_OTHER_BROWSER_PACKAGES = {
             "org.mozilla.firefox",
             "org.mozilla.firefox.beta",
             "org.mozilla.focus",
@@ -263,17 +262,40 @@ public class BlockEnforcer {
     };
 
     /**
+     * Apps that are known to sometimes register themselves as able to open
+     * a generic http(s) link (usually to show link previews or open pages
+     * in their own embedded viewer) without actually being a standalone
+     * browser - never auto-suspend these via the live detection below,
+     * however it turns out to be applying: doing so could silently break
+     * something the user relies on with no obvious explanation why.
+     */
+    private static final Set<String> BROWSER_DETECTION_EXCLUDE = new HashSet<String>(java.util.Arrays.asList(
+            "com.google.android.googlequicksearchbox", // Google app / Assistant
+            "com.google.android.gm",                    // Gmail
+            "com.google.android.apps.docs",             // Google Drive
+            "com.google.android.apps.messaging",        // Google Messages
+            "com.google.android.apps.maps",             // Google Maps
+            "com.android.vending"                       // Play Store
+    ));
+
+    /**
      * Adult-content blocking with none of DNS / VPN / Accessibility Service
      * / Usage Stats involved: managed policies pushed straight into Chrome
      * via setApplicationRestrictions (the same mechanism real enterprise
      * MDM apps use - Chrome itself reads and enforces these, so it keeps
      * working even inside Incognito or a tab this app never sees), plus
-     * every other common browser kept permanently suspended so Chrome
-     * can't just be swapped out. Both halves are re-applied every cycle,
-     * same as the other permanent protections above - cheap, and
-     * self-healing if anything ever gets cleared or a new browser shows up.
+     * every other browser kept permanently suspended so Chrome can't just
+     * be swapped out. "Every other browser" is detected live each cycle -
+     * any app that resolves a plain, host-agnostic http:// link is, by
+     * Android's own definition, a browser (the same mechanism behind the
+     * "Open with..." chooser) - rather than relying only on a fixed list
+     * of package names, so a newly installed or previously-unrecognized
+     * browser from Play Store gets caught automatically too. All of this
+     * is re-applied every cycle, same as the other permanent protections
+     * above - cheap, and self-healing if anything ever gets cleared or a
+     * new browser shows up.
      */
-    private static void applyContentFilteringProtections(Context context, DevicePolicyManager dpm, ComponentName admin) {
+    private static void applyContentFilteringProtections(Context context, DevicePolicyManager dpm, ComponentName admin, String ownPackage) {
         try {
             Set<String> blockedDomains = new BlockedWebsitesStorage(context).loadDomains();
             Bundle restrictions = new Bundle();
@@ -288,11 +310,32 @@ public class BlockEnforcer {
         } catch (Exception e) {
             // Best effort - Chrome may not be installed, or this OEM build may ignore these keys.
         }
+
+        Set<String> browsersToSuspend = detectBrowserPackages(context, ownPackage);
+        browsersToSuspend.addAll(java.util.Arrays.asList(KNOWN_OTHER_BROWSER_PACKAGES));
         try {
-            dpm.setPackagesSuspended(admin, OTHER_BROWSER_PACKAGES, true);
+            dpm.setPackagesSuspended(admin, browsersToSuspend.toArray(new String[0]), true);
         } catch (Exception e) {
-            // Best effort - fine for any package in the list that isn't installed.
+            // Best effort - fine for any package here that isn't installed.
         }
+    }
+
+    private static Set<String> detectBrowserPackages(Context context, String ownPackage) {
+        Set<String> result = new HashSet<String>();
+        try {
+            PackageManager pm = context.getPackageManager();
+            Intent probe = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("http://example.com"));
+            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(probe, 0);
+            for (ResolveInfo info : resolveInfos) {
+                String pkg = info.activityInfo.packageName;
+                if (!pkg.equals(ownPackage) && !pkg.equals(CHROME_PACKAGE) && !BROWSER_DETECTION_EXCLUDE.contains(pkg)) {
+                    result.add(pkg);
+                }
+            }
+        } catch (Exception e) {
+            // Best effort - the known-package list above still covers the common cases either way.
+        }
+        return result;
     }
 
     /**
