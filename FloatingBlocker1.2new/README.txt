@@ -87,6 +87,26 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.53
+-----------------------
+- Kiosk Mode (Beta): added the AlarmManager safety net for the "session
+  Activity died mid-session" gap described in 4.52's known limitation
+  below. A KioskTimeoutReceiver is now scheduled (via KioskScheduler)
+  for the session's end time the moment a session starts, the same
+  pattern already used for Alarms (AlarmPunishmentDeadlineReceiver
+  backstopping AlarmRingService's in-process timer). If
+  KioskSessionActivity ends the session normally - timer or "End
+  Session Now" - it cancels this alarm; if it never gets the chance to,
+  the receiver still fires at the same end time, marks the session
+  ended, and clears the Device Owner's lock task allowlist
+  (setLockTaskPackages with an empty list), which forces Android to
+  exit lock task mode for whatever's still pinned even without an
+  explicit stopLockTask() call from inside the pinned Activity.
+- This does not cover a reboot mid-session (lock task pinning doesn't
+  survive a reboot in the first place, and no boot-time rescheduling
+  was added for this beta feature) - only the in-session Activity-death
+  case described in 4.52.
+
 WHAT CHANGED IN 4.52
 -----------------------
 - NEW (BETA): Kiosk Mode, a new "Kiosk Mode (Beta)" section on the main

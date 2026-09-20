@@ -155,6 +155,7 @@ public class KioskSessionActivity extends Activity {
     private void endSession() {
         handler.removeCallbacks(tickRunnable);
         kioskModeStorage.endSession();
+        KioskScheduler.cancelTimeoutFallback(this);
         try {
             stopLockTask();
         } catch (Exception e) {

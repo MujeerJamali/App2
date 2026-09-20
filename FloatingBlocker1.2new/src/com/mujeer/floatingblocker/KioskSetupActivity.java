@@ -186,6 +186,7 @@ public class KioskSetupActivity extends Activity {
 
         long endMillis = System.currentTimeMillis() + (minutes * 60L * 1000L);
         kioskModeStorage.startSession(endMillis);
+        KioskScheduler.scheduleTimeoutFallback(this, endMillis);
 
         startActivity(new Intent(this, KioskSessionActivity.class));
         finish();
