@@ -36,6 +36,13 @@
     <string name="confirm_delete_safety_yes">Yes, delete forever</string>
     <string name="confirm_delete_safety_cancel">Cancel</string>
 
+    <!-- Clear Current Punishment - one-time only -->
+    <string name="clear_punishment_button">🧹 Clear Current Punishment (One-Time Use)</string>
+    <string name="confirm_clear_punishment_title">Clear all current punishment?</string>
+    <string name="confirm_clear_punishment_message">This clears any Blocks currently widened by a missed Alarm. It can only ever be used once - after this, it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
+    <string name="confirm_clear_punishment_yes">Yes, clear it (uses this up forever)</string>
+    <string name="msg_punishment_cleared">Cleared. This one-time action has now been used.</string>
+
     <!-- DNS Filter Lock -->
 
 

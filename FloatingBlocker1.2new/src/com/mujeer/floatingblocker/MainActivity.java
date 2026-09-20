@@ -36,6 +36,8 @@ public class MainActivity extends Activity {
     private Button btnDeleteSafetyForever;
     private Button btnBatteryExemption;
     private Button btnScanRingingAlarm;
+    private Button btnClearPunishment;
+    private BlockPunishmentStorage punishmentStorage;
 
     private final Handler ringingAlarmHandler = new Handler();
     private final Runnable ringingAlarmTick = new Runnable() {
@@ -63,6 +65,7 @@ public class MainActivity extends Activity {
         lockScheduleStorage = new LockScheduleStorage(this);
         blocksPauseStorage = new BlocksPauseStorage(this);
         masterSafetyStorage = new MasterSafetyStorage(this);
+        punishmentStorage = new BlockPunishmentStorage(this);
         devicePolicyManager = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, FloatingBlockerDeviceAdminReceiver.class);
 
@@ -72,6 +75,7 @@ public class MainActivity extends Activity {
         btnDeleteSafetyForever = (Button) findViewById(R.id.btnDeleteSafetyForever);
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
+        btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
@@ -118,6 +122,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onScanRingingAlarmClicked();
+            }
+        });
+
+        btnClearPunishment.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onClearPunishmentClicked();
             }
         });
 
@@ -284,7 +295,41 @@ public class MainActivity extends Activity {
         btnBatteryExemption.setText(batteryExempt ? R.string.battery_exempt_on : R.string.battery_exempt_off);
         btnBatteryExemption.setEnabled(!batteryExempt);
 
+        btnClearPunishment.setVisibility(punishmentStorage.hasUsedOneTimeClear()
+                ? android.view.View.GONE : android.view.View.VISIBLE);
+
         refreshRingingAlarmButton();
+    }
+
+    /**
+     * A one-time-only escape hatch for Alarm-miss punishment (Block
+     * widening) that wasn't actually deserved - e.g. a bug fabricating
+     * missed occurrences that never really happened. Deliberately NOT
+     * gated on Lock Schedule's unlocked state like every other
+     * weakening action in this app: being usable exactly once, ever,
+     * already prevents it from becoming a repeatable loophole, and
+     * gating it to unlocked-only could make it unusable exactly when
+     * it's needed (right after the punishment was wrongly applied,
+     * while still locked). Once used, the button is gone forever.
+     */
+    private void onClearPunishmentClicked() {
+        if (punishmentStorage.hasUsedOneTimeClear()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_clear_punishment_title)
+                .setMessage(R.string.confirm_clear_punishment_message)
+                .setPositiveButton(R.string.confirm_clear_punishment_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        punishmentStorage.clearAll();
+                        punishmentStorage.markOneTimeClearUsed();
+                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
     }
 
     /**

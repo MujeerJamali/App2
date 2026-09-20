@@ -51,4 +51,32 @@ public class BlockPunishmentStorage {
         long end = prefs.getLong("end_" + blockId, 0);
         return end > 0 && nowMillis >= start && nowMillis < end;
     }
+
+    /**
+     * Clears every Block's currently-stored widen window - meant ONLY as a
+     * one-time recovery action (see hasUsedOneTimeClear/markOneTimeClearUsed
+     * below, and MainActivity's Clear Current Punishment button), not a
+     * repeatable way to escape a deserved punishment - that would undermine
+     * the entire point of the widening in the first place. Only removes the
+     * start_/end_ keys, so the one-time-used flag itself (stored in this
+     * same prefs file) survives this call.
+     */
+    public void clearAll() {
+        SharedPreferences.Editor editor = prefs.edit();
+        for (String key : prefs.getAll().keySet()) {
+            if (key.startsWith("start_") || key.startsWith("end_")) {
+                editor.remove(key);
+            }
+        }
+        editor.apply();
+    }
+
+    /** Whether the one-time Clear Current Punishment action has already been used - it can only ever be used once. */
+    public boolean hasUsedOneTimeClear() {
+        return prefs.getBoolean("one_time_clear_used", false);
+    }
+
+    public void markOneTimeClearUsed() {
+        prefs.edit().putBoolean("one_time_clear_used", true).apply();
+    }
 }

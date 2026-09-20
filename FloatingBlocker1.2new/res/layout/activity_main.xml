@@ -116,6 +116,14 @@
             android:layout_marginTop="10dp"
             android:text="@string/safety_delete_forever_button" />
 
+        <Button
+            android:id="@+id/btnClearPunishment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/clear_punishment_button" />
+
         <TextView
             style="@style/SectionHeader"
             android:layout_width="match_parent"

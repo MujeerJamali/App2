@@ -87,6 +87,22 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.60
+-----------------------
+- NEW: "Clear Current Punishment (One-Time Use)" on the main screen's
+  Safety Valve section - clears any Block currently widened by a
+  missed Alarm. Built specifically to recover from 4.59's freeze bug
+  wrongly applying punishment for occurrences that never actually
+  happened, but is general-purpose: clears whatever punishment state
+  exists at the time it's used. Deliberately a ONE-TIME action - the
+  button disappears forever the instant it's used, so it can't become
+  a repeatable way to dodge deserved punishment (which would undermine
+  the entire point of the feature). Unlike every other weakening
+  action in this app, it's NOT gated behind an unlocked Lock Schedule -
+  being usable exactly once, ever, already prevents it from being a
+  loophole, and gating it to unlocked-only could make it unusable
+  right when it's actually needed.
+
 WHAT CHANGED IN 4.59
 -----------------------
 - FIXED: the app could freeze for a very long time (no crash, no ANR
