@@ -177,8 +177,13 @@ public class KioskSetupActivity extends Activity {
         lockTaskPackages.add(getPackageName());
         try {
             devicePolicyManager.setLockTaskPackages(adminComponent, lockTaskPackages.toArray(new String[0]));
+            // LOCK_TASK_FEATURE_OVERVIEW is deliberately left out - Android
+            // requires LOCK_TASK_FEATURE_HOME to be enabled alongside it
+            // (throws IllegalArgumentException otherwise), which in turn
+            // needs a designated home activity among the allowed packages -
+            // more setup than this beta feature needs just to show Recents.
             devicePolicyManager.setLockTaskFeatures(adminComponent,
-                    DevicePolicyManager.LOCK_TASK_FEATURE_OVERVIEW | DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO);
+                    DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO);
         } catch (Exception e) {
             Toast.makeText(this, getString(R.string.msg_kiosk_start_failed, e.getMessage()), Toast.LENGTH_LONG).show();
             return;

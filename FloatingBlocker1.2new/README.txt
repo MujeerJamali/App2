@@ -87,6 +87,19 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.55
+-----------------------
+- FIXED: Kiosk Mode (Beta) failed to start with "Cannot use
+  LOCK_TASK_FEATURE_OVERVIEW without LOCK_TASK_FEATURE_HOME" - a real
+  Android API constraint (setLockTaskFeatures throws
+  IllegalArgumentException if OVERVIEW is set without HOME also being
+  set), not a bug specific to this app. Enabling LOCK_TASK_FEATURE_HOME
+  needs a designated home activity among the allowed packages, which is
+  more setup than this beta needs just to show the Recents button while
+  pinned - so OVERVIEW was dropped instead, keeping only
+  LOCK_TASK_FEATURE_SYSTEM_INFO (status bar clock/battery still shown
+  during a session).
+
 WHAT CHANGED IN 4.54
 -----------------------
 - FIXED: the app crashed immediately on every open (before showing
