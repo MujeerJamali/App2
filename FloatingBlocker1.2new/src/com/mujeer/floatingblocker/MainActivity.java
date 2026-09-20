@@ -35,6 +35,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Checked first, before anything else in onCreate() that could
+        // itself throw - if a bug crashes onCreate() on every launch,
+        // onResume() (where this was previously shown) never gets a
+        // chance to run, so the crash dialog could never surface at all.
+        // Checking here means even a crash-on-every-launch situation is
+        // still self-diagnosing on the very next attempt.
+        showCrashReportIfAny();
+
         setContentView(R.layout.activity_main);
 
         lockScheduleStorage = new LockScheduleStorage(this);
@@ -168,7 +177,6 @@ public class MainActivity extends Activity {
         BlockEnforcer.reapplyAndReschedule(this);
         AlarmScheduler.rescheduleAll(this);
         refreshUi();
-        showCrashReportIfAny();
     }
 
     /**
