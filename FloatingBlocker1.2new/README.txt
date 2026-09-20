@@ -87,6 +87,29 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.56
+-----------------------
+- FIXED (probably the real root cause of the long-standing "alarm
+  crashes app when triggered while already inside app" issue):
+  AlarmRingService was calling MediaPlayer.prepare() - the
+  SYNCHRONOUS/blocking variant - to load the alarm sound.
+  Service.onStartCommand() runs on the app's main thread by default,
+  so this blocked the entire UI while the sound loaded. Normally
+  that's fast enough not to notice, but confirmed today: triggering
+  an Alarm while the app was already open showed Android's "isn't
+  responding / Wait" dialog (an ANR, not an actual crash - a
+  different system dialog than a real crash shows), and tapping Wait
+  let it finish and ring completely normally. Switched to
+  MediaPlayer.prepareAsync(), which loads the sound off the main
+  thread and starts playback once ready via a listener instead of
+  blocking anything.
+- What was previously reported/treated as a "crash" earlier this
+  session (fixed then with defensive try/catch hardening and a crash
+  reporter, since the exact cause couldn't be confirmed without a
+  real stack trace) may well have been this same ANR all along -
+  worth re-testing the original scenario now that the actual
+  blocking call is fixed, rather than just caught defensively.
+
 WHAT CHANGED IN 4.55
 -----------------------
 - FIXED: Kiosk Mode (Beta) failed to start with "Cannot use

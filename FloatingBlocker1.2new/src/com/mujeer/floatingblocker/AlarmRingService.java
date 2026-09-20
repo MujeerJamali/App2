@@ -191,8 +191,34 @@ public class AlarmRingService extends Service {
                     .build());
             mediaPlayer.setDataSource(this, alarmUri);
             mediaPlayer.setLooping(true);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+            // prepare() (synchronous) blocks the calling thread until the
+            // data source is loaded - Service callbacks like
+            // onStartCommand() run on the app's MAIN thread by default, so
+            // this was blocking the whole UI, and long enough on some
+            // devices/URIs to trigger an ANR ("app isn't responding")
+            // whenever an Alarm fired while the app was already open and
+            // sharing that same main thread. prepareAsync() does the same
+            // loading off-thread and starts playback once ready instead.
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    try {
+                        mp.start();
+                    } catch (Exception e) {
+                        // Already dismissed/released by the time preparing
+                        // finished (a narrow but real race with async prep) -
+                        // nothing to play anymore, not a real failure.
+                    }
+                }
+            });
+            mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                @Override
+                public boolean onError(MediaPlayer mp, int what, int extra) {
+                    Log.e("AlarmRingService", "MediaPlayer error: what=" + what + " extra=" + extra);
+                    return true;
+                }
+            });
+            mediaPlayer.prepareAsync();
         } catch (Exception e) {
             Log.e("AlarmRingService", "Could not play alarm sound", e);
         }
