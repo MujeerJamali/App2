@@ -1,6 +1,29 @@
 Claude connection test - this line confirms Claude Code can read and edit this repo.
 ===================================================================================
 
+BUILDING WITHOUT AIDE (build.sh)
+===================================================================================
+build.sh builds a signed, installable APK from this source tree using
+just the raw Android SDK command-line tools (no Gradle, no AIDE) -
+downloads the SDK pieces it needs on first run (needs internet access
+to dl.google.com), then compiles/dexes/packages/signs. Output lands at
+build/apk/app-signed.apk. Needs a JDK, curl, and unzip on PATH.
+
+IMPORTANT: the first run generates a brand-new, random signing key
+(keystore/debug.keystore) that is NOT the same key AIDE has been using
+on the phone. Android refuses to install an APK signed with a
+different key as an "update" over an existing install with the same
+package name - so an APK from this script can only go on as a FRESH
+install, not an update over an AIDE-built copy already on the phone.
+For this app specifically, that matters a lot: it's a Device Owner
+app with deliberate uninstall protection, so replacing an
+AIDE-installed copy with one from this script means first removing
+Device Owner and uninstalling the old copy (see the Device Owner setup
+section below for how that was originally granted - removing it is
+the reverse of that), then installing this script's APK fresh, then
+redoing Device Owner provisioning from scratch. Not something to do
+without meaning to.
+
 Floating Blocker - version 4.37 (real root cause found: barcode decoding was scanning a sideways image)
 ===================================================================================
 
