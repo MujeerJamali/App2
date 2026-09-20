@@ -87,6 +87,22 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.58
+-----------------------
+- The manual "Scan to Dismiss" ringing-alarm button (4.57) now shows a
+  live countdown to the same RING_MINUTES deadline the normal ring
+  flow already uses, e.g. "Scan to Dismiss: Morning Alarm (7:32 left)"
+  - ticks every second while the main screen is visible, so it's clear
+  exactly how long is left before it disappears, instead of it just
+  silently vanishing with no warning once the deadline passes. The
+  button doesn't grant any extra time of its own - it's showing the
+  same deadline the automatic flow was always bound by.
+- Side benefit of how this was built: the button now also
+  appears/updates/disappears live if an Alarm's ringing state changes
+  while already sitting on the main screen (starts ringing, gets
+  dismissed some other way, or times out), not just when the screen is
+  next opened or resumed.
+
 WHAT CHANGED IN 4.57
 -----------------------
 - NEW: a manual "Scan to Dismiss" button on the main screen, shown only

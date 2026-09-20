@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.widget.Button;
@@ -35,6 +36,15 @@ public class MainActivity extends Activity {
     private Button btnDeleteSafetyForever;
     private Button btnBatteryExemption;
     private Button btnScanRingingAlarm;
+
+    private final Handler ringingAlarmHandler = new Handler();
+    private final Runnable ringingAlarmTick = new Runnable() {
+        @Override
+        public void run() {
+            refreshRingingAlarmButton();
+            ringingAlarmHandler.postDelayed(this, 1000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -190,6 +200,17 @@ public class MainActivity extends Activity {
         BlockEnforcer.reapplyAndReschedule(this);
         AlarmScheduler.rescheduleAll(this);
         refreshUi();
+        // Ticks the ringing-alarm button's countdown once a second while
+        // this screen is visible - also means the button appears/updates/
+        // disappears live if an Alarm starts or resolves while already
+        // sitting on this screen, not just on the next resume.
+        ringingAlarmHandler.postDelayed(ringingAlarmTick, 1000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        ringingAlarmHandler.removeCallbacks(ringingAlarmTick);
     }
 
     /**
@@ -282,11 +303,34 @@ public class MainActivity extends Activity {
             return;
         }
         btnScanRingingAlarm.setVisibility(android.view.View.VISIBLE);
-        if (ringingAlarms.size() == 1) {
-            btnScanRingingAlarm.setText(getString(R.string.ringing_alarm_button_one_format, ringingAlarms.get(0).name));
-        } else {
-            btnScanRingingAlarm.setText(getString(R.string.ringing_alarm_button_many_format, ringingAlarms.size()));
+
+        // The button doesn't grant any extra time of its own - it's just
+        // another way to reach the same scan screen within the exact same
+        // RING_MINUTES window the normal ring flow already uses, so the
+        // countdown shown here is that same deadline, not a separate one.
+        AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(this);
+        long soonestDeadlineMillis = Long.MAX_VALUE;
+        for (Alarm a : ringingAlarms) {
+            long deadline = runtime.getRingingOccurrence(a.id) + (Alarm.RING_MINUTES * 60L * 1000L);
+            if (deadline < soonestDeadlineMillis) {
+                soonestDeadlineMillis = deadline;
+            }
         }
+        long remainingMillis = Math.max(soonestDeadlineMillis - System.currentTimeMillis(), 0);
+        String remainingText = formatRemaining(remainingMillis);
+
+        if (ringingAlarms.size() == 1) {
+            btnScanRingingAlarm.setText(getString(R.string.ringing_alarm_button_one_format, ringingAlarms.get(0).name, remainingText));
+        } else {
+            btnScanRingingAlarm.setText(getString(R.string.ringing_alarm_button_many_format, ringingAlarms.size(), remainingText));
+        }
+    }
+
+    private String formatRemaining(long remainingMillis) {
+        long totalSeconds = remainingMillis / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        return String.format("%d:%02d", minutes, seconds);
     }
 
     private List<Alarm> findRingingAlarms() {
