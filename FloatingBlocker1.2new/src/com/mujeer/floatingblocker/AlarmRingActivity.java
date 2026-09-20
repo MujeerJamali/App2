@@ -27,6 +27,14 @@ import java.util.List;
  * (which is exactly the kind of gap that would only ever show up when
  * something in the app was already open/running, not when the phone was
  * otherwise idle).
+ *
+ * Can also be launched manually, with no AlarmRingService ever having run
+ * at all (see MainActivity's ringing-alarm button, for when the ring
+ * service/notification somehow fails to show on its own) - the
+ * "is this still unresolved" checks here go against AlarmRuntimeStorage's
+ * persisted ringing-occurrence state, not the service's own alive-or-not
+ * status, specifically so this screen (and dismissing from it) works
+ * whether or not that service instance exists.
  */
 public class AlarmRingActivity extends Activity {
 
@@ -84,7 +92,15 @@ public class AlarmRingActivity extends Activity {
         alarmId = intent.getStringExtra(AlarmRingReceiver.EXTRA_ALARM_ID);
         occurrenceMillis = intent.getLongExtra(AlarmRingReceiver.EXTRA_OCCURRENCE_MILLIS, 0);
 
-        if (alarmId == null || !AlarmRingService.isRingingFor(alarmId, occurrenceMillis)) {
+        // Checked against AlarmRuntimeStorage's persisted state, not
+        // AlarmRingService.isRingingFor() - the service being alive isn't
+        // the same thing as the occurrence still being unresolved (the
+        // service can die without the occurrence having been dismissed or
+        // punished), and this screen can also be launched manually (see
+        // MainActivity's ringing-alarm button, for when the ring service/
+        // notification somehow failed to show normally) without the
+        // service ever having run at all.
+        if (alarmId == null || new AlarmRuntimeStorage(this).getRingingOccurrence(alarmId) != occurrenceMillis) {
             // Already resolved (dismissed or punished) before this screen even opened/updated.
             finish();
             return;
@@ -166,7 +182,7 @@ public class AlarmRingActivity extends Activity {
     protected void onResume() {
         super.onResume();
         AlarmRingService.setStopListener(onServiceStopped);
-        if (alarmId != null && !AlarmRingService.isRingingFor(alarmId, occurrenceMillis)) {
+        if (alarmId != null && new AlarmRuntimeStorage(this).getRingingOccurrence(alarmId) != occurrenceMillis) {
             finish();
         }
     }

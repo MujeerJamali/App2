@@ -87,6 +87,33 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.57
+-----------------------
+- NEW: a manual "Scan to Dismiss" button on the main screen, shown only
+  when an Alarm has an unresolved ringing occurrence (per
+  AlarmRuntimeStorage's persisted state) - for whenever the ring
+  service/notification/full-screen alarm somehow fails to show
+  normally, but you're otherwise aware an Alarm should be ringing right
+  now. Tapping it goes straight to the same scan-to-dismiss screen the
+  normal ring flow uses (showing the alarm's name, same barcode-pair
+  requirement); with more than one Alarm ringing at once, it asks which
+  one first. Hidden the rest of the time.
+- FIXED (found while building the above): AlarmRingActivity's "is this
+  occurrence already resolved" checks, and AlarmRingService's dismiss
+  handling, were gated on AlarmRingService.isRingingFor() - whether
+  that PARTICULAR service instance is alive - rather than on whether
+  the occurrence is actually still unresolved. Those aren't the same
+  thing: if the service ever died or failed to start for any reason
+  (independent of today's ANR fix), a correct barcode scan on the
+  ring screen would silently fail to register as dismissed, and the
+  occurrence would still get punished at the 10-minute deadline
+  despite being scanned correctly. Now checked against
+  AlarmRuntimeStorage's persisted ringing-occurrence state instead,
+  which is what actually tracks resolution and survives the service
+  not existing at all - needed for the new manual button above to
+  work, but also a real correctness fix for the existing automatic
+  flow.
+
 WHAT CHANGED IN 4.56
 -----------------------
 - FIXED (probably the real root cause of the long-standing "alarm

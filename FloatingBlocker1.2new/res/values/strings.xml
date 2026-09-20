@@ -194,6 +194,14 @@
     <!-- Crash reporting -->
     <string name="crash_report_title">The app crashed last time - details below</string>
 
+    <!-- Ringing Alarm - manual dismiss fallback, for when the ring
+         service/notification/full-screen alarm somehow fails to show
+         normally, but the user is otherwise aware an Alarm should be
+         ringing right now. -->
+    <string name="ringing_alarm_button_one_format">⏰ Scan to Dismiss: %1$s</string>
+    <string name="ringing_alarm_button_many_format">⏰ %1$d Alarms Ringing - Tap to Choose</string>
+    <string name="pick_ringing_alarm_title">Which alarm?</string>
+
     <!-- Kiosk Mode (Beta) -->
     <string name="section_kiosk">Kiosk Mode (Beta)</string>
     <string name="kiosk_mode_button">🖥️  Kiosk Mode (Beta)</string>

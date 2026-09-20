@@ -64,11 +64,18 @@ public class AlarmRingService extends Service {
         stopListener = null;
     }
 
-    /** Called by AlarmRingActivity after a correct barcode scan. */
+    /**
+     * Called by AlarmRingActivity after a correct barcode scan. Deliberately
+     * does NOT gate this on isRingingFor() - that only reflects whether this
+     * particular service instance is alive, not whether the occurrence is
+     * still actually unresolved, so gating on it would silently drop a
+     * legitimate dismissal whenever the service had died or never started
+     * (e.g. the manual "scan to dismiss" entry point on the main screen, for
+     * when the alarm somehow failed to ring/show normally).
+     * AlarmPunisher.markDismissed() is already safe to call unconditionally.
+     */
     public static void notifyDismissed(Context context, String alarmId, long occurrenceMillis) {
-        if (isRingingFor(alarmId, occurrenceMillis)) {
-            AlarmPunisher.markDismissed(context, alarmId, occurrenceMillis);
-        }
+        AlarmPunisher.markDismissed(context, alarmId, occurrenceMillis);
     }
 
     /** Called by AlarmPunisher once an occurrence is resolved (dismissed or punished), from either path. */

@@ -15,6 +15,9 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends Activity {
 
     private static final int REQUEST_EXPORT_BACKUP = 801;
@@ -31,6 +34,7 @@ public class MainActivity extends Activity {
     private Button btnMasterSafety;
     private Button btnDeleteSafetyForever;
     private Button btnBatteryExemption;
+    private Button btnScanRingingAlarm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +61,9 @@ public class MainActivity extends Activity {
         btnMasterSafety = (Button) findViewById(R.id.btnMasterSafety);
         btnDeleteSafetyForever = (Button) findViewById(R.id.btnDeleteSafetyForever);
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
+        btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
+        btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
         Button btnBlocks = (Button) findViewById(R.id.btnBlocks);
         Button btnLockSchedule = (Button) findViewById(R.id.btnLockSchedule);
@@ -95,6 +101,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onDeleteSafetyForeverClicked();
+            }
+        });
+
+        btnScanRingingAlarm.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onScanRingingAlarmClicked();
             }
         });
 
@@ -249,6 +262,76 @@ public class MainActivity extends Activity {
         boolean batteryExempt = isBatteryExempt();
         btnBatteryExemption.setText(batteryExempt ? R.string.battery_exempt_on : R.string.battery_exempt_off);
         btnBatteryExemption.setEnabled(!batteryExempt);
+
+        refreshRingingAlarmButton();
+    }
+
+    /**
+     * Shows a prominent button whenever any Alarm currently has an
+     * unresolved ringing occurrence (per AlarmRuntimeStorage's persisted
+     * state, not whether AlarmRingService happens to be alive) - a manual
+     * way to reach the scan-to-dismiss screen for whenever the ring
+     * service/notification/full-screen alarm somehow fails to show on its
+     * own, as long as the user is otherwise aware an Alarm should be
+     * ringing. Hidden the rest of the time.
+     */
+    private void refreshRingingAlarmButton() {
+        List<Alarm> ringingAlarms = findRingingAlarms();
+        if (ringingAlarms.isEmpty()) {
+            btnScanRingingAlarm.setVisibility(android.view.View.GONE);
+            return;
+        }
+        btnScanRingingAlarm.setVisibility(android.view.View.VISIBLE);
+        if (ringingAlarms.size() == 1) {
+            btnScanRingingAlarm.setText(getString(R.string.ringing_alarm_button_one_format, ringingAlarms.get(0).name));
+        } else {
+            btnScanRingingAlarm.setText(getString(R.string.ringing_alarm_button_many_format, ringingAlarms.size()));
+        }
+    }
+
+    private List<Alarm> findRingingAlarms() {
+        List<Alarm> result = new ArrayList<Alarm>();
+        AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(this);
+        for (Alarm a : new AlarmsStorage(this).loadAlarms()) {
+            if (runtime.getRingingOccurrence(a.id) != 0) {
+                result.add(a);
+            }
+        }
+        return result;
+    }
+
+    private void onScanRingingAlarmClicked() {
+        final List<Alarm> ringingAlarms = findRingingAlarms();
+        if (ringingAlarms.isEmpty()) {
+            // Resolved by some other path (e.g. the deadline just fired) between showing the button and tapping it.
+            refreshUi();
+            return;
+        }
+        if (ringingAlarms.size() == 1) {
+            launchAlarmDismissScreen(ringingAlarms.get(0));
+            return;
+        }
+        String[] labels = new String[ringingAlarms.size()];
+        for (int i = 0; i < ringingAlarms.size(); i++) {
+            labels[i] = ringingAlarms.get(i).name;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.pick_ringing_alarm_title)
+                .setItems(labels, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        launchAlarmDismissScreen(ringingAlarms.get(which));
+                    }
+                })
+                .show();
+    }
+
+    private void launchAlarmDismissScreen(Alarm alarm) {
+        long occurrenceMillis = new AlarmRuntimeStorage(this).getRingingOccurrence(alarm.id);
+        Intent intent = new Intent(this, AlarmRingActivity.class);
+        intent.putExtra(AlarmRingReceiver.EXTRA_ALARM_ID, alarm.id);
+        intent.putExtra(AlarmRingReceiver.EXTRA_OCCURRENCE_MILLIS, occurrenceMillis);
+        startActivity(intent);
     }
 
     private boolean isBatteryExempt() {
