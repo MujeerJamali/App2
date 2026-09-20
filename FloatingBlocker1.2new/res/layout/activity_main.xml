@@ -117,6 +117,16 @@
 
         <TextView
             style="@style/SectionHeader"
+            android:text="@string/section_kiosk" />
+
+        <Button
+            android:id="@+id/btnKioskMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/kiosk_mode_button" />
+
+        <TextView
+            style="@style/SectionHeader"
             android:text="@string/section_backup" />
 
         <Button

@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
         Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
         Button btnExportBackup = (Button) findViewById(R.id.btnExportBackup);
         Button btnImportBackup = (Button) findViewById(R.id.btnImportBackup);
+        Button btnKioskMode = (Button) findViewById(R.id.btnKioskMode);
 
         btnBatteryExemption.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
@@ -141,6 +142,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onExportBackupClicked();
+            }
+        });
+
+        btnKioskMode.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, KioskSetupActivity.class));
             }
         });
 

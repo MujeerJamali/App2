@@ -87,6 +87,33 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.52
+-----------------------
+- NEW (BETA): Kiosk Mode, a new "Kiosk Mode (Beta)" section on the main
+  screen. Pick which apps stay usable, set a time limit in minutes, and
+  start a session - while it's running, the device is pinned (Android
+  Lock Task Mode) so nothing outside the allowed apps (or this app's
+  own countdown/End Session screen) can be reached at all, not even by
+  leaving the app, opening Recents, or an intent from another app.
+  Ends automatically when the timer runs out, or any time via the "End
+  Session Now" button on the pinned screen.
+- This is explicitly a beta/demo feature, kept completely separate from
+  the existing Blocks system (a different KioskModeStorage, its own two
+  screens) rather than merged into BlockEnforcer - Lock Task Mode is a
+  fundamentally different mechanism (pin-the-whole-device vs suspend-
+  specific-packages), and mixing them risked the well-tested existing
+  system for the sake of an experimental one.
+- Known limitation, stated honestly since this is a beta: the
+  auto-end-at-timer behavior relies on a Handler-based countdown inside
+  the pinned session Activity itself, not an AlarmManager backstop -
+  there's no DevicePolicyManager API to force-unpin from outside the
+  currently-pinned Activity, so if that Activity were somehow killed
+  mid-session, the automatic end wouldn't fire (the manual End Session
+  button, and simply reopening the app, both still work). Under normal
+  operation nothing else can preempt the pinned Activity, so this is
+  expected to be reliable in practice, but it hasn't been hardened the
+  way the rest of the app's enforcement has.
+
 WHAT CHANGED IN 4.51
 -----------------------
 - NEW: Export Backup / Import Backup, on the main screen. Exports

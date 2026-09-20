@@ -193,4 +193,22 @@
 
     <!-- Crash reporting -->
     <string name="crash_report_title">The app crashed last time - details below</string>
+
+    <!-- Kiosk Mode (Beta) -->
+    <string name="section_kiosk">Kiosk Mode (Beta)</string>
+    <string name="kiosk_mode_button">🖥️  Kiosk Mode (Beta)</string>
+    <string name="kiosk_setup_screen_title">Kiosk Mode (Beta)</string>
+    <string name="kiosk_setup_desc">Pick which apps stay usable, set a time limit, and start. While a session is running, the device is pinned so nothing outside the list (or this screen) can be opened - not even by leaving the app. This is an experimental beta feature, kept separate from Blocks.</string>
+    <string name="kiosk_allowed_apps_label">Allowed apps</string>
+    <string name="kiosk_duration_label">Duration (minutes)</string>
+    <string name="kiosk_duration_hint">e.g. 30</string>
+    <string name="kiosk_start_button">Start Kiosk Session</string>
+    <string name="msg_kiosk_needs_device_owner">Kiosk Mode needs Device Owner to be active.</string>
+    <string name="msg_kiosk_select_at_least_one_app">Select at least one app to allow.</string>
+    <string name="msg_kiosk_enter_duration">Enter a duration in minutes (greater than 0).</string>
+    <string name="msg_kiosk_start_failed">Could not start Kiosk Mode: %1$s</string>
+    <string name="kiosk_session_title">Kiosk Session Active</string>
+    <string name="kiosk_time_remaining_format">Time remaining: %1$s</string>
+    <string name="kiosk_open_app_format">Open %1$s</string>
+    <string name="kiosk_end_session_button">End Session Now</string>
 </resources>
