@@ -6,6 +6,17 @@
     <string name="section_manage">Manage</string>
     <string name="section_safety">Safety Valve</string>
     <string name="section_system">System</string>
+    <string name="section_backup">Backup</string>
+    <string name="export_backup_button">⬆️  Export Backup</string>
+    <string name="import_backup_button">⬇️  Import Backup</string>
+    <string name="msg_backup_exported">Backup saved.</string>
+    <string name="msg_backup_export_failed">Could not save the backup: %1$s</string>
+    <string name="msg_backup_imported">Backup imported - everything replaced with the backup\'s contents.</string>
+    <string name="msg_backup_import_failed">Could not import that backup: %1$s</string>
+    <string name="msg_backup_import_locked">Importing a backup can only be done during an unlocked time - check your Lock Schedule. (It can replace your current Blocks/Lock Schedule/etc. entirely, so it\'s gated the same as anything else that could weaken protection.)</string>
+    <string name="confirm_import_backup_title">Import this backup?</string>
+    <string name="confirm_import_backup_message">This replaces ALL of your current Blocks, Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms, and Location Override settings with whatever is in this backup file. This cannot be undone.</string>
+    <string name="confirm_import_backup_yes">Import and replace everything</string>
     <string name="device_owner_active">Device Owner: ACTIVE (full protection on)</string>
     <string name="device_owner_not_active">Device Owner: NOT ACTIVE — protection is off</string>
     <string name="blocks_active">Blocks: Active (tap to pause)</string>

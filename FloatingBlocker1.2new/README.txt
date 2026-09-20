@@ -87,6 +87,36 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.51
+-----------------------
+- NEW: Export Backup / Import Backup, on the main screen. Exports
+  everything meaningful you've configured - Blocks, Lock Schedule,
+  Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms (with
+  their barcode pairs), the Blocks-paused toggle, and Location Override
+  - to a plain JSON file you pick a save location for (Downloads,
+  Google Drive, wherever) via Android's standard file picker. No
+  storage permission needed, and the file survives this app being
+  uninstalled, unlike the app's own data - which is exactly the point:
+  this exists so an uninstall/reinstall (e.g. to switch which key
+  signs the app - see the BUILDING WITHOUT AIDE note near the top of
+  this file) doesn't mean losing everything you've set up.
+- Deliberately NOT included in the backup: Emergency Safety's engaged/
+  deleted-forever state (restoring "deleted forever" back from an old
+  backup would undermine the entire point of that being irreversible),
+  and all runtime/operational bookkeeping (alarm ring history, active
+  punishment windows, crash logs, installed-app snapshots) - none of
+  that makes sense replayed from an earlier point in time.
+- Import replaces ALL current Blocks/Lock Schedule/Holiday Breaks/
+  Websites/Barcodes/Alarms/Location Override with the backup's
+  contents - a confirmation dialog spells this out before it happens.
+  Gated behind an unlocked Lock Schedule period, same as anything else
+  that could weaken protection (an old backup could have fewer/no
+  Blocks configured) - this does NOT block the actual intended use
+  case (restoring right after a fresh reinstall), since Lock Schedule
+  is always open on a blank install with no ranges saved yet.
+- Export is never gated - reading out current state can't weaken
+  anything.
+
 WHAT CHANGED IN 4.50
 -----------------------
 - NEW: a real visual design system, applied app-wide - previously there

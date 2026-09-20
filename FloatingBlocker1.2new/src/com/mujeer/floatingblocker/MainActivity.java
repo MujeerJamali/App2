@@ -17,6 +17,9 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
+    private static final int REQUEST_EXPORT_BACKUP = 801;
+    private static final int REQUEST_IMPORT_BACKUP = 802;
+
     private LockScheduleStorage lockScheduleStorage;
     private BlocksPauseStorage blocksPauseStorage;
     private MasterSafetyStorage masterSafetyStorage;
@@ -54,6 +57,8 @@ public class MainActivity extends Activity {
         Button btnAlarms = (Button) findViewById(R.id.btnAlarms);
         Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
         Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
+        Button btnExportBackup = (Button) findViewById(R.id.btnExportBackup);
+        Button btnImportBackup = (Button) findViewById(R.id.btnImportBackup);
 
         btnBatteryExemption.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
@@ -129,6 +134,20 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 startActivity(new Intent(MainActivity.this, HomeLocationActivity.class));
+            }
+        });
+
+        btnExportBackup.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onExportBackupClicked();
+            }
+        });
+
+        btnImportBackup.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onImportBackupClicked();
             }
         });
     }
@@ -296,6 +315,95 @@ public class MainActivity extends Activity {
                     }
                 })
                 .setNegativeButton(R.string.confirm_delete_safety_cancel, null)
+                .show();
+    }
+
+    /**
+     * Export/Import Backup: everything meaningful a user has configured
+     * (Blocks, Lock Schedule, Holiday Breaks, Blocked Websites,
+     * Registered Barcodes, Alarms, Blocks-paused, Home Location) to/from
+     * a JSON file the user picks a location for via the standard Android
+     * file picker (Storage Access Framework) - no storage permission
+     * needed, and the file survives this app being uninstalled, unlike
+     * the app's own data. See BackupManager for exactly what is and
+     * isn't included and why.
+     */
+    private void onExportBackupClicked() {
+        String filename = "self-control-backup-"
+                + new java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.US).format(new java.util.Date())
+                + ".json";
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, filename);
+        try {
+            startActivityForResult(intent, REQUEST_EXPORT_BACKUP);
+        } catch (Exception e) {
+            Toast.makeText(this, getString(R.string.msg_backup_export_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void onImportBackupClicked() {
+        if (!lockScheduleStorage.isEditingAllowed()) {
+            Toast.makeText(this, R.string.msg_backup_import_locked, Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        // Backup files can show up under a few different MIME types
+        // depending on how they were saved/shared, not always exactly
+        // application/json - accept anything and let opening it validate.
+        intent.setType("*/*");
+        try {
+            startActivityForResult(intent, REQUEST_IMPORT_BACKUP);
+        } catch (Exception e) {
+            Toast.makeText(this, getString(R.string.msg_backup_import_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            return;
+        }
+        Uri uri = data.getData();
+        if (requestCode == REQUEST_EXPORT_BACKUP) {
+            try {
+                BackupManager.exportToUri(this, uri);
+                Toast.makeText(this, R.string.msg_backup_exported, Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(this, getString(R.string.msg_backup_export_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+            }
+        } else if (requestCode == REQUEST_IMPORT_BACKUP) {
+            confirmAndImportBackup(uri);
+        }
+    }
+
+    private void confirmAndImportBackup(final Uri uri) {
+        // Re-checked here too - time may have passed (and the lock state
+        // changed) between tapping Import and actually picking a file in
+        // the system file browser.
+        if (!lockScheduleStorage.isEditingAllowed()) {
+            Toast.makeText(this, R.string.msg_backup_import_locked, Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_import_backup_title)
+                .setMessage(R.string.confirm_import_backup_message)
+                .setPositiveButton(R.string.confirm_import_backup_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            BackupManager.importFromUri(MainActivity.this, uri);
+                            Toast.makeText(MainActivity.this, R.string.msg_backup_imported, Toast.LENGTH_LONG).show();
+                            refreshUi();
+                        } catch (Exception e) {
+                            Toast.makeText(MainActivity.this, getString(R.string.msg_backup_import_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
                 .show();
     }
 
