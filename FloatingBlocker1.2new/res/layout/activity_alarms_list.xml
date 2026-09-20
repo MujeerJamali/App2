@@ -7,10 +7,10 @@
 
     <TextView
         android:id="@+id/txtLockedMessage"
+        style="@style/LockedMessageBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/msg_alarms_locked"
-        android:paddingBottom="16dp"
         android:visibility="gone" />
 
     <Button

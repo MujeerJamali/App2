@@ -17,11 +17,11 @@
 
         <TextView
             android:id="@+id/txtLockedMessage"
+            style="@style/LockedMessageBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/msg_alarms_locked"
-            android:paddingTop="12dp"
-            android:paddingBottom="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <TextView

@@ -3,17 +3,20 @@
     <string name="app_name">Self-Control</string>
 
     <!-- Main screen -->
+    <string name="section_manage">Manage</string>
+    <string name="section_safety">Safety Valve</string>
+    <string name="section_system">System</string>
     <string name="device_owner_active">Device Owner: ACTIVE (full protection on)</string>
     <string name="device_owner_not_active">Device Owner: NOT ACTIVE — protection is off</string>
     <string name="blocks_active">Blocks: Active (tap to pause)</string>
     <string name="blocks_paused">Blocks: Paused (tap to continue)</string>
     <string name="msg_cannot_pause_now">You can only pause Blocks during an unlocked time. Check your Lock Schedule.</string>
-    <string name="blocks_button">Blocks</string>
-    <string name="lock_schedule_button">Lock Schedule</string>
-    <string name="safety_engage_button">Emergency Safety: OFF (tap to disable everything)</string>
-    <string name="safety_disengage_button">Emergency Safety: ON (tap to turn protection back on)</string>
-    <string name="safety_deleted_button">Emergency Safety: permanently removed</string>
-    <string name="safety_delete_forever_button">Delete Emergency Safety Forever</string>
+    <string name="blocks_button">📦  Blocks</string>
+    <string name="lock_schedule_button">🔒  Lock Schedule</string>
+    <string name="safety_engage_button">🚨  Emergency Safety: OFF (tap to disable everything)</string>
+    <string name="safety_disengage_button">🚨  Emergency Safety: ON (tap to turn protection back on)</string>
+    <string name="safety_deleted_button">🚨  Emergency Safety: permanently removed</string>
+    <string name="safety_delete_forever_button">🗑️  Delete Emergency Safety Forever</string>
     <string name="msg_safety_deleted">Emergency Safety has been permanently removed. It cannot be used again.</string>
     <string name="msg_safety_delete_blocked_engaged">Turn Emergency Safety back ON first, then you can delete it forever.</string>
     <string name="msg_safety_already_deleted">Emergency Safety was already removed forever.</string>
@@ -26,8 +29,8 @@
 
 
     <!-- Battery Optimization Exemption -->
-    <string name="battery_exempt_off">Battery Optimization: Not exempt (tap to fix)</string>
-    <string name="battery_exempt_on">Battery Optimization: Exempt</string>
+    <string name="battery_exempt_off">🔋  Battery Optimization: Not exempt (tap to fix)</string>
+    <string name="battery_exempt_on">🔋  Battery Optimization: Exempt</string>
     <string name="msg_battery_already_exempt">Already exempt from battery optimization.</string>
 
     <!-- Lock Schedule screen -->
@@ -64,7 +67,7 @@
     <string name="msg_some_removals_skipped">Some app removals were not applied - that can only be done during an unlocked time. New apps you added were still saved.</string>
 
     <!-- Holiday Breaks -->
-    <string name="holiday_breaks_button">Holiday Breaks</string>
+    <string name="holiday_breaks_button">🏖️  Holiday Breaks</string>
     <string name="holiday_breaks_screen_title">Holiday Breaks</string>
     <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is allowed during an unlocked Lock Schedule time, or any time if its start doesn\'t take effect until a later day (a day starts at 2:00 AM for this purpose, so 1:30 AM still counts as the day before). Cancelling one early is always allowed, any time.</string>
     <string name="msg_holiday_breaks_locked">This can only be created during an unlocked time, unless its start is on a later day (a day starts at 2:00 AM) - check your Lock Schedule, or pick a later start date/time.</string>
@@ -85,7 +88,7 @@
     <string name="msg_break_saved">Holiday Break saved.</string>
 
     <!-- Blocked Websites -->
-    <string name="websites_button">Blocked Websites</string>
+    <string name="websites_button">🌐  Blocked Websites</string>
     <string name="websites_screen_title">Blocked Websites</string>
     <string name="websites_desc">Domains added here are blocked in Chrome (and every subdomain of them), pushed in as a Chrome content policy - no DNS or VPN involved. Chrome also blocks adult/explicit sites in general, forces SafeSearch and restricted YouTube, and Incognito is disabled. Every other common browser is kept permanently unusable so this can\'t just be switched around.</string>
     <string name="msg_websites_locked">Removing a website can only be done during an unlocked time. Adding one is always allowed.</string>
@@ -99,7 +102,7 @@
     <string name="confirm_block_website_yes">Block it</string>
 
     <!-- Registered Barcodes -->
-    <string name="barcodes_button">Registered Barcodes</string>
+    <string name="barcodes_button">🏷️  Registered Barcodes</string>
     <string name="barcodes_screen_title">Registered Barcodes</string>
     <string name="barcodes_desc">Scan a barcode or QR code once here to register it (you\'ll scan it twice, to confirm). Alarms can then require scanning a PAIR of these exact codes, one after the other, to be dismissed.</string>
     <string name="msg_barcodes_locked">Removing a barcode can only be done during an unlocked time. Registering a new one is always allowed.</string>
@@ -128,7 +131,7 @@
     <string name="flashlight_off_button">Flashlight Off</string>
 
     <!-- Alarms -->
-    <string name="alarms_button">Alarms</string>
+    <string name="alarms_button">⏰  Alarms</string>
     <string name="alarms_screen_title">Alarms</string>
     <string name="add_alarm_button">+ Add Alarm</string>
     <string name="msg_alarms_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
@@ -162,7 +165,7 @@
     <string name="alarm_notification_channel_name">Alarm ringing</string>
 
     <!-- Home Location Override -->
-    <string name="home_location_button">Location Override</string>
+    <string name="home_location_button">📍  Location Override</string>
     <string name="home_location_screen_title">Location Override</string>
     <string name="home_location_desc">When turned on, Lock Schedule\'s editing-protection, all Blocks, and Alarms stop applying whenever you\'re more than 20km from the home location you set below - as if none of it existed while you\'re away. If your location can\'t be determined for any reason, everything stays exactly as it would without this feature - restrictions still apply. This never affects the permanent protections (this app can\'t be uninstalled, VPN stays blocked, other browsers stay locked, etc.) - those stay on no matter where you are.</string>
     <string name="msg_home_location_locked">Changing an already-set home location can only be done during an unlocked time - check your Lock Schedule. (Being far from home doesn\'t unlock this specifically - otherwise a single trip could permanently break the feature.)</string>

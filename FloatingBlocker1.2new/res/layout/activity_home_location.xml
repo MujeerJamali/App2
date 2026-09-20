@@ -10,17 +10,17 @@
         android:padding="16dp">
 
         <TextView
+            style="@style/ScreenDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/home_location_desc"
-            android:paddingBottom="16dp" />
+            android:text="@string/home_location_desc" />
 
         <TextView
             android:id="@+id/txtLockedMessage"
+            style="@style/LockedMessageBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/msg_home_location_locked"
-            android:paddingBottom="16dp"
             android:visibility="gone" />
 
         <TextView

@@ -64,6 +64,40 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.50
+-----------------------
+- NEW: a real visual design system, applied app-wide - previously there
+  was no theme, no color palette, and no shared styles at all, just
+  scattered hardcoded colors per-screen. Added:
+  - A cohesive color palette (res/values/colors.xml): a calm slate-blue
+    brand color instead of default system gray, plus semantic
+    success/danger/warning colors reused consistently everywhere they
+    already applied (green = active/good, red = paused/danger, amber =
+    "needs attention").
+  - An app theme (res/values/styles.xml + applied in the manifest) that
+    reskins every screen's action bar, every plain Button, and every
+    dialog automatically - no per-screen edits needed for this part.
+    Buttons are now rounded, colored, and have a visible disabled state
+    (previously a disabled button looked identical to an enabled one).
+  - A light background color app-wide (previously stark white).
+- Main screen reorganized into clearly labeled sections ("Manage",
+  "Safety Valve", "System") instead of one long undifferentiated column
+  of buttons, with the Device Owner status + pause button grouped into
+  a distinct status card at the top. Each nav button also got a small
+  icon prefix for quicker visual scanning.
+- Every list screen (Blocks, Alarms, Barcodes, Holiday Breaks, Websites,
+  triggers, barcode pairs) now renders its rows as distinct rounded
+  cards instead of plain flat rows separated by nothing.
+- The "this can only be done during an unlocked time" notices, shown on
+  several screens, are now a soft amber box instead of plain text - more
+  noticeable, reads as informative rather than alarming.
+- Emergency Safety's button now visibly turns red while engaged (since
+  that means everything is disabled), and "Delete Emergency Safety
+  Forever" is now visibly red as the destructive action it is.
+- NOT changed: the app's launcher icon (still the default) - a proper
+  custom icon needs real image assets, which isn't something achievable
+  through layout/style XML alone.
+
 WHAT CHANGED IN 4.49
 -----------------------
 - NEW: registering a barcode now requires scanning it TWICE to confirm -

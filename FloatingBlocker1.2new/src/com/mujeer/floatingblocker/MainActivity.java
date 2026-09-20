@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
         btnMasterSafety = (Button) findViewById(R.id.btnMasterSafety);
         btnDeleteSafetyForever = (Button) findViewById(R.id.btnDeleteSafetyForever);
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
+        btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
         Button btnBlocks = (Button) findViewById(R.id.btnBlocks);
         Button btnLockSchedule = (Button) findViewById(R.id.btnLockSchedule);
@@ -183,12 +184,15 @@ public class MainActivity extends Activity {
                 ? getString(R.string.device_owner_active)
                 : getString(R.string.device_owner_not_active));
         txtDeviceOwnerStatus.setTextColor(deviceOwnerActive
-                ? Color.parseColor("#2E7D32")
-                : Color.parseColor("#B71C1C"));
+                ? getColor(R.color.color_success)
+                : getColor(R.color.color_danger));
 
         boolean paused = blocksPauseStorage.isPaused();
         btnBlocksPause.setText(paused ? R.string.blocks_paused : R.string.blocks_active);
-        btnBlocksPause.setBackgroundColor(paused ? Color.parseColor("#B71C1C") : Color.parseColor("#2E7D32"));
+        // Tint rather than replace the background outright, so the button
+        // keeps its rounded shape instead of reverting to a flat rectangle.
+        btnBlocksPause.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                paused ? getColor(R.color.color_danger) : getColor(R.color.color_success)));
         btnBlocksPause.setTextColor(Color.WHITE);
 
         boolean safetyEngaged = masterSafetyStorage.isEngaged();
@@ -197,10 +201,13 @@ public class MainActivity extends Activity {
         if (safetyDeleted) {
             btnMasterSafety.setText(R.string.safety_deleted_button);
             btnMasterSafety.setEnabled(false);
+            btnMasterSafety.setBackgroundTintList(null);
             btnDeleteSafetyForever.setEnabled(false);
         } else {
             btnMasterSafety.setText(safetyEngaged ? R.string.safety_disengage_button : R.string.safety_engage_button);
             btnMasterSafety.setEnabled(true);
+            btnMasterSafety.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    safetyEngaged ? getColor(R.color.color_danger) : getColor(R.color.primary)));
             btnDeleteSafetyForever.setEnabled(true);
         }
 

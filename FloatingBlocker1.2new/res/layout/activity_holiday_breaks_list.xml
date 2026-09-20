@@ -6,10 +6,10 @@
     android:padding="16dp">
 
     <TextView
+        style="@style/ScreenDescription"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/holiday_breaks_desc"
-        android:paddingBottom="16dp" />
+        android:text="@string/holiday_breaks_desc" />
 
     <Button
         android:id="@+id/btnAddHolidayBreak"
