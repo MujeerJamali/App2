@@ -87,6 +87,20 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.64
+-----------------------
+- Confirmed via LogCat that 4.63's background-thread fix works as
+  intended: the app opened and became fully interactive (window
+  drawn, touch input handled) while BlockEnforcer.applyNow() was
+  still grinding through slow DevicePolicyManager Binder calls
+  (applyLocationPermissionState alone took ~3 seconds) on its
+  background thread, completely invisible to the user. The underlying
+  OEM Binder latency is still there - not something this app can fix,
+  it's a device/system_server characteristic - but it's now properly
+  isolated from ever blocking the window again.
+- debuggable reverted back to false now that this is confirmed
+  fixed.
+
 WHAT CHANGED IN 4.63
 -----------------------
 - Likely real fix for the white-screen-on-open freeze: the LogCat
