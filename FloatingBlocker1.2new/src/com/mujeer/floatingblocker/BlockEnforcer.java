@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.os.UserManager;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -41,6 +42,8 @@ import java.util.Set;
  */
 public class BlockEnforcer {
 
+    private static final String TAG = "BlockEnforcer";
+
     /** Re-applies the correct suspend/unsuspend state for every managed app, right now. */
     public static void applyNow(Context context) {
         DevicePolicyManager dpm = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
@@ -50,15 +53,29 @@ public class BlockEnforcer {
         ComponentName admin = new ComponentName(context, FloatingBlockerDeviceAdminReceiver.class);
         String ownPackage = context.getPackageName();
 
+        // Breadcrumb logging through each step - if this ever hangs again,
+        // whatever's the LAST line printed in LogCat before it stops
+        // pinpoints exactly which step is stuck, the same way the missed-
+        // alarms freeze (fixed in 4.59) was eventually found.
+        Log.d(TAG, "applyNow: start");
         applyPermanentDeviceOwnerProtections(context, dpm, admin, ownPackage);
+        Log.d(TAG, "applyNow: after applyPermanentDeviceOwnerProtections");
         applyLocationPermissionState(context, dpm, admin, ownPackage);
+        Log.d(TAG, "applyNow: after applyLocationPermissionState");
         applyHomeLocationTransition(context);
+        Log.d(TAG, "applyNow: after applyHomeLocationTransition");
         releaseStrictPrivateDnsIfLocked(context, dpm, admin);
+        Log.d(TAG, "applyNow: after releaseStrictPrivateDnsIfLocked");
         applyDebuggingFeaturesLock(context, dpm, admin);
+        Log.d(TAG, "applyNow: after applyDebuggingFeaturesLock");
         applyBootstrapToolsLock(context, dpm, admin);
+        Log.d(TAG, "applyNow: after applyBootstrapToolsLock");
         checkForNewlyInstalledApps(context, ownPackage);
+        Log.d(TAG, "applyNow: after checkForNewlyInstalledApps");
         cleanUpExpiredBreaks(new HolidayBreaksStorage(context));
+        Log.d(TAG, "applyNow: after cleanUpExpiredBreaks");
         checkForMissedAlarms(context);
+        Log.d(TAG, "applyNow: after checkForMissedAlarms");
 
         List<Block> blocks = new BlocksStorage(context).loadBlocks();
         Set<String> allManaged = new HashSet<String>();
@@ -88,12 +105,14 @@ public class BlockEnforcer {
                 // Already unsuspended, or never was - fine either way.
             }
         }
+        Log.d(TAG, "applyNow: after suspend/unsuspend calls");
 
         // Runs last, deliberately - if a user ever put one of these browser
         // packages into a Block of their own, the Block-schedule-based
         // unsuspend right above this could otherwise win the race and
         // briefly leave it unsuspended. This always has the final say.
         applyContentFilteringProtections(context, dpm, admin, ownPackage);
+        Log.d(TAG, "applyNow: done");
     }
 
     /**
@@ -160,6 +179,7 @@ public class BlockEnforcer {
         AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
         for (Alarm alarm : new AlarmsStorage(context).loadAlarms()) {
             long cursor = runtime.getLastHandledOccurrence(alarm.id);
+            Log.d(TAG, "checkForMissedAlarms: alarm=" + alarm.id + " cursor=" + cursor);
             if (cursor <= 0) {
                 // Never resolved even once (e.g. a brand-new Alarm that
                 // hasn't had a chance to ring yet) - there's no legitimate
@@ -175,9 +195,24 @@ public class BlockEnforcer {
                 runtime.setLastHandledOccurrence(alarm.id, now);
                 continue;
             }
+            // Hard safety cap, defense-in-depth against any other edge case
+            // (not just the epoch-start one already fixed above) that could
+            // otherwise make this loop grind through an implausible number
+            // of iterations - e.g. a corrupted/absurd stored cursor value.
+            // A phone realistically never stays off long enough to need
+            // anywhere close to this many catch-up occurrences for one Alarm.
+            final int MAX_CATCHUP_ITERATIONS = 1000;
+            int iterations = 0;
             while (true) {
                 long next = alarm.nextOccurrenceAfter(cursor);
                 if (next <= 0 || next > now || now < next + ringMillis) {
+                    break;
+                }
+                if (++iterations > MAX_CATCHUP_ITERATIONS) {
+                    Log.e(TAG, "checkForMissedAlarms: alarm=" + alarm.id
+                            + " hit the " + MAX_CATCHUP_ITERATIONS + "-iteration safety cap - "
+                            + "bailing out instead of continuing to walk forward");
+                    runtime.setLastHandledOccurrence(alarm.id, now);
                     break;
                 }
                 // A Holiday Break active at the occurrence's own time, or

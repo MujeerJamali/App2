@@ -87,6 +87,22 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.61
+-----------------------
+- Diagnostic build for a new white-screen freeze on open, reported
+  even after the 4.59 missed-alarms fix (so it's a different cause).
+  Added Log.d breadcrumbs through every step of
+  BlockEnforcer.applyNow() (the same method that had the 4.59 bug) -
+  whatever's the last line printed in LogCat before it freezes again
+  will pinpoint exactly which step is stuck. Also added a hard
+  1000-iteration safety cap to checkForMissedAlarms()'s catch-up loop,
+  defense-in-depth against any other edge case (not just the
+  epoch-start one already fixed) that could make it grind through an
+  implausible number of iterations.
+- android:debuggable temporarily set back to true, same as the last
+  diagnostic round - needed for AIDE's LogCat to show anything at
+  all. Revert to false once this is found and fixed.
+
 WHAT CHANGED IN 4.60
 -----------------------
 - NEW: "Clear Current Punishment (One-Time Use)" on the main screen's
