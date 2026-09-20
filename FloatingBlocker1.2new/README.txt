@@ -87,6 +87,21 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.62
+-----------------------
+- NEW: "Pause All Blocks for 1 Hour (One-Time Use)" on the main
+  screen's Safety Valve section. Immediately unsuspends every
+  currently-blocked app for exactly 1 hour, then Blocks resume
+  automatically on their own - no further action needed, and no way
+  to get stuck "paused forever" behind a locked schedule. Built for
+  exactly the situation of needing blocked tools (AIDE, etc.) to keep
+  debugging this app while a Lock Schedule sleep window is about to
+  suspend them. Same one-time-only design as Clear Current
+  Punishment: usable exactly once, ever, not gated on Lock Schedule's
+  unlocked state (needs to work while locked to be useful at all).
+  Shows a live countdown while active, then disappears for good once
+  the hour is up.
+
 WHAT CHANGED IN 4.61
 -----------------------
 - Diagnostic build for a new white-screen freeze on open, reported

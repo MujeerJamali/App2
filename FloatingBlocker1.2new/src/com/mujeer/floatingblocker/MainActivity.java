@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     private Button btnBatteryExemption;
     private Button btnScanRingingAlarm;
     private Button btnClearPunishment;
+    private Button btnPauseAllOneHour;
     private BlockPunishmentStorage punishmentStorage;
 
     private final Handler ringingAlarmHandler = new Handler();
@@ -44,6 +45,7 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             refreshRingingAlarmButton();
+            refreshPauseAllButton();
             ringingAlarmHandler.postDelayed(this, 1000);
         }
     };
@@ -76,6 +78,7 @@ public class MainActivity extends Activity {
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
+        btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
@@ -129,6 +132,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onClearPunishmentClicked();
+            }
+        });
+
+        btnPauseAllOneHour.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onPauseAllOneHourClicked();
             }
         });
 
@@ -298,6 +308,8 @@ public class MainActivity extends Activity {
         btnClearPunishment.setVisibility(punishmentStorage.hasUsedOneTimeClear()
                 ? android.view.View.GONE : android.view.View.VISIBLE);
 
+        refreshPauseAllButton();
+
         refreshRingingAlarmButton();
     }
 
@@ -330,6 +342,63 @@ public class MainActivity extends Activity {
                 })
                 .setNegativeButton(R.string.cancel_button, null)
                 .show();
+    }
+
+    /**
+     * A one-time-only emergency unsuspend for every currently-blocked app,
+     * for exactly 1 hour, then Blocks resume automatically on their own -
+     * meant for a situation where Blocks enforcement is itself getting in
+     * the way of fixing a real problem (e.g. needing AIDE/other tools to
+     * debug this app while a Lock Schedule sleep window is about to
+     * suspend them). Not gated on Lock Schedule's unlocked state, same
+     * reasoning as Clear Current Punishment above - usable exactly once,
+     * ever, already prevents it being a repeatable loophole, and it needs
+     * to actually work while locked to be useful at all. Auto-expiring
+     * (via BlocksPauseStorage's temporary-override window) rather than a
+     * plain pause specifically so it can't get stuck "paused forever"
+     * behind a locked schedule with no way to manually resume it.
+     */
+    private void onPauseAllOneHourClicked() {
+        if (blocksPauseStorage.hasUsedOneTimePause()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_pause_all_title)
+                .setMessage(R.string.confirm_pause_all_message)
+                .setPositiveButton(R.string.confirm_pause_all_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        blocksPauseStorage.setTemporaryOverrideUntilMillis(
+                                System.currentTimeMillis() + (60L * 60L * 1000L));
+                        blocksPauseStorage.markOneTimePauseUsed();
+                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    /**
+     * Visible and clickable before first use; visible-but-informational
+     * with a live countdown while the 1-hour window is active; gone for
+     * good once that window has passed - it can never be triggered again.
+     */
+    private void refreshPauseAllButton() {
+        if (!blocksPauseStorage.hasUsedOneTimePause()) {
+            btnPauseAllOneHour.setVisibility(android.view.View.VISIBLE);
+            btnPauseAllOneHour.setEnabled(true);
+            btnPauseAllOneHour.setText(R.string.pause_all_button_activate);
+            return;
+        }
+        long remainingMillis = blocksPauseStorage.getTemporaryOverrideUntilMillis() - System.currentTimeMillis();
+        if (remainingMillis <= 0) {
+            btnPauseAllOneHour.setVisibility(android.view.View.GONE);
+            return;
+        }
+        btnPauseAllOneHour.setVisibility(android.view.View.VISIBLE);
+        btnPauseAllOneHour.setEnabled(false);
+        btnPauseAllOneHour.setText(getString(R.string.pause_all_button_active_format, formatRemaining(remainingMillis)));
     }
 
     /**

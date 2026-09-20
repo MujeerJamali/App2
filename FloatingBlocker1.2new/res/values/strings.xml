@@ -43,6 +43,13 @@
     <string name="confirm_clear_punishment_yes">Yes, clear it (uses this up forever)</string>
     <string name="msg_punishment_cleared">Cleared. This one-time action has now been used.</string>
 
+    <!-- Pause All Blocks for 1 Hour - one-time only -->
+    <string name="pause_all_button_activate">⏸️ Pause All Blocks for 1 Hour (One-Time Use)</string>
+    <string name="pause_all_button_active_format">⏸️ Blocks Paused (One-Time) - %1$s Remaining</string>
+    <string name="confirm_pause_all_title">Pause all Blocks for 1 hour?</string>
+    <string name="confirm_pause_all_message">This immediately unsuspends every currently-blocked app for exactly 1 hour, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
+    <string name="confirm_pause_all_yes">Yes, pause for 1 hour (uses this up forever)</string>
+
     <!-- DNS Filter Lock -->
 
 

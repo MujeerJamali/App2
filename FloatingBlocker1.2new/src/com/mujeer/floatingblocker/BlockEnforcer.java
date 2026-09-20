@@ -132,14 +132,14 @@ public class BlockEnforcer {
         MasterSafetyStorage safetyStorage = new MasterSafetyStorage(context);
         BlocksPauseStorage pauseStorage = new BlocksPauseStorage(context);
 
+        long now = System.currentTimeMillis();
         Set<String> desiredSuspended = new HashSet<String>();
         boolean overridden = safetyStorage.isEngaged() || pauseStorage.isPaused()
+                || pauseStorage.isTemporaryOverrideActive(now)
                 || HomeLocationChecker.isFarFromHome(context);
         if (overridden) {
             return desiredSuspended;
         }
-
-        long now = System.currentTimeMillis();
         Set<String> blockIdsOnBreak = new HashSet<String>();
         for (HolidayBreak h : holidayBreaks) {
             if (h.isActiveNow(now)) {

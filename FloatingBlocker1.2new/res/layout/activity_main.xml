@@ -124,6 +124,14 @@
             android:visibility="gone"
             android:text="@string/clear_punishment_button" />
 
+        <Button
+            android:id="@+id/btnPauseAllOneHour"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/pause_all_button_activate" />
+
         <TextView
             style="@style/SectionHeader"
             android:layout_width="match_parent"
