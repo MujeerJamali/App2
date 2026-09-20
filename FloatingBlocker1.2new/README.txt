@@ -87,6 +87,32 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.59
+-----------------------
+- FIXED: the app could freeze for a very long time (no crash, no ANR
+  dialog, just stuck on the launch splash) after creating a new Alarm
+  and reopening the app before that Alarm had ever rung even once.
+  Root cause: BlockEnforcer.checkForMissedAlarms() (runs on every app
+  resume, catches up on Alarm occurrences missed while the phone was
+  powered off) starts walking forward from
+  AlarmRuntimeStorage.getLastHandledOccurrence(), which defaults to 0
+  (epoch/1970) for an Alarm that's never been resolved even once -
+  including one just created. That made it walk forward one
+  occurrence at a time from January 1970 all the way to today -
+  thousands of theoretical weekly occurrences, each one incorrectly
+  treated as a missed alarm and punished (widening Blocks) for
+  something that never actually happened, all synchronously on the
+  main thread. A same-day test alarm usually rings shortly after
+  creation, seeding this value via the normal path before ever
+  hitting the bug - a next-day (or otherwise delayed) trigger sits
+  unrung long enough that the very next app resume hits it.
+- Fix: an Alarm with no prior handled occurrence at all now seeds
+  straight to the current time instead of walking forward from epoch
+  - there's no legitimate prior occurrence to catch up on for an
+  Alarm that was never tracked before anyway. Self-healing: the fix
+  applies to any already-broken Alarm the moment this update runs, no
+  need to delete and recreate it.
+
 WHAT CHANGED IN 4.58
 -----------------------
 - The manual "Scan to Dismiss" ringing-alarm button (4.57) now shows a

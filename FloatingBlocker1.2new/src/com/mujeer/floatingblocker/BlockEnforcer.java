@@ -160,6 +160,21 @@ public class BlockEnforcer {
         AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
         for (Alarm alarm : new AlarmsStorage(context).loadAlarms()) {
             long cursor = runtime.getLastHandledOccurrence(alarm.id);
+            if (cursor <= 0) {
+                // Never resolved even once (e.g. a brand-new Alarm that
+                // hasn't had a chance to ring yet) - there's no legitimate
+                // prior occurrence to catch up on, since nothing "missed"
+                // before this Alarm was ever tracked. Seeding straight to
+                // now avoids walking forward one occurrence at a time from
+                // epoch (1970) all the way to today - which is exactly
+                // what the loop below would otherwise do, treating
+                // thousands of theoretical pre-creation occurrences as
+                // missed and freezing the app for a very long time while
+                // it wrongly punishes Blocks for alarms that never
+                // actually happened.
+                runtime.setLastHandledOccurrence(alarm.id, now);
+                continue;
+            }
             while (true) {
                 long next = alarm.nextOccurrenceAfter(cursor);
                 if (next <= 0 || next > now || now < next + ringMillis) {
