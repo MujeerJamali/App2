@@ -64,6 +64,25 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.48
+-----------------------
+- FIXED: Holiday Breaks list screen's "+ Add Holiday Break" button (and
+  its click handler) was gating navigation on the CURRENT Lock Schedule
+  lock state - but the whole point of the "later app-day" 2am exception
+  built in 4.35 is that creation can be allowed depending on the START
+  DATE the user is about to pick, which isn't known until they're
+  actually on the edit screen choosing it. The list screen was blocking
+  entry before that logic ever got a chance to run, effectively
+  disabling the 2am exception entirely. The button now always navigates
+  there - HolidayBreakEditActivity was already the only place that
+  correctly decides and enforces this, so nothing else needed to change.
+- NEW: Registered Barcodes list now shows each barcode's actual scanned
+  value under its label, in a smaller font.
+- NEW: when an Alarm starts ringing, the alarm volume is pushed to max
+  once, right at the start - not held there. Turning it back down with
+  the volume buttons while it's ringing is respected; nothing re-forces
+  it back up after that first push.
+
 WHAT CHANGED IN 4.47
 -----------------------
 - NEW: any settings change made during a 20km-away Location Override

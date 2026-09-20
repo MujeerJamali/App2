@@ -104,9 +104,11 @@ public class BarcodesListActivity extends Activity {
         for (final RegisteredBarcode barcode : barcodes) {
             View row = LayoutInflater.from(this).inflate(R.layout.list_item_barcode, barcodesContainer, false);
             TextView txtLabel = (TextView) row.findViewById(R.id.txtBarcodeLabel);
+            TextView txtValue = (TextView) row.findViewById(R.id.txtBarcodeValue);
             Button btnRemove = (Button) row.findViewById(R.id.btnRemoveBarcode);
 
             txtLabel.setText(barcode.label);
+            txtValue.setText(barcode.value);
             btnRemove.setEnabled(editingAllowed);
             btnRemove.setOnClickListener(new View.OnClickListener() {
                 @Override

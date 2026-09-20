@@ -10,26 +10,27 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- * Creating a Holiday Break is gated by the Lock Schedule (only allowed
- * while unlocked), since it schedules restriction being lifted ahead of
- * time - same idea as the Pause button needing an unlocked moment.
- * Cancelling one early is always allowed any time, since that restores
- * restriction sooner rather than removing it.
+ * Creating a Holiday Break is NOT gated here - whether it's actually
+ * allowed depends on the start date/time the user is about to pick
+ * (Lock Schedule locked "now" doesn't matter if the chosen start is on a
+ * later app-day - see HolidayBreakEditActivity.isOnLaterAppDay), which
+ * isn't known until they're on that screen choosing it. So the Add
+ * button here always navigates there; HolidayBreakEditActivity is the
+ * only place that actually decides and enforces this. Cancelling one
+ * early is always allowed any time, since that restores restriction
+ * sooner rather than removing it.
  */
 public class HolidayBreaksListActivity extends Activity {
 
     private HolidayBreaksStorage holidayBreaksStorage;
     private BlocksStorage blocksStorage;
-    private LockScheduleStorage lockScheduleStorage;
     private LinearLayout breaksContainer;
-    private TextView txtLockedMessage;
     private Button btnAddHolidayBreak;
 
     @Override
@@ -40,19 +41,13 @@ public class HolidayBreaksListActivity extends Activity {
 
         holidayBreaksStorage = new HolidayBreaksStorage(this);
         blocksStorage = new BlocksStorage(this);
-        lockScheduleStorage = new LockScheduleStorage(this);
 
         breaksContainer = (LinearLayout) findViewById(R.id.breaksContainer);
-        txtLockedMessage = (TextView) findViewById(R.id.txtLockedMessage);
         btnAddHolidayBreak = (Button) findViewById(R.id.btnAddHolidayBreak);
 
         btnAddHolidayBreak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!lockScheduleStorage.isEditingAllowed()) {
-                    Toast.makeText(HolidayBreaksListActivity.this, R.string.msg_holiday_breaks_locked, Toast.LENGTH_LONG).show();
-                    return;
-                }
                 startActivity(new Intent(HolidayBreaksListActivity.this, HolidayBreakEditActivity.class));
             }
         });
@@ -61,9 +56,6 @@ public class HolidayBreaksListActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        boolean creationAllowed = lockScheduleStorage.isEditingAllowed();
-        txtLockedMessage.setVisibility(creationAllowed ? View.GONE : View.VISIBLE);
-        btnAddHolidayBreak.setEnabled(creationAllowed);
         renderBreaks();
     }
 

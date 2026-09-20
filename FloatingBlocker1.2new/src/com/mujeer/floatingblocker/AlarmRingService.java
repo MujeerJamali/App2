@@ -136,6 +136,20 @@ public class AlarmRingService extends Service {
     }
 
     private void startSoundAndVibration() {
+        // Push the alarm stream to max ONCE, right as it starts ringing -
+        // this is a one-time nudge, not an ongoing lock. If the user turns
+        // it back down with the volume buttons while it's ringing, that's
+        // respected; nothing here ever re-forces it back up.
+        try {
+            android.media.AudioManager audioManager = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (audioManager != null) {
+                int maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM);
+                audioManager.setStreamVolume(android.media.AudioManager.STREAM_ALARM, maxVolume, 0);
+            }
+        } catch (Exception e) {
+            // Best effort - the alarm still rings at whatever volume was already set.
+        }
+
         try {
             Uri alarmUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
             if (alarmUri == null) {
