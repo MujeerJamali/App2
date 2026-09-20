@@ -87,6 +87,36 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.63
+-----------------------
+- Likely real fix for the white-screen-on-open freeze: the LogCat
+  captured from 4.61's breadcrumbs showed a single
+  DevicePolicyManager Binder call (setPermissionGrantState, inside
+  applyLocationPermissionState) taking over 1.2 seconds even in a
+  successful run, and a separate failed attempt going 18+ seconds
+  with zero log output before being force-killed - never even
+  reaching the first breadcrumb. BlockEnforcer.applyNow() makes well
+  over a dozen synchronous DevicePolicyManager Binder calls back to
+  back, all previously running on the main thread inside
+  MainActivity.onResume() - this device (an Oplus/ColorOS-based
+  build, per the logs) appears to have inconsistent Binder round-trip
+  latency to system_server for these calls, occasionally fast,
+  occasionally very slow. Moved MainActivity.onResume()'s call to a
+  background thread, so a slow Binder round-trip can no longer block
+  the window from becoming visible/responsive - refreshUi() runs
+  immediately with whatever's already known, then again once the
+  background enforcement pass finishes.
+- Known follow-up, not done tonight: several other screens also call
+  BlockEnforcer.reapplyAndReschedule() synchronously after saving a
+  change (e.g. the Blocks Pause button, Alarm/Block editors) and
+  could theoretically hit the same OEM latency, just less
+  disruptively (a saved screen briefly not responding vs. the whole
+  app failing to open at all). Worth revisiting if any of those show
+  the same symptom.
+- debuggable is still left as true for now, in case another LogCat
+  capture is needed to confirm this actually fixed it - revert once
+  confirmed.
+
 WHAT CHANGED IN 4.62
 -----------------------
 - NEW: "Pause All Blocks for 1 Hour (One-Time Use)" on the main

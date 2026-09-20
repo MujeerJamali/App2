@@ -216,16 +216,40 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Cheap and idempotent - makes sure anything changed in Blocks/Lock
-        // Schedule screens, or elsewhere, is reflected immediately.
-        BlockEnforcer.reapplyAndReschedule(this);
-        AlarmScheduler.rescheduleAll(this);
+        // Show what we already have immediately, rather than making the
+        // whole window wait on the enforcement pass below.
         refreshUi();
         // Ticks the ringing-alarm button's countdown once a second while
         // this screen is visible - also means the button appears/updates/
         // disappears live if an Alarm starts or resolves while already
         // sitting on this screen, not just on the next resume.
         ringingAlarmHandler.postDelayed(ringingAlarmTick, 1000);
+
+        // BlockEnforcer.applyNow() makes well over a dozen synchronous
+        // DevicePolicyManager Binder calls back-to-back. Logged evidence
+        // (from a white-screen-on-open report) showed a single one of
+        // those calls occasionally taking 1+ second on at least one OEM
+        // build, and a separate attempt going more than 18 seconds with
+        // zero log output before being killed - consistent with OEM-side
+        // Binder/system_server latency, not a deterministic bug in this
+        // code. Running it on a background thread means a slow Binder
+        // round-trip can no longer block the window from ever becoming
+        // visible/responsive - the small risk of showing briefly-stale
+        // status (e.g. Device Owner state) until refreshUi() re-runs at
+        // the end is a clearly worthwhile trade against a frozen app.
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                AlarmScheduler.rescheduleAll(MainActivity.this);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        refreshUi();
+                    }
+                });
+            }
+        }).start();
     }
 
     @Override
