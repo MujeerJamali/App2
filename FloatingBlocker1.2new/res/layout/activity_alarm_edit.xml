@@ -58,12 +58,20 @@
             android:textStyle="bold"
             android:paddingTop="16dp" />
 
+        <LinearLayout
+            android:id="@+id/pairsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp" />
+
         <Button
-            android:id="@+id/btnSelectBarcodes"
+            android:id="@+id/btnAddBarcodePair"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/select_barcodes_button" />
+            android:text="@string/add_barcode_pair_button" />
 
         <TextView
             android:layout_width="match_parent"

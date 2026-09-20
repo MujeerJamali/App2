@@ -80,14 +80,43 @@ public class AlarmRingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        alarmId = intent.getStringExtra(AlarmRingReceiver.EXTRA_ALARM_ID);
-        occurrenceMillis = intent.getLongExtra(AlarmRingReceiver.EXTRA_OCCURRENCE_MILLIS, 0);
-        runningInstance = this;
+        try {
+            // A prior ring session's resources (e.g. a very close second
+            // Alarm firing before the first's foreground service instance
+            // has been torn down) would otherwise leak silently - release
+            // them first before starting a fresh one.
+            handler.removeCallbacks(timeoutRunnable);
+            releasePlaybackResources();
 
-        startForegroundNotification();
-        startSoundAndVibration();
-        handler.postDelayed(timeoutRunnable, Alarm.RING_MINUTES * 60L * 1000L);
+            alarmId = intent.getStringExtra(AlarmRingReceiver.EXTRA_ALARM_ID);
+            occurrenceMillis = intent.getLongExtra(AlarmRingReceiver.EXTRA_OCCURRENCE_MILLIS, 0);
+            runningInstance = this;
+
+            startForegroundNotification();
+            startSoundAndVibration();
+            handler.postDelayed(timeoutRunnable, Alarm.RING_MINUTES * 60L * 1000L);
+        } catch (Exception e) {
+            // Never let a problem here crash the whole app - worst case
+            // this specific ring attempt is silently lost rather than
+            // taking the process down with it.
+            Log.e("AlarmRingService", "onStartCommand failed", e);
+        }
         return START_NOT_STICKY;
+    }
+
+    private void releasePlaybackResources() {
+        if (mediaPlayer != null) {
+            try {
+                mediaPlayer.release();
+            } catch (Exception e) {
+                // Best effort.
+            }
+            mediaPlayer = null;
+        }
+        if (vibrator != null) {
+            vibrator.cancel();
+            vibrator = null;
+        }
     }
 
     private void startForegroundNotification() {
@@ -189,19 +218,7 @@ public class AlarmRingService extends Service {
 
     private void stopRingingInternal() {
         handler.removeCallbacks(timeoutRunnable);
-        if (mediaPlayer != null) {
-            try {
-                mediaPlayer.stop();
-                mediaPlayer.release();
-            } catch (Exception e) {
-                // Best effort - service is stopping regardless.
-            }
-            mediaPlayer = null;
-        }
-        if (vibrator != null) {
-            vibrator.cancel();
-            vibrator = null;
-        }
+        releasePlaybackResources();
         if (stopListener != null) {
             handler.post(stopListener);
         }
@@ -219,18 +236,7 @@ public class AlarmRingService extends Service {
             runningInstance = null;
         }
         handler.removeCallbacks(timeoutRunnable);
-        if (mediaPlayer != null) {
-            try {
-                mediaPlayer.release();
-            } catch (Exception e) {
-                // Best effort.
-            }
-            mediaPlayer = null;
-        }
-        if (vibrator != null) {
-            vibrator.cancel();
-            vibrator = null;
-        }
+        releasePlaybackResources();
     }
 
     @Override

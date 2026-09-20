@@ -38,14 +38,15 @@ public class AlarmEditActivity extends Activity {
     private LinearLayout triggersContainer;
     private Button btnPickTriggerTime;
     private Button btnAddTrigger;
-    private Button btnSelectBarcodes;
+    private LinearLayout pairsContainer;
+    private Button btnAddBarcodePair;
     private Button btnSelectAffectedBlocks;
     private Button btnSaveAlarm;
     private Button btnDeleteAlarm;
 
     private String alarmId; // null if creating a new Alarm
     private final List<AlarmTrigger> triggers = new ArrayList<AlarmTrigger>();
-    private final Set<String> selectedBarcodeIds = new LinkedHashSet<String>();
+    private final List<BarcodePair> pairs = new ArrayList<BarcodePair>();
     private final Set<String> selectedBlockIds = new LinkedHashSet<String>();
     private int pickedMinuteOfDay = -1;
     private boolean editingAllowed;
@@ -66,7 +67,8 @@ public class AlarmEditActivity extends Activity {
         triggersContainer = (LinearLayout) findViewById(R.id.triggersContainer);
         btnPickTriggerTime = (Button) findViewById(R.id.btnPickTriggerTime);
         btnAddTrigger = (Button) findViewById(R.id.btnAddTrigger);
-        btnSelectBarcodes = (Button) findViewById(R.id.btnSelectBarcodes);
+        pairsContainer = (LinearLayout) findViewById(R.id.pairsContainer);
+        btnAddBarcodePair = (Button) findViewById(R.id.btnAddBarcodePair);
         btnSelectAffectedBlocks = (Button) findViewById(R.id.btnSelectAffectedBlocks);
         btnSaveAlarm = (Button) findViewById(R.id.btnSaveAlarm);
         btnDeleteAlarm = (Button) findViewById(R.id.btnDeleteAlarm);
@@ -87,8 +89,8 @@ public class AlarmEditActivity extends Activity {
         btnAddTrigger.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { onAddTriggerClicked(); }
         });
-        btnSelectBarcodes.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { onSelectBarcodesClicked(); }
+        btnAddBarcodePair.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { onAddBarcodePairClicked(); }
         });
         btnSelectAffectedBlocks.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { onSelectAffectedBlocksClicked(); }
@@ -101,6 +103,7 @@ public class AlarmEditActivity extends Activity {
         });
 
         renderTriggers();
+        renderPairs();
     }
 
     private void loadExistingAlarmIfAny() {
@@ -111,7 +114,7 @@ public class AlarmEditActivity extends Activity {
             if (a.id.equals(alarmId)) {
                 editAlarmName.setText(a.name);
                 triggers.addAll(a.triggers);
-                selectedBarcodeIds.addAll(a.barcodeIds);
+                pairs.addAll(a.barcodePairs);
                 selectedBlockIds.addAll(a.affectedBlockIds);
                 return;
             }
@@ -188,39 +191,92 @@ public class AlarmEditActivity extends Activity {
         }
     }
 
-    private void onSelectBarcodesClicked() {
+    private void onAddBarcodePairClicked() {
         final List<RegisteredBarcode> all = barcodesStorage.loadBarcodes();
-        if (all.isEmpty()) {
-            Toast.makeText(this, R.string.msg_no_barcodes_to_select, Toast.LENGTH_LONG).show();
+        if (all.size() < 2) {
+            Toast.makeText(this, R.string.msg_need_two_barcodes_for_pair, Toast.LENGTH_LONG).show();
             return;
         }
+        pickFirstBarcodeForPair(all);
+    }
+
+    private void pickFirstBarcodeForPair(final List<RegisteredBarcode> all) {
         final String[] labels = new String[all.size()];
-        final String[] ids = new String[all.size()];
-        final boolean[] checked = new boolean[all.size()];
         for (int i = 0; i < all.size(); i++) {
             labels[i] = all.get(i).label;
-            ids[i] = all.get(i).id;
-            checked[i] = selectedBarcodeIds.contains(ids[i]);
         }
         new AlertDialog.Builder(this)
-                .setTitle(R.string.select_barcodes_button)
-                .setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
+                .setTitle(R.string.pick_first_barcode_title)
+                .setItems(labels, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
-                        checked[which] = isChecked;
-                    }
-                })
-                .setPositiveButton(R.string.ok_button, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        selectedBarcodeIds.clear();
-                        for (int i = 0; i < checked.length; i++) {
-                            if (checked[i]) selectedBarcodeIds.add(ids[i]);
-                        }
+                    public void onClick(DialogInterface dialog, int firstIndex) {
+                        pickSecondBarcodeForPair(all, all.get(firstIndex));
                     }
                 })
                 .setNegativeButton(R.string.cancel_button, null)
                 .show();
+    }
+
+    private void pickSecondBarcodeForPair(List<RegisteredBarcode> all, final RegisteredBarcode first) {
+        final List<RegisteredBarcode> remaining = new ArrayList<RegisteredBarcode>();
+        for (RegisteredBarcode b : all) {
+            if (!b.id.equals(first.id)) {
+                remaining.add(b);
+            }
+        }
+        final String[] labels = new String[remaining.size()];
+        for (int i = 0; i < remaining.size(); i++) {
+            labels[i] = remaining.get(i).label;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.pick_second_barcode_title)
+                .setItems(labels, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int secondIndex) {
+                        BarcodePair pair = new BarcodePair();
+                        pair.id = UUID.randomUUID().toString();
+                        pair.barcodeIdA = first.id;
+                        pair.barcodeIdB = remaining.get(secondIndex).id;
+                        pairs.add(pair);
+                        renderPairs();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    private void renderPairs() {
+        pairsContainer.removeAllViews();
+        List<RegisteredBarcode> allBarcodes = barcodesStorage.loadBarcodes();
+        for (final BarcodePair pair : pairs) {
+            View row = LayoutInflater.from(this).inflate(R.layout.list_item_time_range, pairsContainer, false);
+            TextView txtRange = (TextView) row.findViewById(R.id.txtRange);
+            Button btnRemove = (Button) row.findViewById(R.id.btnRemoveRange);
+            txtRange.setText(getString(R.string.pair_item_format,
+                    labelFor(allBarcodes, pair.barcodeIdA), labelFor(allBarcodes, pair.barcodeIdB)));
+            btnRemove.setEnabled(editingAllowed);
+            btnRemove.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (!lockScheduleStorage.isEditingAllowed()) {
+                        Toast.makeText(AlarmEditActivity.this, R.string.msg_alarms_locked, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    pairs.remove(pair);
+                    renderPairs();
+                }
+            });
+            pairsContainer.addView(row);
+        }
+    }
+
+    private String labelFor(List<RegisteredBarcode> allBarcodes, String barcodeId) {
+        for (RegisteredBarcode b : allBarcodes) {
+            if (b.id.equals(barcodeId)) {
+                return b.label;
+            }
+        }
+        return getString(R.string.barcode_default_label);
     }
 
     private void onSelectAffectedBlocksClicked() {
@@ -268,8 +324,8 @@ public class AlarmEditActivity extends Activity {
             Toast.makeText(this, R.string.msg_add_at_least_one_trigger, Toast.LENGTH_LONG).show();
             return;
         }
-        if (selectedBarcodeIds.isEmpty()) {
-            Toast.makeText(this, R.string.msg_select_at_least_one_barcode, Toast.LENGTH_LONG).show();
+        if (pairs.isEmpty()) {
+            Toast.makeText(this, R.string.msg_add_at_least_one_pair, Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -290,8 +346,8 @@ public class AlarmEditActivity extends Activity {
         target.name = name;
         target.triggers.clear();
         target.triggers.addAll(triggers);
-        target.barcodeIds.clear();
-        target.barcodeIds.addAll(selectedBarcodeIds);
+        target.barcodePairs.clear();
+        target.barcodePairs.addAll(pairs);
         target.affectedBlockIds.clear();
         target.affectedBlockIds.addAll(selectedBlockIds);
 

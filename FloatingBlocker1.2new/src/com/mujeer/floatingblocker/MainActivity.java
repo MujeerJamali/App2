@@ -140,6 +140,37 @@ public class MainActivity extends Activity {
         BlockEnforcer.reapplyAndReschedule(this);
         AlarmScheduler.rescheduleAll(this);
         refreshUi();
+        showCrashReportIfAny();
+    }
+
+    /**
+     * Shows the last uncaught crash's stack trace, if there's one not yet
+     * seen - this app deliberately avoids relying on logcat (not
+     * practically accessible on a non-rooted device), so this is the only
+     * practical way to see what an actual crash was.
+     */
+    private void showCrashReportIfAny() {
+        final CrashLogStorage crashLog = new CrashLogStorage(this);
+        if (!crashLog.hasUnseenCrash()) {
+            return;
+        }
+        TextView traceView = new TextView(this);
+        traceView.setText(crashLog.getTrace());
+        traceView.setTextIsSelectable(true);
+        traceView.setPadding(32, 16, 32, 16);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(traceView);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.crash_report_title)
+                .setView(scroll)
+                .setPositiveButton(R.string.ok_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        crashLog.markSeen();
+                    }
+                })
+                .setCancelable(false)
+                .show();
     }
 
     private boolean isDeviceOwnerActive() {

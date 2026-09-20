@@ -63,7 +63,7 @@ public class AlarmsListActivity extends Activity {
             Button btnDelete = (Button) row.findViewById(R.id.btnDeleteAlarm);
 
             txtName.setText(a.name);
-            txtSubtitle.setText(getString(R.string.alarm_subtitle_format, a.triggers.size(), a.affectedBlockIds.size()));
+            txtSubtitle.setText(getString(R.string.alarm_subtitle_format, a.triggers.size(), a.barcodePairs.size(), a.affectedBlockIds.size()));
             btnDelete.setEnabled(editingAllowed);
 
             row.setOnClickListener(new View.OnClickListener() {

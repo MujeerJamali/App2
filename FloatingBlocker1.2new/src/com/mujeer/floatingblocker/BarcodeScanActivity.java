@@ -2,6 +2,8 @@ package com.mujeer.floatingblocker;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -28,31 +30,34 @@ import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 
 import java.util.EnumMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Opens the camera, continuously decodes whatever barcode/QR code it sees,
  * and returns the decoded text via activity result. Two modes, both using
  * the exact same scan loop:
  *
- * - Registration mode (no EXTRA_ACCEPTED_VALUES passed): the very first
- *   successfully decoded code is returned immediately. Used when adding a
- *   new RegisteredBarcode.
- * - Dismiss mode (EXTRA_ACCEPTED_VALUES passed, one or more values): a
- *   decode only finishes this activity if it matches one of those exact
- *   values - anything else shows "wrong code, keep scanning" and the
- *   camera keeps running. This is what makes barcode-dismiss actually
- *   mean THIS specific code, not just any code.
+ * - Registration mode (no pair extras passed): a scan must be confirmed by
+ *   scanning the SAME code again - each of the two scans shows the decoded
+ *   number and asks for confirmation before moving on. Used when adding a
+ *   new RegisteredBarcode. Guards against a misread getting silently
+ *   registered as a Barcode's permanent value.
+ * - Pair-dismiss mode (EXTRA_PAIR_VALUES_A/EXTRA_PAIR_VALUES_B passed, two
+ *   parallel arrays - index i is one pair): the two barcodes of any one
+ *   pair must both be scanned, in either order, within
+ *   PAIR_SCAN_WINDOW_MILLIS of each other - scanning only one, scanning an
+ *   unrelated code, or letting the window lapse resets and requires
+ *   starting that pair over.
  */
 public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callback {
 
-    public static final String EXTRA_ACCEPTED_VALUES = "accepted_values";
+    public static final String EXTRA_PAIR_VALUES_A = "pair_values_a";
+    public static final String EXTRA_PAIR_VALUES_B = "pair_values_b";
     public static final String EXTRA_DECODED_VALUE = "decoded_value";
 
     private static final int REQUEST_CAMERA_PERMISSION = 501;
+    private static final long PAIR_SCAN_WINDOW_MILLIS = 3000L;
 
     private SurfaceView surfaceView;
     private TextView txtStatus;
@@ -61,26 +66,38 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     private final MultiFormatReader reader = new MultiFormatReader();
     private volatile boolean decodeInFlight = false;
     private boolean torchOn = false;
-    private Set<String> acceptedValues;
 
-    // Temporary on-screen diagnostics - this app deliberately avoids relying on
-    // logcat (see DiagnosticActivity's original design note: not practically
-    // accessible on a non-rooted device), so when something like "camera shows
-    // but never decodes" needs debugging, the counters/last-error need to be
-    // visible directly on screen instead.
-    private final Handler diagnosticHandler = new Handler(Looper.getMainLooper());
-    private volatile long framesReceived = 0;
-    private volatile long decodeAttempts = 0;
-    private volatile String lastDecodeError = "(none)";
-    private volatile String previewSizeText = "(camera not open yet)";
-    private final Runnable diagnosticTick = new Runnable() {
+    private String[] pairValuesA;
+    private String[] pairValuesB;
+
+    // Registration mode: the first scan, once the user has confirmed it -
+    // null until then. A second scan is only accepted as a confirming
+    // rescan once this is set.
+    private String firstConfirmedValue;
+    // True while a confirmation AlertDialog is up, in registration mode -
+    // new decodes are ignored until it's answered, so a frame decoded
+    // while the dialog is showing can't silently double-fire it.
+    private volatile boolean dialogShowing = false;
+
+    // Pair-dismiss mode: the first-of-a-pair scan awaiting its partner.
+    private String pendingFirstValue;
+    private long pendingFirstScanTime;
+    private final Handler pairWindowHandler = new Handler(Looper.getMainLooper());
+    private final Runnable pairWindowTick = new Runnable() {
         @Override
         public void run() {
-            txtStatus.setText("Preview size: " + previewSizeText
-                    + "\nFrames received: " + framesReceived
-                    + "\nDecode attempts: " + decodeAttempts
-                    + "\nLast decode error: " + lastDecodeError);
-            diagnosticHandler.postDelayed(this, 500);
+            if (pendingFirstValue == null) {
+                return;
+            }
+            long remaining = PAIR_SCAN_WINDOW_MILLIS - (System.currentTimeMillis() - pendingFirstScanTime);
+            if (remaining <= 0) {
+                pendingFirstValue = null;
+                txtStatus.setText(R.string.barcode_pair_scan_expired);
+                return;
+            }
+            long secondsLeft = (remaining + 999) / 1000;
+            txtStatus.setText(getString(R.string.barcode_pair_scan_waiting, secondsLeft));
+            pairWindowHandler.postDelayed(this, 200);
         }
     };
 
@@ -97,11 +114,8 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
         reader.setHints(hints);
 
-        String[] acceptedArr = getIntent().getStringArrayExtra(EXTRA_ACCEPTED_VALUES);
-        if (acceptedArr != null) {
-            acceptedValues = new HashSet<String>();
-            for (String v : acceptedArr) acceptedValues.add(v);
-        }
+        pairValuesA = getIntent().getStringArrayExtra(EXTRA_PAIR_VALUES_A);
+        pairValuesB = getIntent().getStringArrayExtra(EXTRA_PAIR_VALUES_B);
 
         FrameLayout root = new FrameLayout(this);
         surfaceView = new SurfaceView(this);
@@ -109,8 +123,8 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         txtStatus = new TextView(this);
-        txtStatus.setText(acceptedValues != null
-                ? R.string.barcode_scan_dismiss_instructions
+        txtStatus.setText(isPairMode()
+                ? R.string.barcode_scan_pair_instructions
                 : R.string.barcode_scan_register_instructions);
         txtStatus.setTextColor(Color.WHITE);
         txtStatus.setBackgroundColor(Color.parseColor("#AA000000"));
@@ -118,7 +132,7 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         txtStatus.setTextSize(16f);
         FrameLayout.LayoutParams statusParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        statusParams.gravity = android.view.Gravity.BOTTOM;
+        statusParams.gravity = Gravity.BOTTOM;
         root.addView(txtStatus, statusParams);
 
         btnFlashlight = new Button(this);
@@ -143,8 +157,10 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
         }
+    }
 
-        diagnosticHandler.post(diagnosticTick);
+    private boolean isPairMode() {
+        return pairValuesA != null && pairValuesB != null;
     }
 
     @Override
@@ -198,10 +214,6 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             torchOn = false;
             btnFlashlight.setText(R.string.flashlight_on_button);
 
-            Camera.Size actualSize = params.getPreviewSize();
-            previewSizeText = actualSize.width + "x" + actualSize.height
-                    + " (format=" + params.getPreviewFormat() + ", ImageFormat.NV21=" + android.graphics.ImageFormat.NV21 + ")";
-
             camera.setParameters(params);
             camera.setDisplayOrientation(90);
             camera.setPreviewDisplay(surfaceView.getHolder());
@@ -214,11 +226,9 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             camera.startPreview();
         } catch (Exception e) {
             Log.e("BarcodeScanActivity", "Could not start camera", e);
-            // Deliberately NOT finishing here while diagnosing - staying on
-            // screen with the error visible in previewSizeText is more
-            // useful right now than an instant close the user can't read.
-            previewSizeText = "FAILED TO OPEN: " + e.getClass().getSimpleName() + ": " + e.getMessage();
             Toast.makeText(this, R.string.msg_camera_unavailable, Toast.LENGTH_LONG).show();
+            setResult(RESULT_CANCELED);
+            finish();
         }
     }
 
@@ -267,7 +277,6 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     }
 
     private void handlePreviewFrame(final byte[] data, Camera cam) {
-        framesReceived++;
         if (decodeInFlight) {
             return;
         }
@@ -276,19 +285,15 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
         new Thread(new Runnable() {
             @Override
             public void run() {
-                decodeAttempts++;
                 try {
                     if (data.length < size.width * size.height) {
-                        lastDecodeError = "buffer too small: " + data.length + " bytes for " + size.width + "x" + size.height;
                         return;
                     }
                     // setDisplayOrientation(90) only rotates what's shown on
                     // screen - the raw preview buffer camera hands us is
                     // still in the sensor's native (landscape) orientation.
                     // Rotate it to match what's actually on screen, or
-                    // decoding is effectively scanning a sideways image -
-                    // survivable for a rotation-tolerant QR detector, but
-                    // not for a real 1D barcode.
+                    // decoding is effectively scanning a sideways image.
                     byte[] rotated = rotateNV21Clockwise90(data, size.width, size.height);
                     int rotatedWidth = size.height;
                     int rotatedHeight = size.width;
@@ -303,10 +308,9 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
                         }
                     });
                 } catch (NotFoundException e) {
-                    lastDecodeError = "NotFoundException (normal - no code in frame)";
+                    // Normal - no code in this frame.
                 } catch (Exception e) {
                     Log.e("BarcodeScanActivity", "Decode error", e);
-                    lastDecodeError = e.getClass().getSimpleName() + ": " + e.getMessage();
                 } finally {
                     reader.reset();
                     decodeInFlight = false;
@@ -331,10 +335,7 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             // The chroma (VU) plane only has height/2 rows, each still
             // `width` bytes wide (interleaved V/U pairs) - unlike the Y
             // plane above, y here must index into that half-height plane,
-            // not the full-resolution row range. Using height-1..0 here
-            // (matching the Y-plane loop) reads/writes far past the actual
-            // chroma plane and throws ArrayIndexOutOfBoundsException on
-            // every single frame - which is exactly what was happening.
+            // not the full-resolution row range.
             for (int y = height / 2 - 1; y >= 0; y--) {
                 rotated[i++] = data[frameSize + (y * width) + x];
                 rotated[i++] = data[frameSize + (y * width) + (x + 1)];
@@ -344,30 +345,149 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
     }
 
     private void onDecoded(String value) {
-        if (isFinishing()) {
+        if (isFinishing() || dialogShowing) {
             return;
         }
-        if (acceptedValues == null || acceptedValues.contains(value)) {
+        if (isPairMode()) {
+            handlePairDecode(value);
+        } else {
+            handleRegistrationDecode(value);
+        }
+    }
+
+    private void handleRegistrationDecode(final String value) {
+        if (firstConfirmedValue == null) {
+            dialogShowing = true;
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.barcode_confirm_title)
+                    .setMessage(getString(R.string.barcode_confirm_first_message, value))
+                    .setPositiveButton(R.string.barcode_confirm_scan_again_button, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            firstConfirmedValue = value;
+                            dialogShowing = false;
+                            txtStatus.setText(getString(R.string.barcode_scan_confirm_instructions, value));
+                        }
+                    })
+                    .setNegativeButton(R.string.cancel_button, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialogShowing = false;
+                        }
+                    })
+                    .setCancelable(false)
+                    .show();
+            return;
+        }
+
+        if (!value.equals(firstConfirmedValue)) {
+            Toast.makeText(this, getString(R.string.msg_barcode_confirm_mismatch, firstConfirmedValue, value), Toast.LENGTH_LONG).show();
+            firstConfirmedValue = null;
+            txtStatus.setText(R.string.barcode_scan_register_instructions);
+            return;
+        }
+
+        dialogShowing = true;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.barcode_confirm_title)
+                .setMessage(getString(R.string.barcode_confirm_second_message, value))
+                .setPositiveButton(R.string.confirm_block_website_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent result = new Intent();
+                        result.putExtra(EXTRA_DECODED_VALUE, value);
+                        setResult(RESULT_OK, result);
+                        finish();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialogShowing = false;
+                        firstConfirmedValue = null;
+                        txtStatus.setText(R.string.barcode_scan_register_instructions);
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private void handlePairDecode(String value) {
+        long now = System.currentTimeMillis();
+        if (pendingFirstValue != null && (now - pendingFirstScanTime) > PAIR_SCAN_WINDOW_MILLIS) {
+            pendingFirstValue = null;
+        }
+
+        if (pendingFirstValue == null) {
+            if (!isPairMember(value)) {
+                txtStatus.setText(R.string.barcode_scan_wrong_code);
+                return;
+            }
+            startPendingPairScan(value, now);
+            return;
+        }
+
+        if (value.equals(pendingFirstValue)) {
+            // Same code seen again while still holding it up to the camera - ignore, keep waiting.
+            return;
+        }
+
+        if (pairMatches(pendingFirstValue, value)) {
+            pendingFirstValue = null;
+            pairWindowHandler.removeCallbacks(pairWindowTick);
             Intent result = new Intent();
             result.putExtra(EXTRA_DECODED_VALUE, value);
             setResult(RESULT_OK, result);
             finish();
+            return;
+        }
+
+        // Didn't complete the pending pair - reset, then let this scan
+        // start a fresh pending window if it's itself a valid pair member.
+        pendingFirstValue = null;
+        if (isPairMember(value)) {
+            startPendingPairScan(value, now);
         } else {
             txtStatus.setText(R.string.barcode_scan_wrong_code);
         }
+    }
+
+    private void startPendingPairScan(String value, long now) {
+        pendingFirstValue = value;
+        pendingFirstScanTime = now;
+        pairWindowHandler.removeCallbacks(pairWindowTick);
+        pairWindowHandler.post(pairWindowTick);
+    }
+
+    private boolean isPairMember(String value) {
+        for (int i = 0; i < pairValuesA.length; i++) {
+            if (pairValuesA[i].equals(value) || pairValuesB[i].equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean pairMatches(String v1, String v2) {
+        for (int i = 0; i < pairValuesA.length; i++) {
+            if ((pairValuesA[i].equals(v1) && pairValuesB[i].equals(v2))
+                    || (pairValuesB[i].equals(v1) && pairValuesA[i].equals(v2))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         stopCamera();
-        diagnosticHandler.removeCallbacks(diagnosticTick);
+        pairWindowHandler.removeCallbacks(pairWindowTick);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        diagnosticHandler.post(diagnosticTick);
         if (camera == null && surfaceView.getHolder().getSurface() != null
                 && surfaceView.getHolder().getSurface().isValid()
                 && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {

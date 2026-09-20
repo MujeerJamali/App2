@@ -10,11 +10,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A wake-up alarm that can ONLY be silenced by scanning one of its chosen
- * registered barcodes - no snooze, no back button, no other way out. Missing
- * it (no valid scan within RING_MINUTES of it firing) punishes the chosen
- * Blocks by temporarily widening their next occurrence - see
- * BlockPunishmentStorage and BlockEnforcer.
+ * A wake-up alarm that can ONLY be silenced by scanning BOTH barcodes of
+ * one of its chosen pairs, one right after the other within a short
+ * window (see AlarmRingActivity.PAIR_SCAN_WINDOW_MILLIS) - no snooze, no
+ * back button, no other way out. Missing it (no valid pair scan within
+ * RING_MINUTES of it firing) punishes the chosen Blocks by temporarily
+ * widening their next occurrence - see BlockPunishmentStorage and
+ * BlockEnforcer.
  */
 public class Alarm {
 
@@ -24,7 +26,7 @@ public class Alarm {
     public String name;
     public boolean enabled = true;
     public List<AlarmTrigger> triggers = new ArrayList<AlarmTrigger>();
-    public Set<String> barcodeIds = new LinkedHashSet<String>();
+    public List<BarcodePair> barcodePairs = new ArrayList<BarcodePair>();
     public Set<String> affectedBlockIds = new LinkedHashSet<String>();
 
     /** Next absolute time (millis) any of this alarm's triggers fires strictly after afterMillis. -1 if none. */
@@ -50,9 +52,9 @@ public class Alarm {
         JSONArray triggerArr = new JSONArray();
         for (AlarmTrigger t : triggers) triggerArr.put(t.toJson());
         o.put("triggers", triggerArr);
-        JSONArray barcodeArr = new JSONArray();
-        for (String id : barcodeIds) barcodeArr.put(id);
-        o.put("barcodes", barcodeArr);
+        JSONArray pairArr = new JSONArray();
+        for (BarcodePair p : barcodePairs) pairArr.put(p.toJson());
+        o.put("barcodePairs", pairArr);
         JSONArray blockArr = new JSONArray();
         for (String id : affectedBlockIds) blockArr.put(id);
         o.put("blocks", blockArr);
@@ -70,10 +72,10 @@ public class Alarm {
                 a.triggers.add(AlarmTrigger.fromJson(triggerArr.getJSONObject(i)));
             }
         }
-        JSONArray barcodeArr = o.optJSONArray("barcodes");
-        if (barcodeArr != null) {
-            for (int i = 0; i < barcodeArr.length(); i++) {
-                a.barcodeIds.add(barcodeArr.getString(i));
+        JSONArray pairArr = o.optJSONArray("barcodePairs");
+        if (pairArr != null) {
+            for (int i = 0; i < pairArr.length(); i++) {
+                a.barcodePairs.add(BarcodePair.fromJson(pairArr.getJSONObject(i)));
             }
         }
         JSONArray blockArr = o.optJSONArray("blocks");

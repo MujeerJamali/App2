@@ -64,6 +64,45 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.49
+-----------------------
+- NEW: registering a barcode now requires scanning it TWICE to confirm -
+  each scan shows the decoded number on screen and asks for confirmation
+  before moving on. Guards against a misread getting silently registered
+  as a Barcode's permanent value; if the two scans don't match, it says
+  so and starts over from the first scan.
+- BIG CHANGE: Alarms now require PAIRS of barcodes, not single ones. When
+  editing an Alarm, "Select Barcodes" is replaced by "+ Add Barcode
+  Pair" (pick two different registered barcodes to form one pair - an
+  Alarm can have several pairs, any one of which dismisses it). To
+  dismiss a ringing Alarm, BOTH barcodes of one pair must be scanned, in
+  either order, within 3 seconds of each other - scanning only one,
+  scanning something unrelated, or letting 3 seconds pass resets and
+  that pair has to be started over from its first scan. The scan screen
+  shows a live countdown while waiting for the second code.
+- This is a genuine breaking change to how existing Alarms are stored -
+  an Alarm saved before this version will come back with no pairs
+  configured (the old single-barcode selection doesn't carry over) and
+  will need its barcode pairs set up again before it can ring properly.
+- INVESTIGATING: "Alarm crashes the app when triggered while already
+  inside the app" - couldn't reproduce this directly without a stack
+  trace (this app avoids relying on logcat, same reasoning as
+  everywhere else), so two things instead:
+  1. The app now catches its own crashes and shows the last one's exact
+     stack trace in a dialog the next time it's opened - if this still
+     happens, that dialog will have the real answer instead of another
+     guess. Please screenshot/send it back if you see it.
+  2. Fixed a real, related gap either way: AlarmRingActivity is a
+     launchMode="singleInstance" screen but had no onNewIntent handling
+     - if a second Alarm fired while this screen was already showing
+     (only possible while something in the app was already open/active,
+     which lines up with the reported pattern), the existing instance
+     would get silently reused with stale data instead of updating.
+     Also hardened AlarmRingService's onStartCommand and AlarmRingActivity's
+     onCreate/onNewIntent against any other unexpected exception taking
+     the whole app down with them, and made sure a very-close second
+     Alarm firing can't leak the first one's MediaPlayer/Vibrator.
+
 WHAT CHANGED IN 4.48
 -----------------------
 - FIXED: Holiday Breaks list screen's "+ Add Holiday Break" button (and
