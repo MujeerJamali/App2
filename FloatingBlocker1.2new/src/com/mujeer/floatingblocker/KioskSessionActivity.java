@@ -115,7 +115,7 @@ public class KioskSessionActivity extends Activity {
 
     private void renderApps() {
         appsContainer.removeAllViews();
-        PackageManager pm = getPackageManager();
+        final PackageManager pm = getPackageManager();
         List<String> packages = new java.util.ArrayList<String>(kioskModeStorage.loadAllowedPackages());
         java.util.Collections.sort(packages);
         for (final String pkg : packages) {
