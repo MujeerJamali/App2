@@ -87,6 +87,29 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.54
+-----------------------
+- FIXED: the app crashed immediately on every open (before showing
+  anything, including its own crash dialog). Root cause: the
+  SectionHeader style added back in 4.50's visual redesign only
+  defines text properties (size, color, bold, letter-spacing,
+  padding) - it never defines layout_width/layout_height, which
+  every View requires. Every OTHER screen's use of that style
+  (and ScreenDescription/LockedMessageBox/ListCardRow) already
+  supplied those explicitly alongside the style, but
+  activity_main.xml's five section headers ("Manage", "Safety
+  Valve", "System", "Backup", and this version's new "Kiosk Mode
+  (Beta)") never did - a bug that's been sitting in the main screen's
+  layout since 4.50 and just hadn't been hit by a real device open
+  since then. Fixed by adding explicit layout_width="match_parent"
+  layout_height="wrap_content" to all five.
+- Diagnosed using this app's own on-device tooling: AIDE's LogCat
+  view showed nothing until android:debuggable was temporarily set
+  to true (a non-debuggable process's logs aren't visible without a
+  debugger attached) - that surfaced the real
+  android.view.InflateException with the exact line number. Reverted
+  debuggable back to false once the actual bug was found and fixed.
+
 WHAT CHANGED IN 4.53
 -----------------------
 - Kiosk Mode (Beta): added the AlarmManager safety net for the "session

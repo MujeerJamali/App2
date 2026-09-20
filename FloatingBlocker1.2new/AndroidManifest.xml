@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mujeer.floatingblocker"
-    android:versionCode="53"
-    android:versionName="4.53">
+    android:versionCode="54"
+    android:versionName="4.54">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -26,7 +26,7 @@
         android:allowBackup="true"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
-        android:debuggable="true"
+        android:debuggable="false"
         android:directBootAware="true">
 
         <activity
