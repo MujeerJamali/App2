@@ -233,4 +233,11 @@
     <string name="kiosk_time_remaining_format">Time remaining: %1$s</string>
     <string name="kiosk_open_app_format">Open %1$s</string>
     <string name="kiosk_end_session_button">End Session Now</string>
+    <string name="section_quick_toggles">Quick Toggles</string>
+    <string name="wifi_toggle_on">📶 WiFi: ON (tap to turn off)</string>
+    <string name="wifi_toggle_off">📶 WiFi: OFF (tap to turn on)</string>
+    <string name="bluetooth_toggle_on">🔵 Bluetooth: ON (tap to turn off)</string>
+    <string name="bluetooth_toggle_off">🔵 Bluetooth: OFF (tap to turn on)</string>
+    <string name="msg_wifi_toggle_failed">Could not toggle WiFi on this device.</string>
+    <string name="msg_bluetooth_toggle_failed">Could not toggle Bluetooth on this device.</string>
 </resources>

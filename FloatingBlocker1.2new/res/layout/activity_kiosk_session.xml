@@ -27,6 +27,23 @@
         style="@style/SectionHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="@string/section_quick_toggles" />
+
+    <Button
+        android:id="@+id/btnToggleWifi"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnToggleBluetooth"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        style="@style/SectionHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:text="@string/kiosk_allowed_apps_label" />
 
     <ScrollView

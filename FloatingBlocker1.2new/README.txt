@@ -87,6 +87,26 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.65
+-----------------------
+- NEW: WiFi and Bluetooth toggle buttons directly inside the Kiosk
+  Mode (Beta) session screen, under a new "Quick Toggles" section.
+  Built specifically so a session never needs
+  LOCK_TASK_FEATURE_NOTIFICATIONS enabled just to reach these -
+  Android's Device Owner APIs don't let you show only some Quick
+  Settings tiles, so enabling the notification shade at all would
+  expose everything on it, OEM extras included (e.g. a battery-saver
+  mode that could itself interfere with this app). These buttons call
+  WifiManager/BluetoothAdapter directly instead, using this app's
+  Device Owner privileges - no system panel is ever shown. WiFi
+  should work reliably (Android has a documented Device Owner
+  exemption from the API 29+ restriction on toggling it directly);
+  Bluetooth is less certain (deprecated more aggressively on Android
+  13+) and needs on-device testing to confirm it actually works.
+  Silently self-grants BLUETOOTH_CONNECT (required since API 31) the
+  same way Location Override's permission is silently granted, so
+  there's no runtime permission prompt to get stuck on while pinned.
+
 WHAT CHANGED IN 4.64
 -----------------------
 - Confirmed via LogCat that 4.63's background-thread fix works as
