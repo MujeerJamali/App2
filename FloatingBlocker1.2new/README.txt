@@ -87,6 +87,24 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.69
+-----------------------
+- FIXED: dialog buttons (OK/Cancel/Yes/etc. on every AlertDialog app-
+  wide) were rendering as invisible white text on a white background -
+  clickable, just not visible until pressed/hovered. Cause: AppTheme
+  applies a custom android:buttonStyle app-wide (dark bg_button
+  background + white text) so every regular Button in the app gets
+  the same look with no per-layout changes needed - but AlertDialog's
+  own built-in action buttons inherit that style's white textColor
+  while NOT actually rendering its bg_button background (AlertDialog
+  draws its action buttons as flat/borderless over the dialog's own
+  plain white background, ignoring a custom Button style's
+  background), leaving white-on-white. Fixed by giving AlertDialogs
+  their own isolated theme (falling back to the platform default,
+  which has properly-contrasted buttons) via android:alertDialogTheme,
+  completely independent of android:buttonStyle - every other button
+  in the app is unaffected.
+
 WHAT CHANGED IN 4.68
 -----------------------
 - FIXED (much more likely explanation for the reported double-ring

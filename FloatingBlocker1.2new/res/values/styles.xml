@@ -8,7 +8,19 @@
         <item name="android:windowBackground">@color/background</item>
         <item name="android:buttonStyle">@style/AppButton</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:alertDialogTheme">@style/AppAlertDialogTheme</item>
     </style>
+
+    <!-- Deliberately isolates AlertDialog's own OK/Cancel/etc. buttons from
+         AppTheme's app-wide android:buttonStyle override above - without
+         this, those buttons inherit AppButton's white text color, but NOT
+         its dark bg_button background (AlertDialog renders its own action
+         buttons as flat/borderless over the dialog's plain white
+         background, ignoring a custom Button style's background), leaving
+         invisible white-on-white text. Falling back to the platform's
+         default alert dialog theme keeps every dialog's buttons properly
+         contrasted, with zero effect on any other button in the app. -->
+    <style name="AppAlertDialogTheme" parent="android:Theme.Material.Light.Dialog.Alert" />
 
     <!-- Applied app-wide via the theme's android:buttonStyle, so every
          plain Button gets this look with no per-layout changes needed. -->
