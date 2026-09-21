@@ -58,6 +58,17 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
 
     private static final int REQUEST_CAMERA_PERMISSION = 501;
     private static final long PAIR_SCAN_WINDOW_MILLIS = 3000L;
+    // Right after the first scan of a pair succeeds, the camera is
+    // typically still pointed at (or just pulling away from) that same
+    // physical code - a fast re-decode of it can occasionally come back
+    // as a slightly different string (motion blur, a marginal-angle
+    // re-read) rather than an exact match to pendingFirstValue, which
+    // would otherwise wrongly look like a "wrong code" attempt and reset
+    // the pending scan. Any non-matching decode within this window is
+    // ignored instead - a genuine, fast, correct pair completion still
+    // goes through immediately, it's only a false "mismatch" that's
+    // suppressed.
+    private static final long POST_FIRST_SCAN_SETTLE_MILLIS = 700L;
 
     private SurfaceView surfaceView;
     private TextView txtStatus;
@@ -420,7 +431,7 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
 
         if (pendingFirstValue == null) {
             if (!isPairMember(value)) {
-                txtStatus.setText(R.string.barcode_scan_wrong_code);
+                txtStatus.setText(getString(R.string.barcode_scan_wrong_code_format, value));
                 return;
             }
             startPendingPairScan(value, now);
@@ -442,13 +453,21 @@ public class BarcodeScanActivity extends Activity implements SurfaceHolder.Callb
             return;
         }
 
+        if ((now - pendingFirstScanTime) < POST_FIRST_SCAN_SETTLE_MILLIS) {
+            // Not a match, but still within the settle window right after
+            // the first scan - most likely a noisy re-read of that same
+            // physical code, not a deliberate wrong-code scan. Ignore it
+            // and keep waiting, rather than resetting the pending scan.
+            return;
+        }
+
         // Didn't complete the pending pair - reset, then let this scan
         // start a fresh pending window if it's itself a valid pair member.
         pendingFirstValue = null;
         if (isPairMember(value)) {
             startPendingPairScan(value, now);
         } else {
-            txtStatus.setText(R.string.barcode_scan_wrong_code);
+            txtStatus.setText(getString(R.string.barcode_scan_wrong_code_format, value));
         }
     }
 

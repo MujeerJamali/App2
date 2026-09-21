@@ -87,6 +87,25 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.66
+-----------------------
+- FIXED: scanning the first barcode of a dismiss pair could sometimes
+  get wrongly flagged as a "wrong code" a moment later, resetting the
+  pending scan - even though the code already ignores an exact repeat
+  decode of the same value. Likely cause: right after the first scan,
+  the camera is often still pointed at (or just pulling away from)
+  that same physical code, and a fast re-decode of it can occasionally
+  come back as a slightly different string (motion blur, a
+  marginal-angle re-read) rather than an exact match. Added a 700ms
+  settle window right after the first scan - any non-matching decode
+  in that window is now ignored (kept waiting) instead of being
+  treated as a wrong-code attempt, while a genuine, fast, correct
+  pair completion still goes through immediately either way.
+- Also made the pair-mode "wrong code" message show the actual
+  decoded value (matching what registration mode already showed), so
+  if this is ever seen again, the exact mismatched string is visible
+  for diagnosis.
+
 WHAT CHANGED IN 4.65
 -----------------------
 - NEW: WiFi and Bluetooth toggle buttons directly inside the Kiosk

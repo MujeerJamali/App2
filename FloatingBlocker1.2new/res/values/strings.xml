@@ -142,7 +142,7 @@
     <string name="barcode_scan_register_instructions">Point the camera at the barcode or QR code you want to register.</string>
     <string name="barcode_scan_pair_instructions">Scan either barcode of a pair. Then scan its partner within 3 seconds.</string>
     <string name="barcode_scan_confirm_instructions">Scanned %1$s - now scan the SAME barcode again to confirm it.</string>
-    <string name="barcode_scan_wrong_code">That\'s not the right code - keep scanning.</string>
+    <string name="barcode_scan_wrong_code_format">Scanned %1$s - that\'s not the right code, keep scanning.</string>
     <string name="barcode_pair_scan_waiting">First barcode scanned - scan its partner within %1$d second(s)</string>
     <string name="barcode_pair_scan_expired">Too slow - scan the first barcode again.</string>
     <string name="barcode_confirm_title">Confirm Barcode</string>
