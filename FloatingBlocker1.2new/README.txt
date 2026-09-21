@@ -87,6 +87,24 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.70
+-----------------------
+- NEW: "Permanently Exclude Business ERP (One-Time)" on the main
+  screen's Safety Valve section - a one-time-only action that
+  permanently excludes com.mujeer.businesserp from ever being
+  suspended by any Block, current or future. The actual guarantee is
+  a new PermanentAppExclusionStorage list that
+  BlockEnforcer.applyNow() strips out right before actually
+  suspending anything, regardless of what any Block's own stored app
+  list says - so it stays excluded even if a future Block manually
+  re-adds it, or new-app detection sweeps it back in after a
+  reinstall/update. Also does a one-time cleanup removing it from
+  every currently-configured Block's app list, purely so it isn't
+  confusingly still shown as "in" a Block it will never actually be
+  blocked by. Same one-time-only design as Clear Current Punishment
+  and Pause All Blocks: usable exactly once, ever, then gone for
+  good - there's no in-app way to reverse it afterward.
+
 WHAT CHANGED IN 4.69
 -----------------------
 - FIXED: dialog buttons (OK/Cancel/Yes/etc. on every AlertDialog app-

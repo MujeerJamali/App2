@@ -43,6 +43,13 @@
     <string name="confirm_clear_punishment_yes">Yes, clear it (uses this up forever)</string>
     <string name="msg_punishment_cleared">Cleared. This one-time action has now been used.</string>
 
+    <!-- Permanent app exclusion - one-time only, hardcoded to a specific package -->
+    <string name="exclude_business_erp_button">🏢 Permanently Exclude Business ERP (One-Time)</string>
+    <string name="confirm_exclude_business_erp_title">Permanently exclude Business ERP?</string>
+    <string name="confirm_exclude_business_erp_message">This removes com.mujeer.businesserp from every current Block, and permanently prevents it from ever being blocked again by any Block, current or future - including automatic re-adding via new-app detection. This can only be done once, and there\'s no in-app way to undo it afterward.</string>
+    <string name="confirm_exclude_business_erp_yes">Yes, exclude it permanently</string>
+    <string name="msg_business_erp_excluded">com.mujeer.businesserp is now permanently excluded from all Blocks.</string>
+
     <!-- Pause All Blocks for 1 Hour - one-time only -->
     <string name="pause_all_button_activate">⏸️ Pause All Blocks for 1 Hour (One-Time Use)</string>
     <string name="pause_all_button_active_format">⏸️ Blocks Paused (One-Time) - %1$s Remaining</string>

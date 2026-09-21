@@ -38,7 +38,11 @@ public class MainActivity extends Activity {
     private Button btnScanRingingAlarm;
     private Button btnClearPunishment;
     private Button btnPauseAllOneHour;
+    private Button btnExcludeBusinessErp;
     private BlockPunishmentStorage punishmentStorage;
+    private PermanentAppExclusionStorage permanentExclusionStorage;
+
+    private static final String BUSINESS_ERP_PACKAGE = "com.mujeer.businesserp";
 
     private final Handler ringingAlarmHandler = new Handler();
     private final Runnable ringingAlarmTick = new Runnable() {
@@ -68,6 +72,7 @@ public class MainActivity extends Activity {
         blocksPauseStorage = new BlocksPauseStorage(this);
         masterSafetyStorage = new MasterSafetyStorage(this);
         punishmentStorage = new BlockPunishmentStorage(this);
+        permanentExclusionStorage = new PermanentAppExclusionStorage(this);
         devicePolicyManager = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, FloatingBlockerDeviceAdminReceiver.class);
 
@@ -79,6 +84,7 @@ public class MainActivity extends Activity {
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
         btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
+        btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
@@ -139,6 +145,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onPauseAllOneHourClicked();
+            }
+        });
+
+        btnExcludeBusinessErp.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onExcludeBusinessErpClicked();
             }
         });
 
@@ -355,6 +368,9 @@ public class MainActivity extends Activity {
 
         refreshPauseAllButton();
 
+        btnExcludeBusinessErp.setVisibility(permanentExclusionStorage.isExcluded(BUSINESS_ERP_PACKAGE)
+                ? android.view.View.GONE : android.view.View.VISIBLE);
+
         refreshRingingAlarmButton();
     }
 
@@ -444,6 +460,52 @@ public class MainActivity extends Activity {
         btnPauseAllOneHour.setVisibility(android.view.View.VISIBLE);
         btnPauseAllOneHour.setEnabled(false);
         btnPauseAllOneHour.setText(getString(R.string.pause_all_button_active_format, formatRemaining(remainingMillis)));
+    }
+
+    /**
+     * One-time-only: permanently excludes BUSINESS_ERP_PACKAGE from ever
+     * being suspended by any Block, current or future - the enforcement
+     * filter in BlockEnforcer.applyNow() is the actual guarantee (it
+     * strips excluded packages out right before suspending anything,
+     * regardless of what any Block's own stored list says), this also
+     * does a one-time cleanup pass removing it from every current Block's
+     * list, purely so it isn't confusingly still shown as "in" a Block it
+     * will never actually be blocked by. The button disappears for good
+     * once used - there's no in-app way to reverse this.
+     */
+    private void onExcludeBusinessErpClicked() {
+        if (permanentExclusionStorage.isExcluded(BUSINESS_ERP_PACKAGE)) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_exclude_business_erp_title)
+                .setMessage(R.string.confirm_exclude_business_erp_message)
+                .setPositiveButton(R.string.confirm_exclude_business_erp_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        permanentExclusionStorage.addExcludedPackage(BUSINESS_ERP_PACKAGE);
+                        removePackageFromAllBlocks(BUSINESS_ERP_PACKAGE);
+                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                        Toast.makeText(MainActivity.this, R.string.msg_business_erp_excluded, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    private void removePackageFromAllBlocks(String packageName) {
+        BlocksStorage blocksStorage = new BlocksStorage(this);
+        List<Block> blocks = blocksStorage.loadBlocks();
+        boolean changed = false;
+        for (Block b : blocks) {
+            if (b.blockedPackages.remove(packageName)) {
+                changed = true;
+            }
+        }
+        if (changed) {
+            blocksStorage.saveBlocks(blocks);
+        }
     }
 
     /**

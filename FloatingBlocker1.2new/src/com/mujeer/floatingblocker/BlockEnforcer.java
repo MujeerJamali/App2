@@ -86,6 +86,13 @@ public class BlockEnforcer {
 
         Set<String> desiredSuspended = computeActiveBlockedPackages(context);
         desiredSuspended.remove(ownPackage);
+        // Permanently-excluded packages are never suspended, regardless of
+        // whether some Block still nominally lists one - removing it here
+        // (rather than only when it's added) means allManaged still
+        // contains it if a Block hasn't been cleaned up yet, so the
+        // set-difference below (toUnsuspend = allManaged - desiredSuspended)
+        // naturally unsuspends it if it was already suspended.
+        desiredSuspended.removeAll(new PermanentAppExclusionStorage(context).loadExcludedPackages());
 
         Set<String> toUnsuspend = new HashSet<String>(allManaged);
         toUnsuspend.removeAll(desiredSuspended);
