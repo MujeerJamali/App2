@@ -87,6 +87,25 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.67
+-----------------------
+- NEW: adding an Alarm trigger now warns (not blocks) if it's within
+  15 minutes of an existing trigger on the same day, before adding
+  it. Investigated a report of an Alarm (with 10-12 separate
+  triggers) ringing twice, ~4 minutes apart, around one intended
+  wake-up time - traced the scheduling code (AlarmRingReceiver,
+  AlarmScheduler) thoroughly and found no mechanism for a SINGLE
+  trigger to double-fire (all of an Alarm's triggers share one
+  deterministic PendingIntent, so the system can only ever have one
+  ring pending for that Alarm at a time). The much more likely
+  explanation: two genuinely separate AlarmTrigger entries ended up a
+  few minutes apart by accident - easy to happen when manually adding
+  many triggers one at a time, and easy to miss noticing in a long
+  list. This warning catches that going forward; it doesn't retroactively
+  fix an existing Alarm's trigger list, which needs checking by hand
+  (open the Alarm, look at "Rings at" for two close-together times
+  around the affected wake-up).
+
 WHAT CHANGED IN 4.66
 -----------------------
 - FIXED: scanning the first barcode of a dismiss pair could sometimes

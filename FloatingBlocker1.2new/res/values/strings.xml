@@ -181,6 +181,9 @@
     <string name="msg_add_at_least_one_trigger">Add at least one trigger.</string>
     <string name="msg_add_at_least_one_pair">Add at least one barcode pair.</string>
     <string name="msg_alarm_saved">Alarm saved.</string>
+    <string name="confirm_near_duplicate_trigger_title">Very close to an existing trigger</string>
+    <string name="confirm_near_duplicate_trigger_message">This new trigger (%2$s) is within 15 minutes of an existing one (%1$s). If that wasn\'t intentional - e.g. a slightly mistimed tap while adding several triggers - it would ring twice for what was meant to be one wake-up. Add it anyway?</string>
+    <string name="confirm_near_duplicate_trigger_yes">Yes, add it anyway</string>
 
     <!-- Alarm ringing screen -->
     <string name="alarm_ringing_title">ALARM RINGING</string>

@@ -159,13 +159,67 @@ public class AlarmEditActivity extends Activity {
                             return;
                         }
                         // Adding a trigger is always allowed, regardless of lock state.
-                        triggers.add(new AlarmTrigger(pickedMinuteOfDay, days));
-                        pickedMinuteOfDay = -1;
-                        renderTriggers();
+                        AlarmTrigger candidate = new AlarmTrigger(pickedMinuteOfDay, days);
+                        AlarmTrigger nearDuplicate = findNearDuplicateTrigger(candidate);
+                        if (nearDuplicate != null) {
+                            confirmAddNearDuplicateTrigger(candidate, nearDuplicate);
+                        } else {
+                            addTrigger(candidate);
+                        }
                     }
                 })
                 .setNegativeButton(R.string.cancel_button, null)
                 .show();
+    }
+
+    private static final int NEAR_DUPLICATE_TRIGGER_THRESHOLD_MINUTES = 15;
+
+    /**
+     * Two separate AlarmTrigger entries a few minutes apart on the same
+     * day would each ring independently, requiring a full separate scan
+     * to dismiss each - easy to end up with by accident when adding many
+     * triggers one at a time (e.g. a slightly mistimed tap on the time
+     * picker), and easy to miss noticing in a long trigger list.
+     */
+    private AlarmTrigger findNearDuplicateTrigger(AlarmTrigger candidate) {
+        for (AlarmTrigger existing : triggers) {
+            boolean sharesADay = false;
+            for (Integer d : candidate.days) {
+                if (existing.days.contains(d)) {
+                    sharesADay = true;
+                    break;
+                }
+            }
+            if (!sharesADay) {
+                continue;
+            }
+            int diff = Math.abs(existing.minuteOfDay - candidate.minuteOfDay);
+            diff = Math.min(diff, 1440 - diff); // handles wraparound near midnight
+            if (diff <= NEAR_DUPLICATE_TRIGGER_THRESHOLD_MINUTES) {
+                return existing;
+            }
+        }
+        return null;
+    }
+
+    private void confirmAddNearDuplicateTrigger(final AlarmTrigger candidate, AlarmTrigger existing) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_near_duplicate_trigger_title)
+                .setMessage(getString(R.string.confirm_near_duplicate_trigger_message, existing.format(), candidate.format()))
+                .setPositiveButton(R.string.confirm_near_duplicate_trigger_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        addTrigger(candidate);
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    private void addTrigger(AlarmTrigger trigger) {
+        triggers.add(trigger);
+        pickedMinuteOfDay = -1;
+        renderTriggers();
     }
 
     private void renderTriggers() {
