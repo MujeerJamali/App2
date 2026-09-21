@@ -84,18 +84,27 @@ public class BlockEnforcer {
         }
         allManaged.remove(ownPackage);
 
+        Set<String> permanentlyExcluded = new PermanentAppExclusionStorage(context).loadExcludedPackages();
+
         Set<String> desiredSuspended = computeActiveBlockedPackages(context);
         desiredSuspended.remove(ownPackage);
         // Permanently-excluded packages are never suspended, regardless of
-        // whether some Block still nominally lists one - removing it here
-        // (rather than only when it's added) means allManaged still
-        // contains it if a Block hasn't been cleaned up yet, so the
-        // set-difference below (toUnsuspend = allManaged - desiredSuspended)
-        // naturally unsuspends it if it was already suspended.
-        desiredSuspended.removeAll(new PermanentAppExclusionStorage(context).loadExcludedPackages());
+        // whether some Block still nominally lists one.
+        desiredSuspended.removeAll(permanentlyExcluded);
 
         Set<String> toUnsuspend = new HashSet<String>(allManaged);
         toUnsuspend.removeAll(desiredSuspended);
+        // Explicitly unsuspend every permanently-excluded package on every
+        // pass, regardless of whether it's still tracked in allManaged
+        // (i.e. whether some Block still lists it) - relying only on the
+        // set-difference above silently stops working the moment a
+        // package is no longer tracked by any Block at all (e.g. right
+        // after the one-time exclusion action cleans it out of every
+        // Block's list), since it then can never appear in allManaged to
+        // begin with, so it would never actually get an unsuspend call.
+        // This also means an excluded package self-heals if it's ever
+        // re-suspended by any other path in the future (a reinstall, etc.).
+        toUnsuspend.addAll(permanentlyExcluded);
 
         if (!desiredSuspended.isEmpty()) {
             try {

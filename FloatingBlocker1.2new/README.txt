@@ -87,6 +87,22 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.71
+-----------------------
+- FIXED: the Business ERP exclusion (4.70) removed the package from
+  every Block's stored app list correctly, but left it actually still
+  suspended. Cause: the exclusion action removes the package from
+  every Block's list BEFORE re-running enforcement, so by the time
+  applyNow() computed which packages to unsuspend, the package no
+  longer appeared in allManaged (the union of every Block's app list)
+  at all - and the old logic only ever unsuspended a package by
+  finding it in allManaged first, so it silently never issued the
+  actual unsuspend call. Fixed by explicitly unsuspending every
+  permanently-excluded package on every applyNow() pass, independent
+  of whether it's still tracked in any Block's list - this also means
+  it self-heals if the package is ever suspended again by any other
+  path in the future (e.g. after a reinstall).
+
 WHAT CHANGED IN 4.70
 -----------------------
 - NEW: "Permanently Exclude Business ERP (One-Time)" on the main
