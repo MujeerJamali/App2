@@ -225,6 +225,25 @@ public class MainActivity extends Activity {
         // sitting on this screen, not just on the next resume.
         ringingAlarmHandler.postDelayed(ringingAlarmTick, 1000);
 
+        // AlarmScheduler.rescheduleAll() stays on the MAIN thread,
+        // deliberately - it's cheap (just AlarmManager calls, no
+        // DevicePolicyManager Binder overhead), and more importantly,
+        // AlarmRingReceiver ALSO reschedules this same alarm's next
+        // occurrence when it fires, on the main thread (BroadcastReceivers
+        // run there by default). Keeping both on the same thread means
+        // Android's single-threaded main Looper serializes them - they can
+        // never truly overlap. Running this on a background thread (tried
+        // briefly) opened a real race: a background call could read "now"
+        // just before an alarm's exact trigger time, compute that trigger
+        // as still-upcoming, and then - if its own am.setExactAndAllowWhileIdle()
+        // call executed even slightly late, after the real alarm had
+        // already fired and been correctly rescheduled for its next
+        // occurrence - overwrite that correct future schedule with an
+        // already-past timestamp, which Android fires again almost
+        // immediately. That's consistent with a reported spurious second
+        // ring a few minutes off from the real trigger time.
+        AlarmScheduler.rescheduleAll(this);
+
         // BlockEnforcer.applyNow() makes well over a dozen synchronous
         // DevicePolicyManager Binder calls back-to-back. Logged evidence
         // (from a white-screen-on-open report) showed a single one of
@@ -236,12 +255,14 @@ public class MainActivity extends Activity {
         // round-trip can no longer block the window from ever becoming
         // visible/responsive - the small risk of showing briefly-stale
         // status (e.g. Device Owner state) until refreshUi() re-runs at
-        // the end is a clearly worthwhile trade against a frozen app.
+        // the end is a clearly worthwhile trade against a frozen app. This
+        // one doesn't share a PendingIntent with any receiver that also
+        // runs on the main thread the way AlarmScheduler does, so it
+        // doesn't carry the same race risk.
         new Thread(new Runnable() {
             @Override
             public void run() {
                 BlockEnforcer.reapplyAndReschedule(MainActivity.this);
-                AlarmScheduler.rescheduleAll(MainActivity.this);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {

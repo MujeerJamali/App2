@@ -87,6 +87,32 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.68
+-----------------------
+- FIXED (much more likely explanation for the reported double-ring
+  than 4.67's near-duplicate-trigger theory, which the user was
+  confident wasn't the case): AlarmScheduler.rescheduleAll() moved
+  back to the main thread in MainActivity.onResume(), instead of
+  running on the background thread introduced in 4.63's freeze fix.
+  AlarmRingReceiver also reschedules an Alarm's next occurrence when
+  it fires, on the main thread (BroadcastReceivers run there by
+  default) - keeping both on the main thread means Android's
+  single-threaded Looper serializes them, so they can never truly
+  overlap. Running rescheduleAll() on a background thread opened a
+  real race: it could read "now" just before an Alarm's exact trigger
+  time, compute that trigger as still upcoming, and then - if its own
+  AlarmManager call executed even slightly late, after the real alarm
+  had already fired and been correctly rescheduled for its next
+  occurrence - overwrite that correct future schedule with an
+  already-past timestamp, which Android fires again almost
+  immediately. That matches a spurious second ring a few minutes off
+  from the real trigger time far better than a data-entry mistake.
+  BlockEnforcer.reapplyAndReschedule() (the actually-slow,
+  DevicePolicyManager-heavy part 4.63 needed off the main thread)
+  stays on the background thread - it doesn't share a PendingIntent
+  with anything else running on the main thread, so it doesn't carry
+  this same race risk.
+
 WHAT CHANGED IN 4.67
 -----------------------
 - NEW: adding an Alarm trigger now warns (not blocks) if it's within
