@@ -10,6 +10,27 @@ import java.util.List;
 /** Schedules/cancels the AlarmManager entries behind Alarms - both the ring itself and its 10-minute punishment deadline. */
 public class AlarmScheduler {
 
+    // Guards the compute-then-schedule sequence below against two threads
+    // racing to reschedule the SAME Alarm's ring PendingIntent at once.
+    // This has already caused a real spurious double-ring: a background
+    // thread reads "now" just before an Alarm's exact trigger, computes
+    // that trigger as still upcoming, then - if it doesn't get to actually
+    // call AlarmManager until after the real trigger has already fired and
+    // been correctly rescheduled to its NEXT occurrence by
+    // AlarmRingReceiver (which runs on the main thread) - overwrites that
+    // correct future schedule with an already-past timestamp, which
+    // Android fires again almost immediately. An earlier fix moved
+    // MainActivity's own direct call back to the main thread, but missed
+    // an INDIRECT path: BlockEnforcer.applyNow() (still backgrounded, for
+    // its slow DevicePolicyManager calls) calls
+    // applyHomeLocationTransition(), which can call
+    // SettingsSnapshotStorage.restoreSnapshot(), which ALSO reschedules
+    // every Alarm - from that same background thread. Rather than keep
+    // chasing individual call sites one at a time, this lock makes the
+    // actual compute-then-schedule operation atomic regardless of which
+    // thread or code path calls it, present or future.
+    private static final Object SCHEDULE_LOCK = new Object();
+
     /** Re-schedules every enabled Alarm's next occurrence. Call after any Alarm is added, edited, or deleted. */
     public static void rescheduleAll(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -30,13 +51,21 @@ public class AlarmScheduler {
     }
 
     private static void scheduleNextForAlarm(Context context, AlarmManager am, Alarm alarm) {
-        long next = alarm.nextOccurrenceAfter(System.currentTimeMillis());
-        PendingIntent pi = ringPendingIntent(context, alarm.id);
-        if (next <= 0) {
-            am.cancel(pi);
-            return;
+        synchronized (SCHEDULE_LOCK) {
+            // "now" and "next" are deliberately (re)computed INSIDE the
+            // lock, not passed in from outside - a thread that was
+            // blocked waiting for this lock must use a FRESH read of the
+            // current time once it actually gets to run, not a stale one
+            // from before it was blocked, or this synchronization
+            // wouldn't actually prevent the race it's here for.
+            long next = alarm.nextOccurrenceAfter(System.currentTimeMillis());
+            PendingIntent pi = ringPendingIntent(context, alarm.id);
+            if (next <= 0) {
+                am.cancel(pi);
+                return;
+            }
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi);
         }
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi);
     }
 
     public static void schedulePunishmentDeadline(Context context, String alarmId, long occurrenceMillis) {

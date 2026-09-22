@@ -57,6 +57,12 @@
     <string name="confirm_pause_all_message">This immediately unsuspends every currently-blocked app for exactly 1 hour, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
     <string name="confirm_pause_all_yes">Yes, pause for 1 hour (uses this up forever)</string>
 
+    <string name="pause_until_11pm_button_activate">⏸️ Disable All Blocks Until 11 PM (One-Time)</string>
+    <string name="pause_until_11pm_button_active_format">⏸️ Blocks Disabled (One-Time) - %1$s Remaining</string>
+    <string name="confirm_pause_until_11pm_title">Disable all Blocks until 11 PM?</string>
+    <string name="confirm_pause_until_11pm_message">This immediately unsuspends every currently-blocked app until 11:00 PM, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
+    <string name="confirm_pause_until_11pm_yes">Yes, disable until 11 PM (uses this up forever)</string>
+
     <!-- DNS Filter Lock -->
 
 

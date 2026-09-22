@@ -87,6 +87,32 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.72
+-----------------------
+- FIXED (this time via a structural fix, not chasing individual call
+  sites - the previous fix, 4.68, only closed one path and the
+  double-ring bug persisted through a different one): the compute-
+  then-schedule sequence in AlarmScheduler is now wrapped in a
+  synchronized lock, making it atomic regardless of which thread or
+  code path calls it. 4.68 moved MainActivity's DIRECT
+  AlarmScheduler.rescheduleAll() call back to the main thread, but
+  missed an INDIRECT path: BlockEnforcer.applyNow() (still
+  backgrounded, for its slow DevicePolicyManager calls) calls
+  applyHomeLocationTransition(), which can call
+  SettingsSnapshotStorage.restoreSnapshot(), which ALSO reschedules
+  every Alarm - from that same background thread, recreating the
+  exact same race. The lock closes this off completely: no thread can
+  read "now" and schedule based on it while another thread is doing
+  the same for the same Alarm, present or future callers included.
+- NEW: "Disable All Blocks Until 11 PM (One-Time)" on the main
+  screen's Safety Valve section - same mechanism as Pause All Blocks
+  for 1 Hour (the shared temporary-override window, which now only
+  ever extends, never shortens, so using multiple one-time pause
+  actions in any order safely composes instead of the second
+  potentially cutting the first short), but targeting a fixed clock
+  time instead of a fixed duration. If it's already past 11 PM when
+  used, targets 11 PM tomorrow instead.
+
 WHAT CHANGED IN 4.71
 -----------------------
 - FIXED: the Business ERP exclusion (4.70) removed the package from

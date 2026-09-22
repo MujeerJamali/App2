@@ -133,6 +133,14 @@
             android:text="@string/pause_all_button_activate" />
 
         <Button
+            android:id="@+id/btnPauseUntil11pm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/pause_until_11pm_button_activate" />
+
+        <Button
             android:id="@+id/btnExcludeBusinessErp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     private Button btnScanRingingAlarm;
     private Button btnClearPunishment;
     private Button btnPauseAllOneHour;
+    private Button btnPauseUntil11pm;
     private Button btnExcludeBusinessErp;
     private BlockPunishmentStorage punishmentStorage;
     private PermanentAppExclusionStorage permanentExclusionStorage;
@@ -50,6 +51,7 @@ public class MainActivity extends Activity {
         public void run() {
             refreshRingingAlarmButton();
             refreshPauseAllButton();
+            refreshPauseUntil11pmButton();
             ringingAlarmHandler.postDelayed(this, 1000);
         }
     };
@@ -84,6 +86,7 @@ public class MainActivity extends Activity {
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
         btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
+        btnPauseUntil11pm = (Button) findViewById(R.id.btnPauseUntil11pm);
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
@@ -145,6 +148,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onPauseAllOneHourClicked();
+            }
+        });
+
+        btnPauseUntil11pm.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onPauseUntil11pmClicked();
             }
         });
 
@@ -367,6 +377,7 @@ public class MainActivity extends Activity {
                 ? android.view.View.GONE : android.view.View.VISIBLE);
 
         refreshPauseAllButton();
+        refreshPauseUntil11pmButton();
 
         btnExcludeBusinessErp.setVisibility(permanentExclusionStorage.isExcluded(BUSINESS_ERP_PACKAGE)
                 ? android.view.View.GONE : android.view.View.VISIBLE);
@@ -460,6 +471,59 @@ public class MainActivity extends Activity {
         btnPauseAllOneHour.setVisibility(android.view.View.VISIBLE);
         btnPauseAllOneHour.setEnabled(false);
         btnPauseAllOneHour.setText(getString(R.string.pause_all_button_active_format, formatRemaining(remainingMillis)));
+    }
+
+    /**
+     * A second, independent one-time emergency unsuspend - same mechanism
+     * as Pause All Blocks for 1 Hour (the shared temporary-override window
+     * in BlocksPauseStorage, which only ever extends, never shortens), but
+     * targeting a fixed clock time (11 PM) rather than a fixed duration.
+     * If it's already past 11 PM when this is used, targets 11 PM
+     * tomorrow instead, so "until 11 PM" always means something.
+     */
+    private void onPauseUntil11pmClicked() {
+        if (blocksPauseStorage.hasUsedOneTimePauseUntil11pm()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_pause_until_11pm_title)
+                .setMessage(R.string.confirm_pause_until_11pm_message)
+                .setPositiveButton(R.string.confirm_pause_until_11pm_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        java.util.Calendar cal = java.util.Calendar.getInstance();
+                        cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+                        cal.set(java.util.Calendar.MINUTE, 0);
+                        cal.set(java.util.Calendar.SECOND, 0);
+                        cal.set(java.util.Calendar.MILLISECOND, 0);
+                        if (cal.getTimeInMillis() <= System.currentTimeMillis()) {
+                            cal.add(java.util.Calendar.DAY_OF_YEAR, 1);
+                        }
+                        blocksPauseStorage.setTemporaryOverrideUntilMillis(cal.getTimeInMillis());
+                        blocksPauseStorage.markOneTimePauseUntil11pmUsed();
+                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    private void refreshPauseUntil11pmButton() {
+        if (!blocksPauseStorage.hasUsedOneTimePauseUntil11pm()) {
+            btnPauseUntil11pm.setVisibility(android.view.View.VISIBLE);
+            btnPauseUntil11pm.setEnabled(true);
+            btnPauseUntil11pm.setText(R.string.pause_until_11pm_button_activate);
+            return;
+        }
+        long remainingMillis = blocksPauseStorage.getTemporaryOverrideUntilMillis() - System.currentTimeMillis();
+        if (remainingMillis <= 0) {
+            btnPauseUntil11pm.setVisibility(android.view.View.GONE);
+            return;
+        }
+        btnPauseUntil11pm.setVisibility(android.view.View.VISIBLE);
+        btnPauseUntil11pm.setEnabled(false);
+        btnPauseUntil11pm.setText(getString(R.string.pause_until_11pm_button_active_format, formatRemaining(remainingMillis)));
     }
 
     /**
