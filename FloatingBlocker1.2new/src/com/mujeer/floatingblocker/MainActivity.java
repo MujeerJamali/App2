@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     private Button btnBatteryExemption;
     private Button btnScanRingingAlarm;
     private Button btnClearPunishment;
+    private Button btnClearPunishment2;
     private Button btnPauseAllOneHour;
     private Button btnPauseUntil11pm;
     private Button btnExcludeBusinessErp;
@@ -85,6 +86,7 @@ public class MainActivity extends Activity {
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
+        btnClearPunishment2 = (Button) findViewById(R.id.btnClearPunishment2);
         btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
         btnPauseUntil11pm = (Button) findViewById(R.id.btnPauseUntil11pm);
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
@@ -141,6 +143,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onClearPunishmentClicked();
+            }
+        });
+
+        btnClearPunishment2.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onClearPunishment2Clicked();
             }
         });
 
@@ -375,6 +384,8 @@ public class MainActivity extends Activity {
 
         btnClearPunishment.setVisibility(punishmentStorage.hasUsedOneTimeClear()
                 ? android.view.View.GONE : android.view.View.VISIBLE);
+        btnClearPunishment2.setVisibility(punishmentStorage.hasUsedOneTimeClear2()
+                ? android.view.View.GONE : android.view.View.VISIBLE);
 
         refreshPauseAllButton();
         refreshPauseUntil11pmButton();
@@ -409,6 +420,37 @@ public class MainActivity extends Activity {
                         punishmentStorage.clearAll();
                         punishmentStorage.markOneTimeClearUsed();
                         Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    /**
+     * A second, independent one-time-only escape hatch for Alarm-miss
+     * punishment, tracked under its own used-flag (see
+     * BlockPunishmentStorage.hasUsedOneTimeClear2) so it stays available
+     * even after the first Clear Current Punishment button has already
+     * been spent - added specifically for a false punishment caused by the
+     * early-alarm-delivery bug fixed in 4.74, discovered while the phone
+     * was too locked down to install that fix right away. Same reasoning
+     * as the first one: not gated on Lock Schedule's unlocked state, and
+     * gone forever once used.
+     */
+    private void onClearPunishment2Clicked() {
+        if (punishmentStorage.hasUsedOneTimeClear2()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_clear_punishment_title_2)
+                .setMessage(R.string.confirm_clear_punishment_message_2)
+                .setPositiveButton(R.string.confirm_clear_punishment_yes_2, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        punishmentStorage.clearAll();
+                        punishmentStorage.markOneTimeClearUsed2();
+                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_2, Toast.LENGTH_LONG).show();
                         refreshUi();
                     }
                 })

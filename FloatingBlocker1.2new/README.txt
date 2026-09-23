@@ -87,6 +87,19 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.75
+-----------------------
+- NEW: "Clear Current Punishment #2 (One-Time Use)" on the main
+  screen's Safety Valve section - a second, independent one-time
+  Clear Current Punishment action, tracked under its own used-flag so
+  it stays available even though the original one-time Clear
+  Current Punishment button was already spent earlier. Added because
+  the early-alarm-delivery bug fixed in 4.74 had already caused a
+  false punishment on this phone before 4.74 could actually be
+  installed (the phone was too locked down at the time to run AIDE).
+  Same behavior as the original button - clears every Block's current
+  widen window - and same one-time-only rule: gone for good once used.
+
 WHAT CHANGED IN 4.74
 -----------------------
 - FIXED (root cause of the double-ring Alarm bug, found via the

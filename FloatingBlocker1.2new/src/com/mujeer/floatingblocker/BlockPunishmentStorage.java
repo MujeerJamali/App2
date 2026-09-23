@@ -94,4 +94,21 @@ public class BlockPunishmentStorage {
     public void markOneTimeClearUsed() {
         prefs.edit().putBoolean("one_time_clear_used", true).apply();
     }
+
+    /**
+     * A second, independent one-time Clear Current Punishment action, for
+     * when the first one has already been spent but a NEW false punishment
+     * shows up later (e.g. from the early-alarm-delivery bug fixed in
+     * 4.74) before the fix could actually be installed. Same one-time-only
+     * reasoning as hasUsedOneTimeClear/markOneTimeClearUsed above, just
+     * tracked under its own flag so using the first one doesn't also use
+     * this one up.
+     */
+    public boolean hasUsedOneTimeClear2() {
+        return prefs.getBoolean("one_time_clear_used_2", false);
+    }
+
+    public void markOneTimeClearUsed2() {
+        prefs.edit().putBoolean("one_time_clear_used_2", true).apply();
+    }
 }
