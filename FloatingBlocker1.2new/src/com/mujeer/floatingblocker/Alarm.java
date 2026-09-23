@@ -44,6 +44,34 @@ public class Alarm {
         return best;
     }
 
+    // Some OEM battery-management stacks (confirmed on this device) can
+    // deliver an "exact" AlarmManager alarm a few minutes EARLY. Treating
+    // that early actual firing time as "the occurrence" breaks two things:
+    // (1) rescheduling from it makes nextOccurrenceAfter() see the SAME
+    // nominal trigger as still upcoming, causing a phantom second ring a
+    // few minutes later, and (2) recording that early time as handled still
+    // leaves it BEFORE the nominal trigger time, so a later catch-up scan
+    // sees the nominal time as a distinct, still-unhandled occurrence and
+    // wrongly punishes it - even though it already rang and was dealt with,
+    // just a couple of minutes ahead of schedule. Snapping the firing back
+    // to its true scheduled time fixes both problems at the source.
+    public static final long EARLY_DELIVERY_TOLERANCE_MILLIS = 5 * 60L * 1000L;
+
+    /**
+     * Best-effort nominal trigger time for a firing that actually happened
+     * at actualMillis. If a trigger was scheduled within
+     * EARLY_DELIVERY_TOLERANCE_MILLIS before actualMillis, returns THAT
+     * scheduled time; otherwise falls back to actualMillis itself (nothing
+     * nearby to snap to).
+     */
+    public long nominalOccurrenceNear(long actualMillis) {
+        long candidate = nextOccurrenceAfter(actualMillis - EARLY_DELIVERY_TOLERANCE_MILLIS - 1);
+        if (candidate > 0 && candidate <= actualMillis + EARLY_DELIVERY_TOLERANCE_MILLIS) {
+            return candidate;
+        }
+        return actualMillis;
+    }
+
     public JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
         o.put("id", id);

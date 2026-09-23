@@ -31,7 +31,14 @@ public class AlarmRingReceiver extends BroadcastReceiver {
             return;
         }
 
-        long occurrenceMillis = System.currentTimeMillis();
+        // Snap to the trigger's true scheduled time in case the OS delivered
+        // this broadcast a few minutes early (observed on this device) - see
+        // Alarm.nominalOccurrenceNear for why using the raw delivery time
+        // instead causes both a phantom second ring and false "missed"
+        // punishment later. Everything below (suppression check, dismiss
+        // bookkeeping, the ring screen's own identity, the deadline, and the
+        // reschedule) is keyed off this nominal time, not the raw one.
+        long occurrenceMillis = alarm.nominalOccurrenceNear(System.currentTimeMillis());
 
         if (AlarmPunisher.isSuppressed(context, occurrenceMillis)) {
             // A Holiday Break is active right now, or the phone is far
@@ -41,7 +48,7 @@ public class AlarmRingReceiver extends BroadcastReceiver {
             // gets punished once things return to normal and the catch-up
             // scan looks back at it.
             new AlarmRuntimeStorage(context).setLastHandledOccurrence(alarmId, occurrenceMillis);
-            AlarmScheduler.scheduleNextForAlarm(context, alarm);
+            AlarmScheduler.scheduleNextAfterFiring(context, alarm, occurrenceMillis);
             return;
         }
 
@@ -57,6 +64,6 @@ public class AlarmRingReceiver extends BroadcastReceiver {
         }
 
         AlarmScheduler.schedulePunishmentDeadline(context, alarmId, occurrenceMillis);
-        AlarmScheduler.scheduleNextForAlarm(context, alarm);
+        AlarmScheduler.scheduleNextAfterFiring(context, alarm, occurrenceMillis);
     }
 }

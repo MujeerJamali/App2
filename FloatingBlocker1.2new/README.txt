@@ -87,6 +87,36 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.74
+-----------------------
+- FIXED (root cause of the double-ring Alarm bug, found via the
+  precise incident report of a 12:50 trigger firing at 12:48): this
+  OEM's battery-management stack can deliver an "exact" AlarmManager
+  alarm a couple of minutes EARLY, not just late. AlarmRingReceiver
+  used to treat that early actual delivery time as "the occurrence"
+  itself, which broke two things at once:
+  1) Rescheduling from that early time made nextOccurrenceAfter() see
+     the SAME nominal trigger (e.g. 12:50) as still upcoming, so it
+     got scheduled a second time a few minutes later - the double
+     ring. 4.68 and 4.72 fixed two different THREADING races that
+     could also cause a double ring, but this is a separate cause and
+     neither of those fixes touched it.
+  2) Recording that early time as "handled" still left it BEFORE the
+     trigger's real nominal time. The catch-up scan
+     (BlockEnforcer.checkForMissedAlarms) walks forward from the last
+     handled time using the same nextOccurrenceAfter(), so it would
+     see the nominal time (12:50) as a distinct, still-unhandled
+     occurrence and punish it as missed - even though it had already
+     rung and been dealt with 2 minutes earlier. This is what was
+     almost certainly behind "punishment without any offense."
+  Alarm.nominalOccurrenceNear() now snaps a firing to its true
+  scheduled time whenever it happened within 5 minutes of one, and
+  AlarmRingReceiver uses that snapped time everywhere (suppression
+  check, dismiss bookkeeping, the ring screen's identity, the 10-
+  minute deadline, and the reschedule) instead of the raw delivery
+  time. AlarmScheduler.scheduleNextAfterFiring() also adds the same
+  5-minute tolerance on top as extra insurance.
+
 WHAT CHANGED IN 4.73
 -----------------------
 - FIXED: an app could get suspended again right after a Holiday Break

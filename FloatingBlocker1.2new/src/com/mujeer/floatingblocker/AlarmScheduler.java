@@ -68,6 +68,31 @@ public class AlarmScheduler {
         }
     }
 
+    /**
+     * Use this instead of scheduleNextForAlarm(context, alarm) right after an
+     * Alarm has actually fired, passing the occurrence time it fired for
+     * (see AlarmRingReceiver, which snaps this to the trigger's true nominal
+     * time via Alarm.nominalOccurrenceNear before calling here). Adding
+     * Alarm.EARLY_DELIVERY_TOLERANCE_MILLIS on top is extra insurance: even
+     * if occurrenceMillis weren't already snapped, this still won't
+     * re-schedule the very occurrence that just fired.
+     */
+    public static void scheduleNextAfterFiring(Context context, Alarm alarm, long occurrenceMillis) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) {
+            return;
+        }
+        synchronized (SCHEDULE_LOCK) {
+            long next = alarm.nextOccurrenceAfter(occurrenceMillis + Alarm.EARLY_DELIVERY_TOLERANCE_MILLIS);
+            PendingIntent pi = ringPendingIntent(context, alarm.id);
+            if (next <= 0) {
+                am.cancel(pi);
+                return;
+            }
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi);
+        }
+    }
+
     public static void schedulePunishmentDeadline(Context context, String alarmId, long occurrenceMillis) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
