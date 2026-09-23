@@ -100,6 +100,7 @@ public class MainActivity extends Activity {
         Button btnAlarms = (Button) findViewById(R.id.btnAlarms);
         Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
         Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
+        Button btnViewPunishments = (Button) findViewById(R.id.btnViewPunishments);
         Button btnExportBackup = (Button) findViewById(R.id.btnExportBackup);
         Button btnImportBackup = (Button) findViewById(R.id.btnImportBackup);
         Button btnKioskMode = (Button) findViewById(R.id.btnKioskMode);
@@ -220,6 +221,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 startActivity(new Intent(MainActivity.this, HomeLocationActivity.class));
+            }
+        });
+
+        btnViewPunishments.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, PunishmentStatusActivity.class));
             }
         });
 

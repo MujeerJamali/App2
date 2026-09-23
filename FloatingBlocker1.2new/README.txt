@@ -87,6 +87,17 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.76
+-----------------------
+- NEW: "View Active Punishments" screen (main screen, Manage section).
+  Read-only list of every Block currently carrying an Alarm-miss
+  punishment widen window (see BlockPunishmentStorage), showing the
+  Block's name, the widened start-to-end range, and whether it's
+  currently active or hasn't started yet. Already-expired windows
+  aren't shown. Makes it possible to actually see what's punished and
+  until when, instead of only finding out indirectly by noticing an
+  app is still suspended past its normal schedule.
+
 WHAT CHANGED IN 4.75
 -----------------------
 - NEW: "Clear Current Punishment #2 (One-Time Use)" on the main

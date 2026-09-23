@@ -3,6 +3,9 @@ package com.mujeer.floatingblocker;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Tracks a one-time "widen this Block's next occurrence by an hour on each
  * side" punishment per Block, for a missed Alarm (see Alarm/AlarmTrigger).
@@ -50,6 +53,42 @@ public class BlockPunishmentStorage {
         long start = prefs.getLong("start_" + blockId, 0);
         long end = prefs.getLong("end_" + blockId, 0);
         return end > 0 && nowMillis >= start && nowMillis < end;
+    }
+
+    /** One Block's currently-stored widen window - see getAllWindows(). */
+    public static class Window {
+        public final String blockId;
+        public final long start;
+        public final long end;
+
+        Window(String blockId, long start, long end) {
+            this.blockId = blockId;
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    /**
+     * Every Block that currently has a stored widen window, regardless of
+     * whether it's already started - a window can cover a not-yet-started
+     * next occurrence just as easily as the current one. Used by
+     * PunishmentStatusActivity to show what's actually in effect right now.
+     */
+    public List<Window> getAllWindows() {
+        List<Window> result = new ArrayList<Window>();
+        java.util.Map<String, ?> all = prefs.getAll();
+        for (String key : all.keySet()) {
+            if (!key.startsWith("start_")) {
+                continue;
+            }
+            String blockId = key.substring("start_".length());
+            long start = prefs.getLong(key, 0);
+            long end = prefs.getLong("end_" + blockId, 0);
+            if (end > 0) {
+                result.add(new Window(blockId, start, end));
+            }
+        }
+        return result;
     }
 
     /**

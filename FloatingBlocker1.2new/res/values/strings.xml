@@ -50,6 +50,15 @@
     <string name="confirm_clear_punishment_yes_2">Yes, clear it (uses this up forever)</string>
     <string name="msg_punishment_cleared_2">Cleared. This one-time action has now been used.</string>
 
+    <!-- Active Punishments status screen -->
+    <string name="view_punishments_button">View Active Punishments</string>
+    <string name="punishments_screen_title">Active Punishments</string>
+    <string name="punishments_desc">Every Block currently widened by a missed Alarm, and until when. Already-expired ones aren\'t shown.</string>
+    <string name="no_punishments_message">No Block currently has an active punishment.</string>
+    <string name="punishment_status_active">Currently active</string>
+    <string name="punishment_status_upcoming">Not started yet</string>
+    <string name="punishment_deleted_block">(deleted Block)</string>
+
     <!-- Permanent app exclusion - one-time only, hardcoded to a specific package -->
     <string name="exclude_business_erp_button">🏢 Permanently Exclude Business ERP (One-Time)</string>
     <string name="confirm_exclude_business_erp_title">Permanently exclude Business ERP?</string>

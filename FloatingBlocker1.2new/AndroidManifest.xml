@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mujeer.floatingblocker"
-    android:versionCode="75"
-    android:versionName="4.75">
+    android:versionCode="76"
+    android:versionName="4.76">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -86,6 +86,10 @@
         <activity
             android:name=".AlarmEditActivity"
             android:label="@string/alarm_edit_screen_title" />
+
+        <activity
+            android:name=".PunishmentStatusActivity"
+            android:label="@string/punishments_screen_title" />
 
         <activity
             android:name=".AlarmRingActivity"
