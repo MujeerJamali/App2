@@ -87,6 +87,22 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.73
+-----------------------
+- FIXED: an app could get suspended again right after a Holiday Break
+  ended, even with no currently-active Block schedule and no new
+  offense. Cause: Block-widening punishment (BlockPunishmentStorage)
+  and Holiday Breaks are independent mechanisms - while a Break is
+  active, computeActiveBlockedPackages() correctly SKIPS the Blocks it
+  covers entirely, but that only masks any existing punishment-widen
+  state for those Blocks, it doesn't clear it. Since punishment can
+  only ever be applied to a Block OUTSIDE an active Break to begin
+  with, anything still attached the moment a Break ends must predate
+  it - and was silently resurfacing the instant the Break expired.
+  cleanUpExpiredBreaks() now clears any leftover widen state for the
+  Blocks a just-expired Break covered, so it's forgiven along with
+  everything else the Break covered instead of reappearing unannounced.
+
 WHAT CHANGED IN 4.72
 -----------------------
 - FIXED (this time via a structural fix, not chasing individual call

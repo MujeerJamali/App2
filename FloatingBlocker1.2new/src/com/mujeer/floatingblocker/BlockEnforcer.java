@@ -72,7 +72,7 @@ public class BlockEnforcer {
         Log.d(TAG, "applyNow: after applyBootstrapToolsLock");
         checkForNewlyInstalledApps(context, ownPackage);
         Log.d(TAG, "applyNow: after checkForNewlyInstalledApps");
-        cleanUpExpiredBreaks(new HolidayBreaksStorage(context));
+        cleanUpExpiredBreaks(context, new HolidayBreaksStorage(context));
         Log.d(TAG, "applyNow: after cleanUpExpiredBreaks");
         checkForMissedAlarms(context);
         Log.d(TAG, "applyNow: after checkForMissedAlarms");
@@ -575,21 +575,36 @@ public class BlockEnforcer {
         return result;
     }
 
-    /** Removes any Holiday Break whose end time has already passed, and returns what's left. */
-    private static List<HolidayBreak> cleanUpExpiredBreaks(HolidayBreaksStorage storage) {
+    /**
+     * Removes any Holiday Break whose end time has already passed, and
+     * returns what's left. Also clears any leftover punishment-widen
+     * state (see BlockPunishmentStorage) for the Blocks each just-expired
+     * Break covered - punishment can only ever be applied to a Block
+     * OUTSIDE an active Break, so anything still attached when the Break
+     * ends must predate it, and should be considered forgiven along with
+     * everything else the Break covered rather than silently resurfacing
+     * the instant it ends.
+     */
+    private static List<HolidayBreak> cleanUpExpiredBreaks(Context context, HolidayBreaksStorage storage) {
         List<HolidayBreak> all = storage.loadBreaks();
         long now = System.currentTimeMillis();
         List<HolidayBreak> stillValid = new ArrayList<HolidayBreak>();
-        boolean anyExpired = false;
+        List<HolidayBreak> justExpired = new ArrayList<HolidayBreak>();
         for (HolidayBreak h : all) {
             if (h.endMillis <= now) {
-                anyExpired = true;
+                justExpired.add(h);
             } else {
                 stillValid.add(h);
             }
         }
-        if (anyExpired) {
+        if (!justExpired.isEmpty()) {
             storage.saveBreaks(stillValid);
+            BlockPunishmentStorage punishmentStorage = new BlockPunishmentStorage(context);
+            for (HolidayBreak h : justExpired) {
+                for (String blockId : h.affectedBlockIds) {
+                    punishmentStorage.clearWidenedFor(blockId);
+                }
+            }
         }
         return stillValid;
     }

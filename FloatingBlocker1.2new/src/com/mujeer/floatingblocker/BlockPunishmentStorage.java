@@ -53,6 +53,21 @@ public class BlockPunishmentStorage {
     }
 
     /**
+     * Clears one specific Block's widen window, if any. Used when a
+     * Holiday Break covering this Block ends - punishment can only ever
+     * be applied to a Block OUTSIDE an active Break (it's explicitly
+     * skipped while one covers it), so any widen state still attached to
+     * a Block when its Break expires must predate that Break. Without
+     * this, that leftover state would otherwise resurface the instant
+     * the Break ends - suspending the Block's apps again with no
+     * currently-active schedule and no new offense, which the Break
+     * should already have covered.
+     */
+    public void clearWidenedFor(String blockId) {
+        prefs.edit().remove("start_" + blockId).remove("end_" + blockId).apply();
+    }
+
+    /**
      * Clears every Block's currently-stored widen window - meant ONLY as a
      * one-time recovery action (see hasUsedOneTimeClear/markOneTimeClearUsed
      * below, and MainActivity's Clear Current Punishment button), not a
