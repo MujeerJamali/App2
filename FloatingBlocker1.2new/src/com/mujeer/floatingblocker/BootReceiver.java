@@ -16,5 +16,6 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         BlockEnforcer.reapplyAndReschedule(context);
+        AlarmScheduler.rescheduleAll(context);
     }
 }

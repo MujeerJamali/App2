@@ -7,61 +7,108 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:padding="24dp">
+        android:padding="20dp">
 
-        <TextView
-            android:id="@+id/txtDeviceOwnerStatus"
-            android:layout_width="wrap_content"
+        <!-- Status card: protection state + the one-tap pause -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/device_owner_not_active"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:paddingBottom="24dp" />
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/txtDeviceOwnerStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/device_owner_not_active"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <Button
+                android:id="@+id/btnBlocksPause"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginTop="14dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:text="@string/blocks_active" />
+        </LinearLayout>
 
         <Button
-            android:id="@+id/btnBlocksPause"
+            android:id="@+id/btnScanRingingAlarm"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:text="@string/blocks_active" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:visibility="gone" />
+
+        <TextView
+            style="@style/SectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_manage" />
 
         <Button
             android:id="@+id/btnBlocks"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
             android:text="@string/blocks_button" />
 
         <Button
             android:id="@+id/btnLockSchedule"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:text="@string/lock_schedule_button" />
 
         <Button
             android:id="@+id/btnHolidayBreaks"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:text="@string/holiday_breaks_button" />
 
         <Button
             android:id="@+id/btnWebsites"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:text="@string/websites_button" />
 
-        <View
+        <Button
+            android:id="@+id/btnAlarms"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#CCCCCC"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/alarms_button" />
+
+        <Button
+            android:id="@+id/btnBarcodes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/barcodes_button" />
+
+        <Button
+            android:id="@+id/btnHomeLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/home_location_button" />
+
+        <Button
+            android:id="@+id/btnViewPunishments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/view_punishments_button" />
+
+        <TextView
+            style="@style/SectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_safety" />
 
         <Button
             android:id="@+id/btnMasterSafety"
@@ -73,55 +120,99 @@
             android:id="@+id/btnDeleteSafetyForever"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:text="@string/safety_delete_forever_button" />
 
-        <View
+        <Button
+            android:id="@+id/btnClearPunishment"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#CCCCCC"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/clear_punishment_button" />
+
+        <Button
+            android:id="@+id/btnClearPunishment2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/clear_punishment_button_2" />
+
+        <Button
+            android:id="@+id/btnClearPunishment3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/clear_punishment_button_3" />
+
+        <Button
+            android:id="@+id/btnPauseAllOneHour"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/pause_all_button_activate" />
+
+        <Button
+            android:id="@+id/btnPauseUntil11pm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/pause_until_11pm_button_activate" />
+
+        <Button
+            android:id="@+id/btnExcludeBusinessErp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:text="@string/exclude_business_erp_button" />
+
+        <TextView
+            style="@style/SectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_system" />
 
         <Button
             android:id="@+id/btnBatteryExemption"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:text="@string/battery_exempt_off" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#CCCCCC"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp" />
-
-        <Button
-            android:id="@+id/btnVpnSafety"
+        <TextView
+            style="@style/SectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/vpn_safety_engage_button" />
+            android:text="@string/section_kiosk" />
 
         <Button
-            android:id="@+id/btnDeleteVpnSafetyForever"
+            android:id="@+id/btnKioskMode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/vpn_safety_delete_forever_button" />
+            android:text="@string/kiosk_mode_button" />
 
-        <View
+        <TextView
+            style="@style/SectionHeader"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#CCCCCC"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_height="wrap_content"
+            android:text="@string/section_backup" />
 
         <Button
-            android:id="@+id/btnDiagnostic"
+            android:id="@+id/btnExportBackup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/diagnostic_button" />
+            android:text="@string/export_backup_button" />
+
+        <Button
+            android:id="@+id/btnImportBackup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/import_backup_button" />
 
     </LinearLayout>
 </ScrollView>

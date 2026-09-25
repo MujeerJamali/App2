@@ -3,17 +3,31 @@
     <string name="app_name">Self-Control</string>
 
     <!-- Main screen -->
+    <string name="section_manage">Manage</string>
+    <string name="section_safety">Safety Valve</string>
+    <string name="section_system">System</string>
+    <string name="section_backup">Backup</string>
+    <string name="export_backup_button">⬆️  Export Backup</string>
+    <string name="import_backup_button">⬇️  Import Backup</string>
+    <string name="msg_backup_exported">Backup saved.</string>
+    <string name="msg_backup_export_failed">Could not save the backup: %1$s</string>
+    <string name="msg_backup_imported">Backup imported - everything replaced with the backup\'s contents.</string>
+    <string name="msg_backup_import_failed">Could not import that backup: %1$s</string>
+    <string name="msg_backup_import_locked">Importing a backup can only be done during an unlocked time - check your Lock Schedule. (It can replace your current Blocks/Lock Schedule/etc. entirely, so it\'s gated the same as anything else that could weaken protection.)</string>
+    <string name="confirm_import_backup_title">Import this backup?</string>
+    <string name="confirm_import_backup_message">This replaces ALL of your current Blocks, Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms, and Location Override settings with whatever is in this backup file. This cannot be undone.</string>
+    <string name="confirm_import_backup_yes">Import and replace everything</string>
     <string name="device_owner_active">Device Owner: ACTIVE (full protection on)</string>
     <string name="device_owner_not_active">Device Owner: NOT ACTIVE — protection is off</string>
     <string name="blocks_active">Blocks: Active (tap to pause)</string>
     <string name="blocks_paused">Blocks: Paused (tap to continue)</string>
     <string name="msg_cannot_pause_now">You can only pause Blocks during an unlocked time. Check your Lock Schedule.</string>
-    <string name="blocks_button">Blocks</string>
-    <string name="lock_schedule_button">Lock Schedule</string>
-    <string name="safety_engage_button">Emergency Safety: OFF (tap to disable everything)</string>
-    <string name="safety_disengage_button">Emergency Safety: ON (tap to turn protection back on)</string>
-    <string name="safety_deleted_button">Emergency Safety: permanently removed</string>
-    <string name="safety_delete_forever_button">Delete Emergency Safety Forever</string>
+    <string name="blocks_button">📦  Blocks</string>
+    <string name="lock_schedule_button">🔒  Lock Schedule</string>
+    <string name="safety_engage_button">🚨  Emergency Safety: OFF (tap to disable everything)</string>
+    <string name="safety_disengage_button">🚨  Emergency Safety: ON (tap to turn protection back on)</string>
+    <string name="safety_deleted_button">🚨  Emergency Safety: permanently removed</string>
+    <string name="safety_delete_forever_button">🗑️  Delete Emergency Safety Forever</string>
     <string name="msg_safety_deleted">Emergency Safety has been permanently removed. It cannot be used again.</string>
     <string name="msg_safety_delete_blocked_engaged">Turn Emergency Safety back ON first, then you can delete it forever.</string>
     <string name="msg_safety_already_deleted">Emergency Safety was already removed forever.</string>
@@ -22,12 +36,62 @@
     <string name="confirm_delete_safety_yes">Yes, delete forever</string>
     <string name="confirm_delete_safety_cancel">Cancel</string>
 
+    <!-- Clear Current Punishment - one-time only -->
+    <string name="clear_punishment_button">🧹 Clear Current Punishment (One-Time Use)</string>
+    <string name="confirm_clear_punishment_title">Clear all current punishment?</string>
+    <string name="confirm_clear_punishment_message">This clears any Blocks currently widened by a missed Alarm. It can only ever be used once - after this, it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
+    <string name="confirm_clear_punishment_yes">Yes, clear it (uses this up forever)</string>
+    <string name="msg_punishment_cleared">Cleared. This one-time action has now been used.</string>
+
+    <!-- Clear Current Punishment #2 - a second, independent one-time use, for after the first one is already spent -->
+    <string name="clear_punishment_button_2">🧹 Clear Current Punishment #2 (One-Time Use)</string>
+    <string name="confirm_clear_punishment_title_2">Clear all current punishment?</string>
+    <string name="confirm_clear_punishment_message_2">This clears any Blocks currently widened by a missed Alarm. This is a second, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
+    <string name="confirm_clear_punishment_yes_2">Yes, clear it (uses this up forever)</string>
+    <string name="msg_punishment_cleared_2">Cleared. This one-time action has now been used.</string>
+
+    <!-- Clear Current Punishment #3 - a third, independent one-time use, for after the first two are already spent -->
+    <string name="clear_punishment_button_3">🧹 Clear Current Punishment #3 (One-Time Use)</string>
+    <string name="confirm_clear_punishment_title_3">Clear all current punishment?</string>
+    <string name="confirm_clear_punishment_message_3">This clears any Blocks currently widened by a missed Alarm. This is a third, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
+    <string name="confirm_clear_punishment_yes_3">Yes, clear it (uses this up forever)</string>
+    <string name="msg_punishment_cleared_3">Cleared. This one-time action has now been used.</string>
+
+    <!-- Active Punishments status screen -->
+    <string name="view_punishments_button">View Active Punishments</string>
+    <string name="punishments_screen_title">Active Punishments</string>
+    <string name="punishments_desc">Every Block currently widened by a missed Alarm, and until when. Already-expired ones aren\'t shown.</string>
+    <string name="no_punishments_message">No Block currently has an active punishment.</string>
+    <string name="punishment_status_active">Currently active</string>
+    <string name="punishment_status_upcoming">Not started yet</string>
+    <string name="punishment_deleted_block">(deleted Block)</string>
+
+    <!-- Permanent app exclusion - one-time only, hardcoded to a specific package -->
+    <string name="exclude_business_erp_button">🏢 Permanently Exclude Business ERP (One-Time)</string>
+    <string name="confirm_exclude_business_erp_title">Permanently exclude Business ERP?</string>
+    <string name="confirm_exclude_business_erp_message">This removes com.mujeer.businesserp from every current Block, and permanently prevents it from ever being blocked again by any Block, current or future - including automatic re-adding via new-app detection. This can only be done once, and there\'s no in-app way to undo it afterward.</string>
+    <string name="confirm_exclude_business_erp_yes">Yes, exclude it permanently</string>
+    <string name="msg_business_erp_excluded">com.mujeer.businesserp is now permanently excluded from all Blocks.</string>
+
+    <!-- Pause All Blocks for 1 Hour - one-time only -->
+    <string name="pause_all_button_activate">⏸️ Pause All Blocks for 1 Hour (One-Time Use)</string>
+    <string name="pause_all_button_active_format">⏸️ Blocks Paused (One-Time) - %1$s Remaining</string>
+    <string name="confirm_pause_all_title">Pause all Blocks for 1 hour?</string>
+    <string name="confirm_pause_all_message">This immediately unsuspends every currently-blocked app for exactly 1 hour, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
+    <string name="confirm_pause_all_yes">Yes, pause for 1 hour (uses this up forever)</string>
+
+    <string name="pause_until_11pm_button_activate">⏸️ Disable All Blocks Until 11 PM (One-Time)</string>
+    <string name="pause_until_11pm_button_active_format">⏸️ Blocks Disabled (One-Time) - %1$s Remaining</string>
+    <string name="confirm_pause_until_11pm_title">Disable all Blocks until 11 PM?</string>
+    <string name="confirm_pause_until_11pm_message">This immediately unsuspends every currently-blocked app until 11:00 PM, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
+    <string name="confirm_pause_until_11pm_yes">Yes, disable until 11 PM (uses this up forever)</string>
+
     <!-- DNS Filter Lock -->
 
 
     <!-- Battery Optimization Exemption -->
-    <string name="battery_exempt_off">Battery Optimization: Not exempt (tap to fix)</string>
-    <string name="battery_exempt_on">Battery Optimization: Exempt</string>
+    <string name="battery_exempt_off">🔋  Battery Optimization: Not exempt (tap to fix)</string>
+    <string name="battery_exempt_on">🔋  Battery Optimization: Exempt</string>
     <string name="msg_battery_already_exempt">Already exempt from battery optimization.</string>
 
     <!-- Lock Schedule screen -->
@@ -64,10 +128,10 @@
     <string name="msg_some_removals_skipped">Some app removals were not applied - that can only be done during an unlocked time. New apps you added were still saved.</string>
 
     <!-- Holiday Breaks -->
-    <string name="holiday_breaks_button">Holiday Breaks</string>
+    <string name="holiday_breaks_button">🏖️  Holiday Breaks</string>
     <string name="holiday_breaks_screen_title">Holiday Breaks</string>
-    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is only allowed during an unlocked Lock Schedule time. Cancelling one early is always allowed, any time.</string>
-    <string name="msg_holiday_breaks_locked">Creating a Holiday Break is only allowed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is allowed during an unlocked Lock Schedule time, or any time if its start doesn\'t take effect until a later day (a day starts at 2:00 AM for this purpose, so 1:30 AM still counts as the day before). Cancelling one early is always allowed, any time.</string>
+    <string name="msg_holiday_breaks_locked">This can only be created during an unlocked time, unless its start is on a later day (a day starts at 2:00 AM) - check your Lock Schedule, or pick a later start date/time.</string>
     <string name="add_holiday_break_button">+ Add Holiday Break</string>
     <string name="cancel_break_button">Cancel Break</string>
     <string name="confirm_cancel_break_message">Cancel this Holiday Break now? The affected Blocks will resume their normal schedule immediately.</string>
@@ -85,9 +149,9 @@
     <string name="msg_break_saved">Holiday Break saved.</string>
 
     <!-- Blocked Websites -->
-    <string name="websites_button">Blocked Websites</string>
+    <string name="websites_button">🌐  Blocked Websites</string>
     <string name="websites_screen_title">Blocked Websites</string>
-    <string name="websites_desc">Domains added here are blocked entirely (the whole domain, not a specific page) whenever the DNS Filter VPN is running - which is always, unless VPN Safety is engaged below.</string>
+    <string name="websites_desc">Domains added here are blocked in Chrome (and every subdomain of them), pushed in as a Chrome content policy - no DNS or VPN involved. Chrome also blocks adult/explicit sites in general, forces SafeSearch and restricted YouTube, and Incognito is disabled. Every other common browser is kept permanently unusable so this can\'t just be switched around.</string>
     <string name="msg_websites_locked">Removing a website can only be done during an unlocked time. Adding one is always allowed.</string>
     <string name="website_hint">Type or paste a website or URL</string>
     <string name="add_website_button">+ Add</string>
@@ -98,21 +162,121 @@
     <string name="confirm_block_website_message">Block the entire domain \"%1$s\"? This blocks the whole domain, not just this specific page.</string>
     <string name="confirm_block_website_yes">Block it</string>
 
-    <!-- VPN Safety (separate from Master Safety - governs the DNS Filter VPN specifically) -->
-    <string name="vpn_safety_engage_button">VPN Safety: OFF (tap to shut off the VPN and restore normal internet)</string>
-    <string name="vpn_safety_disengage_button">VPN Safety: ON, VPN is OFF (tap to turn the VPN and website filtering back on)</string>
-    <string name="vpn_safety_deleted_button">VPN Safety: permanently removed</string>
-    <string name="vpn_safety_delete_forever_button">Delete VPN Safety Forever</string>
+    <!-- Registered Barcodes -->
+    <string name="barcodes_button">🏷️  Registered Barcodes</string>
+    <string name="barcodes_screen_title">Registered Barcodes</string>
+    <string name="barcodes_desc">Scan a barcode or QR code once here to register it (you\'ll scan it twice, to confirm). Alarms can then require scanning a PAIR of these exact codes, one after the other, to be dismissed.</string>
+    <string name="msg_barcodes_locked">Removing a barcode can only be done during an unlocked time. Registering a new one is always allowed.</string>
+    <string name="scan_new_barcode_button">+ Scan New Barcode</string>
+    <string name="barcode_label_hint">Label (e.g. Kitchen fridge)</string>
+    <string name="barcode_scanned_title">Barcode scanned</string>
+    <string name="barcode_default_label">Barcode</string>
+    <string name="msg_barcode_registered">Barcode registered.</string>
+    <string name="msg_no_barcodes_to_select">You don\'t have any registered barcodes yet - scan one first under Registered Barcodes.</string>
 
-    <string name="diagnostic_button">Network Diagnostics</string>
-    <string name="diagnostic_screen_title">Network Diagnostics</string>
-    <string name="diagnostic_run_button">Run Diagnostics Again</string>
-    <string name="diagnostic_copy_button">Copy Report to Clipboard</string>
-    <string name="msg_diagnostic_running">Running diagnostics, this can take up to 30 seconds…</string>
-    <string name="msg_diagnostic_copied">Report copied to clipboard</string>
-    <string name="msg_vpn_safety_deleted">VPN Safety has been permanently removed. It cannot be used again.</string>
-    <string name="msg_vpn_safety_delete_blocked_engaged">Turn VPN Safety back OFF first (turn the VPN and filtering back on), then you can delete it forever.</string>
-    <string name="msg_vpn_safety_already_deleted">VPN Safety was already removed forever.</string>
-    <string name="confirm_delete_vpn_safety_title">Delete VPN Safety Forever?</string>
-    <string name="confirm_delete_vpn_safety_message">This cannot be undone. You will never be able to shut off the VPN again, ever - if it ever breaks your internet again, this will be the only way back in, and it will be gone.</string>
+    <!-- Barcode scanning screen -->
+    <string name="barcode_scan_register_instructions">Point the camera at the barcode or QR code you want to register.</string>
+    <string name="barcode_scan_pair_instructions">Scan either barcode of a pair. Then scan its partner within 3 seconds.</string>
+    <string name="barcode_scan_confirm_instructions">Scanned %1$s - now scan the SAME barcode again to confirm it.</string>
+    <string name="barcode_scan_wrong_code_format">Scanned %1$s - that\'s not the right code, keep scanning.</string>
+    <string name="barcode_pair_scan_waiting">First barcode scanned - scan its partner within %1$d second(s)</string>
+    <string name="barcode_pair_scan_expired">Too slow - scan the first barcode again.</string>
+    <string name="barcode_confirm_title">Confirm Barcode</string>
+    <string name="barcode_confirm_first_message">Scanned: %1$s\n\nScan the same barcode again to confirm it.</string>
+    <string name="barcode_confirm_second_message">Confirmed: %1$s\n\nSave this barcode?</string>
+    <string name="barcode_confirm_scan_again_button">OK, Scan Again</string>
+    <string name="msg_barcode_confirm_mismatch">Didn\'t match (%1$s vs %2$s) - scan the first barcode again.</string>
+    <string name="msg_camera_permission_required">Camera permission is required to scan a barcode.</string>
+    <string name="msg_camera_unavailable">Could not open the camera.</string>
+    <string name="flashlight_on_button">Flashlight</string>
+    <string name="flashlight_off_button">Flashlight Off</string>
+
+    <!-- Alarms -->
+    <string name="alarms_button">⏰  Alarms</string>
+    <string name="alarms_screen_title">Alarms</string>
+    <string name="add_alarm_button">+ Add Alarm</string>
+    <string name="msg_alarms_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="alarm_subtitle_format">%1$d trigger(s), %2$d pair(s), %3$d block(s) punished on miss</string>
+    <string name="delete_alarm_button">Delete This Alarm</string>
+
+    <!-- Alarm edit screen -->
+    <string name="alarm_edit_screen_title">Edit Alarm</string>
+    <string name="alarm_name_hint">Alarm name (e.g. Morning wake-up)</string>
+    <string name="alarm_triggers_label">Rings at (pick a time, then Add Trigger to choose its days)</string>
+    <string name="add_trigger_button">+ Add Trigger</string>
+    <string name="alarm_barcodes_label">Any of these barcode pairs dismisses this alarm - both codes of a pair must be scanned within 3 seconds of each other</string>
+    <string name="add_barcode_pair_button">+ Add Barcode Pair</string>
+    <string name="pair_item_format">%1$s  +  %2$s</string>
+    <string name="pick_first_barcode_title">Pick the first barcode</string>
+    <string name="pick_second_barcode_title">Pick the second barcode</string>
+    <string name="msg_need_two_barcodes_for_pair">You need at least 2 registered barcodes to make a pair - scan another one first under Registered Barcodes.</string>
+    <string name="alarm_affected_blocks_label">Missing it for 10 minutes widens these Blocks by 1 hour each side, once</string>
+    <string name="msg_time_picked">Time picked - now tap Add Trigger to choose its days.</string>
+    <string name="msg_pick_time_first">Pick a time first.</string>
+    <string name="msg_enter_alarm_name">Enter a name for this Alarm.</string>
+    <string name="msg_add_at_least_one_trigger">Add at least one trigger.</string>
+    <string name="msg_add_at_least_one_pair">Add at least one barcode pair.</string>
+    <string name="msg_alarm_saved">Alarm saved.</string>
+    <string name="confirm_near_duplicate_trigger_title">Very close to an existing trigger</string>
+    <string name="confirm_near_duplicate_trigger_message">This new trigger (%2$s) is within 15 minutes of an existing one (%1$s). If that wasn\'t intentional - e.g. a slightly mistimed tap while adding several triggers - it would ring twice for what was meant to be one wake-up. Add it anyway?</string>
+    <string name="confirm_near_duplicate_trigger_yes">Yes, add it anyway</string>
+
+    <!-- Alarm ringing screen -->
+    <string name="alarm_ringing_title">ALARM RINGING</string>
+    <string name="alarm_ringing_text">Scan both barcodes of a pair to stop it</string>
+    <string name="alarm_ring_scan_hint">No snooze, no back button - scanning both barcodes of one pair, within 3 seconds of each other, is the only way to stop this.</string>
+    <string name="scan_to_dismiss_button">Scan Barcodes to Dismiss</string>
+    <string name="alarm_notification_channel_name">Alarm ringing</string>
+
+    <!-- Home Location Override -->
+    <string name="home_location_button">📍  Location Override</string>
+    <string name="home_location_screen_title">Location Override</string>
+    <string name="home_location_desc">When turned on, Lock Schedule\'s editing-protection, all Blocks, and Alarms stop applying whenever you\'re more than 20km from the home location you set below - as if none of it existed while you\'re away. If your location can\'t be determined for any reason, everything stays exactly as it would without this feature - restrictions still apply. This never affects the permanent protections (this app can\'t be uninstalled, VPN stays blocked, other browsers stay locked, etc.) - those stay on no matter where you are.</string>
+    <string name="msg_home_location_locked">Changing an already-set home location can only be done during an unlocked time - check your Lock Schedule. (Being far from home doesn\'t unlock this specifically - otherwise a single trip could permanently break the feature.)</string>
+    <string name="home_location_status_not_set">No home location set yet.</string>
+    <string name="home_location_status_enabled">Enabled - home is %1$s</string>
+    <string name="home_location_status_disabled">Disabled - home is %1$s</string>
+    <string name="home_location_enable_button">Enable Location Override</string>
+    <string name="home_location_disable_button">Disable Location Override</string>
+    <string name="home_location_set_button">Set This As Home</string>
+    <string name="home_location_update_button">Update Home Location</string>
+    <string name="msg_home_location_set">Home location saved.</string>
+    <string name="msg_home_location_permission_needed">Location permission is needed to do this.</string>
+    <string name="msg_home_location_unavailable">Could not get your current location - make sure Location is turned on and try again.</string>
+
+    <!-- Crash reporting -->
+    <string name="crash_report_title">The app crashed last time - details below</string>
+
+    <!-- Ringing Alarm - manual dismiss fallback, for when the ring
+         service/notification/full-screen alarm somehow fails to show
+         normally, but the user is otherwise aware an Alarm should be
+         ringing right now. -->
+    <string name="ringing_alarm_button_one_format">⏰ Scan to Dismiss: %1$s (%2$s left)</string>
+    <string name="ringing_alarm_button_many_format">⏰ %1$d Alarms Ringing - Tap to Choose (%2$s left)</string>
+    <string name="pick_ringing_alarm_title">Which alarm?</string>
+
+    <!-- Kiosk Mode (Beta) -->
+    <string name="section_kiosk">Kiosk Mode (Beta)</string>
+    <string name="kiosk_mode_button">🖥️  Kiosk Mode (Beta)</string>
+    <string name="kiosk_setup_screen_title">Kiosk Mode (Beta)</string>
+    <string name="kiosk_setup_desc">Pick which apps stay usable, set a time limit, and start. While a session is running, the device is pinned so nothing outside the list (or this screen) can be opened - not even by leaving the app. This is an experimental beta feature, kept separate from Blocks.</string>
+    <string name="kiosk_allowed_apps_label">Allowed apps</string>
+    <string name="kiosk_duration_label">Duration (minutes)</string>
+    <string name="kiosk_duration_hint">e.g. 30</string>
+    <string name="kiosk_start_button">Start Kiosk Session</string>
+    <string name="msg_kiosk_needs_device_owner">Kiosk Mode needs Device Owner to be active.</string>
+    <string name="msg_kiosk_select_at_least_one_app">Select at least one app to allow.</string>
+    <string name="msg_kiosk_enter_duration">Enter a duration in minutes (greater than 0).</string>
+    <string name="msg_kiosk_start_failed">Could not start Kiosk Mode: %1$s</string>
+    <string name="kiosk_session_title">Kiosk Session Active</string>
+    <string name="kiosk_time_remaining_format">Time remaining: %1$s</string>
+    <string name="kiosk_open_app_format">Open %1$s</string>
+    <string name="kiosk_end_session_button">End Session Now</string>
+    <string name="section_quick_toggles">Quick Toggles</string>
+    <string name="wifi_toggle_on">📶 WiFi: ON (tap to turn off)</string>
+    <string name="wifi_toggle_off">📶 WiFi: OFF (tap to turn on)</string>
+    <string name="bluetooth_toggle_on">🔵 Bluetooth: ON (tap to turn off)</string>
+    <string name="bluetooth_toggle_off">🔵 Bluetooth: OFF (tap to turn on)</string>
+    <string name="msg_wifi_toggle_failed">Could not toggle WiFi on this device.</string>
+    <string name="msg_bluetooth_toggle_failed">Could not toggle Bluetooth on this device.</string>
 </resources>

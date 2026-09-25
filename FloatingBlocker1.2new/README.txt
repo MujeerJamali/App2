@@ -1,3 +1,80 @@
+Claude connection test - this line confirms Claude Code can read and edit this repo.
+===================================================================================
+
+BUILDING WITHOUT AIDE (build.sh)
+===================================================================================
+build.sh builds a signed, installable APK from this source tree using
+just the raw Android SDK command-line tools (no Gradle, no AIDE) -
+downloads the SDK pieces it needs on first run (needs internet access
+to dl.google.com), then compiles/dexes/packages/signs. Output lands at
+build/apk/app-signed.apk. Needs a JDK, curl, and unzip on PATH.
+
+IMPORTANT: the first run generates a brand-new, random signing key
+(keystore/debug.keystore) that is NOT the same key AIDE has been using
+on the phone. Android refuses to install an APK signed with a
+different key as an "update" over an existing install with the same
+package name - so an APK from this script can only go on as a FRESH
+install, not an update over an AIDE-built copy already on the phone.
+For this app specifically, that matters a lot: it's a Device Owner
+app with deliberate uninstall protection, so replacing an
+AIDE-installed copy with one from this script means first removing
+Device Owner and uninstalling the old copy (see the Device Owner setup
+section below for how that was originally granted - removing it is
+the reverse of that), then installing this script's APK fresh, then
+redoing Device Owner provisioning from scratch. Not something to do
+without meaning to.
+
+Floating Blocker - version 4.37 (real root cause found: barcode decoding was scanning a sideways image)
+===================================================================================
+
+Floating Blocker - version 4.36 (NEW: flashlight toggle on the barcode scan screen)
+===================================================================================
+
+Floating Blocker - version 4.35 (Holiday Breaks starting on a later day can now be created while locked)
+===================================================================================
+
+Floating Blocker - version 4.34 (Alarm punishment now also skips Blocks currently on a Holiday Break)
+===================================================================================
+
+Floating Blocker - version 4.33 (NEW: barcode-dismiss Alarms that punish missed wake-ups by widening Blocks)
+===================================================================================
+
+Floating Blocker - version 4.32 (VPN removed from this app entirely - back to app-suspension-only blocking)
+===================================================================================
+
+Floating Blocker - version 4.31 (DISALLOW_CONFIG_VPN re-enforced - VPN-based blocking abandoned)
+===================================================================================
+
+Floating Blocker - version 4.30 (TEMPORARY: DISALLOW_CONFIG_VPN released during WireGuard migration testing)
+===================================================================================
+
+Floating Blocker - version 4.29 (real root cause found: the VPN tunnel was restarting roughly every minute)
+===================================================================================
+
+Floating Blocker - version 4.28 (new leading theory: silently-dropped IPv6 connection attempts, now logged)
+===================================================================================
+
+Floating Blocker - version 4.27 (diagnostic can now run live, updating continuously until you stop it)
+===================================================================================
+
+Floating Blocker - version 4.26 (diagnostic now reports whether Android has validated the VPN network)
+===================================================================================
+
+Floating Blocker - version 4.25 (found: Chrome's DNS works but its connections may be silently Block-dropped)
+===================================================================================
+
+Floating Blocker - version 4.24 (diagnostic log now shows which app each packet belongs to)
+===================================================================================
+
+Floating Blocker - version 4.23 (real root cause found: CleanBrowsing outage/rate-limit, no fallback DNS)
+===================================================================================
+
+Floating Blocker - version 4.22 (fixed: 4.21's shared UDP thread pool starved Chrome/video behind slow DNS)
+===================================================================================
+
+Floating Blocker - version 4.21 (fixed: UDP-packet thread storm causing intermittent Chrome DNS failures)
+===================================================================================
+
 Floating Blocker - version 4.17 (full-traffic VPN: real TCP/UDP relay, not DNS-only)
 ===================================================================================
 
@@ -9,6 +86,1331 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
+
+WHAT CHANGED IN 4.77
+-----------------------
+- NEW: "Clear Current Punishment #3 (One-Time Use)" on the main
+  screen's Safety Valve section - a third, independent one-time Clear
+  Current Punishment action, tracked under its own used-flag so it
+  stays available even after the first two one-time Clear Current
+  Punishment buttons have already been spent. Same behavior as the
+  first two - clears every Block's current widen window - and same
+  one-time-only rule: gone for good once used.
+
+WHAT CHANGED IN 4.76
+-----------------------
+- NEW: "View Active Punishments" screen (main screen, Manage section).
+  Read-only list of every Block currently carrying an Alarm-miss
+  punishment widen window (see BlockPunishmentStorage), showing the
+  Block's name, the widened start-to-end range, and whether it's
+  currently active or hasn't started yet. Already-expired windows
+  aren't shown. Makes it possible to actually see what's punished and
+  until when, instead of only finding out indirectly by noticing an
+  app is still suspended past its normal schedule.
+
+WHAT CHANGED IN 4.75
+-----------------------
+- NEW: "Clear Current Punishment #2 (One-Time Use)" on the main
+  screen's Safety Valve section - a second, independent one-time
+  Clear Current Punishment action, tracked under its own used-flag so
+  it stays available even though the original one-time Clear
+  Current Punishment button was already spent earlier. Added because
+  the early-alarm-delivery bug fixed in 4.74 had already caused a
+  false punishment on this phone before 4.74 could actually be
+  installed (the phone was too locked down at the time to run AIDE).
+  Same behavior as the original button - clears every Block's current
+  widen window - and same one-time-only rule: gone for good once used.
+
+WHAT CHANGED IN 4.74
+-----------------------
+- FIXED (root cause of the double-ring Alarm bug, found via the
+  precise incident report of a 12:50 trigger firing at 12:48): this
+  OEM's battery-management stack can deliver an "exact" AlarmManager
+  alarm a couple of minutes EARLY, not just late. AlarmRingReceiver
+  used to treat that early actual delivery time as "the occurrence"
+  itself, which broke two things at once:
+  1) Rescheduling from that early time made nextOccurrenceAfter() see
+     the SAME nominal trigger (e.g. 12:50) as still upcoming, so it
+     got scheduled a second time a few minutes later - the double
+     ring. 4.68 and 4.72 fixed two different THREADING races that
+     could also cause a double ring, but this is a separate cause and
+     neither of those fixes touched it.
+  2) Recording that early time as "handled" still left it BEFORE the
+     trigger's real nominal time. The catch-up scan
+     (BlockEnforcer.checkForMissedAlarms) walks forward from the last
+     handled time using the same nextOccurrenceAfter(), so it would
+     see the nominal time (12:50) as a distinct, still-unhandled
+     occurrence and punish it as missed - even though it had already
+     rung and been dealt with 2 minutes earlier. This is what was
+     almost certainly behind "punishment without any offense."
+  Alarm.nominalOccurrenceNear() now snaps a firing to its true
+  scheduled time whenever it happened within 5 minutes of one, and
+  AlarmRingReceiver uses that snapped time everywhere (suppression
+  check, dismiss bookkeeping, the ring screen's identity, the 10-
+  minute deadline, and the reschedule) instead of the raw delivery
+  time. AlarmScheduler.scheduleNextAfterFiring() also adds the same
+  5-minute tolerance on top as extra insurance.
+
+WHAT CHANGED IN 4.73
+-----------------------
+- FIXED: an app could get suspended again right after a Holiday Break
+  ended, even with no currently-active Block schedule and no new
+  offense. Cause: Block-widening punishment (BlockPunishmentStorage)
+  and Holiday Breaks are independent mechanisms - while a Break is
+  active, computeActiveBlockedPackages() correctly SKIPS the Blocks it
+  covers entirely, but that only masks any existing punishment-widen
+  state for those Blocks, it doesn't clear it. Since punishment can
+  only ever be applied to a Block OUTSIDE an active Break to begin
+  with, anything still attached the moment a Break ends must predate
+  it - and was silently resurfacing the instant the Break expired.
+  cleanUpExpiredBreaks() now clears any leftover widen state for the
+  Blocks a just-expired Break covered, so it's forgiven along with
+  everything else the Break covered instead of reappearing unannounced.
+
+WHAT CHANGED IN 4.72
+-----------------------
+- FIXED (this time via a structural fix, not chasing individual call
+  sites - the previous fix, 4.68, only closed one path and the
+  double-ring bug persisted through a different one): the compute-
+  then-schedule sequence in AlarmScheduler is now wrapped in a
+  synchronized lock, making it atomic regardless of which thread or
+  code path calls it. 4.68 moved MainActivity's DIRECT
+  AlarmScheduler.rescheduleAll() call back to the main thread, but
+  missed an INDIRECT path: BlockEnforcer.applyNow() (still
+  backgrounded, for its slow DevicePolicyManager calls) calls
+  applyHomeLocationTransition(), which can call
+  SettingsSnapshotStorage.restoreSnapshot(), which ALSO reschedules
+  every Alarm - from that same background thread, recreating the
+  exact same race. The lock closes this off completely: no thread can
+  read "now" and schedule based on it while another thread is doing
+  the same for the same Alarm, present or future callers included.
+- NEW: "Disable All Blocks Until 11 PM (One-Time)" on the main
+  screen's Safety Valve section - same mechanism as Pause All Blocks
+  for 1 Hour (the shared temporary-override window, which now only
+  ever extends, never shortens, so using multiple one-time pause
+  actions in any order safely composes instead of the second
+  potentially cutting the first short), but targeting a fixed clock
+  time instead of a fixed duration. If it's already past 11 PM when
+  used, targets 11 PM tomorrow instead.
+
+WHAT CHANGED IN 4.71
+-----------------------
+- FIXED: the Business ERP exclusion (4.70) removed the package from
+  every Block's stored app list correctly, but left it actually still
+  suspended. Cause: the exclusion action removes the package from
+  every Block's list BEFORE re-running enforcement, so by the time
+  applyNow() computed which packages to unsuspend, the package no
+  longer appeared in allManaged (the union of every Block's app list)
+  at all - and the old logic only ever unsuspended a package by
+  finding it in allManaged first, so it silently never issued the
+  actual unsuspend call. Fixed by explicitly unsuspending every
+  permanently-excluded package on every applyNow() pass, independent
+  of whether it's still tracked in any Block's list - this also means
+  it self-heals if the package is ever suspended again by any other
+  path in the future (e.g. after a reinstall).
+
+WHAT CHANGED IN 4.70
+-----------------------
+- NEW: "Permanently Exclude Business ERP (One-Time)" on the main
+  screen's Safety Valve section - a one-time-only action that
+  permanently excludes com.mujeer.businesserp from ever being
+  suspended by any Block, current or future. The actual guarantee is
+  a new PermanentAppExclusionStorage list that
+  BlockEnforcer.applyNow() strips out right before actually
+  suspending anything, regardless of what any Block's own stored app
+  list says - so it stays excluded even if a future Block manually
+  re-adds it, or new-app detection sweeps it back in after a
+  reinstall/update. Also does a one-time cleanup removing it from
+  every currently-configured Block's app list, purely so it isn't
+  confusingly still shown as "in" a Block it will never actually be
+  blocked by. Same one-time-only design as Clear Current Punishment
+  and Pause All Blocks: usable exactly once, ever, then gone for
+  good - there's no in-app way to reverse it afterward.
+
+WHAT CHANGED IN 4.69
+-----------------------
+- FIXED: dialog buttons (OK/Cancel/Yes/etc. on every AlertDialog app-
+  wide) were rendering as invisible white text on a white background -
+  clickable, just not visible until pressed/hovered. Cause: AppTheme
+  applies a custom android:buttonStyle app-wide (dark bg_button
+  background + white text) so every regular Button in the app gets
+  the same look with no per-layout changes needed - but AlertDialog's
+  own built-in action buttons inherit that style's white textColor
+  while NOT actually rendering its bg_button background (AlertDialog
+  draws its action buttons as flat/borderless over the dialog's own
+  plain white background, ignoring a custom Button style's
+  background), leaving white-on-white. Fixed by giving AlertDialogs
+  their own isolated theme (falling back to the platform default,
+  which has properly-contrasted buttons) via android:alertDialogTheme,
+  completely independent of android:buttonStyle - every other button
+  in the app is unaffected.
+
+WHAT CHANGED IN 4.68
+-----------------------
+- FIXED (much more likely explanation for the reported double-ring
+  than 4.67's near-duplicate-trigger theory, which the user was
+  confident wasn't the case): AlarmScheduler.rescheduleAll() moved
+  back to the main thread in MainActivity.onResume(), instead of
+  running on the background thread introduced in 4.63's freeze fix.
+  AlarmRingReceiver also reschedules an Alarm's next occurrence when
+  it fires, on the main thread (BroadcastReceivers run there by
+  default) - keeping both on the main thread means Android's
+  single-threaded Looper serializes them, so they can never truly
+  overlap. Running rescheduleAll() on a background thread opened a
+  real race: it could read "now" just before an Alarm's exact trigger
+  time, compute that trigger as still upcoming, and then - if its own
+  AlarmManager call executed even slightly late, after the real alarm
+  had already fired and been correctly rescheduled for its next
+  occurrence - overwrite that correct future schedule with an
+  already-past timestamp, which Android fires again almost
+  immediately. That matches a spurious second ring a few minutes off
+  from the real trigger time far better than a data-entry mistake.
+  BlockEnforcer.reapplyAndReschedule() (the actually-slow,
+  DevicePolicyManager-heavy part 4.63 needed off the main thread)
+  stays on the background thread - it doesn't share a PendingIntent
+  with anything else running on the main thread, so it doesn't carry
+  this same race risk.
+
+WHAT CHANGED IN 4.67
+-----------------------
+- NEW: adding an Alarm trigger now warns (not blocks) if it's within
+  15 minutes of an existing trigger on the same day, before adding
+  it. Investigated a report of an Alarm (with 10-12 separate
+  triggers) ringing twice, ~4 minutes apart, around one intended
+  wake-up time - traced the scheduling code (AlarmRingReceiver,
+  AlarmScheduler) thoroughly and found no mechanism for a SINGLE
+  trigger to double-fire (all of an Alarm's triggers share one
+  deterministic PendingIntent, so the system can only ever have one
+  ring pending for that Alarm at a time). The much more likely
+  explanation: two genuinely separate AlarmTrigger entries ended up a
+  few minutes apart by accident - easy to happen when manually adding
+  many triggers one at a time, and easy to miss noticing in a long
+  list. This warning catches that going forward; it doesn't retroactively
+  fix an existing Alarm's trigger list, which needs checking by hand
+  (open the Alarm, look at "Rings at" for two close-together times
+  around the affected wake-up).
+
+WHAT CHANGED IN 4.66
+-----------------------
+- FIXED: scanning the first barcode of a dismiss pair could sometimes
+  get wrongly flagged as a "wrong code" a moment later, resetting the
+  pending scan - even though the code already ignores an exact repeat
+  decode of the same value. Likely cause: right after the first scan,
+  the camera is often still pointed at (or just pulling away from)
+  that same physical code, and a fast re-decode of it can occasionally
+  come back as a slightly different string (motion blur, a
+  marginal-angle re-read) rather than an exact match. Added a 700ms
+  settle window right after the first scan - any non-matching decode
+  in that window is now ignored (kept waiting) instead of being
+  treated as a wrong-code attempt, while a genuine, fast, correct
+  pair completion still goes through immediately either way.
+- Also made the pair-mode "wrong code" message show the actual
+  decoded value (matching what registration mode already showed), so
+  if this is ever seen again, the exact mismatched string is visible
+  for diagnosis.
+
+WHAT CHANGED IN 4.65
+-----------------------
+- NEW: WiFi and Bluetooth toggle buttons directly inside the Kiosk
+  Mode (Beta) session screen, under a new "Quick Toggles" section.
+  Built specifically so a session never needs
+  LOCK_TASK_FEATURE_NOTIFICATIONS enabled just to reach these -
+  Android's Device Owner APIs don't let you show only some Quick
+  Settings tiles, so enabling the notification shade at all would
+  expose everything on it, OEM extras included (e.g. a battery-saver
+  mode that could itself interfere with this app). These buttons call
+  WifiManager/BluetoothAdapter directly instead, using this app's
+  Device Owner privileges - no system panel is ever shown. WiFi
+  should work reliably (Android has a documented Device Owner
+  exemption from the API 29+ restriction on toggling it directly);
+  Bluetooth is less certain (deprecated more aggressively on Android
+  13+) and needs on-device testing to confirm it actually works.
+  Silently self-grants BLUETOOTH_CONNECT (required since API 31) the
+  same way Location Override's permission is silently granted, so
+  there's no runtime permission prompt to get stuck on while pinned.
+
+WHAT CHANGED IN 4.64
+-----------------------
+- Confirmed via LogCat that 4.63's background-thread fix works as
+  intended: the app opened and became fully interactive (window
+  drawn, touch input handled) while BlockEnforcer.applyNow() was
+  still grinding through slow DevicePolicyManager Binder calls
+  (applyLocationPermissionState alone took ~3 seconds) on its
+  background thread, completely invisible to the user. The underlying
+  OEM Binder latency is still there - not something this app can fix,
+  it's a device/system_server characteristic - but it's now properly
+  isolated from ever blocking the window again.
+- debuggable reverted back to false now that this is confirmed
+  fixed.
+
+WHAT CHANGED IN 4.63
+-----------------------
+- Likely real fix for the white-screen-on-open freeze: the LogCat
+  captured from 4.61's breadcrumbs showed a single
+  DevicePolicyManager Binder call (setPermissionGrantState, inside
+  applyLocationPermissionState) taking over 1.2 seconds even in a
+  successful run, and a separate failed attempt going 18+ seconds
+  with zero log output before being force-killed - never even
+  reaching the first breadcrumb. BlockEnforcer.applyNow() makes well
+  over a dozen synchronous DevicePolicyManager Binder calls back to
+  back, all previously running on the main thread inside
+  MainActivity.onResume() - this device (an Oplus/ColorOS-based
+  build, per the logs) appears to have inconsistent Binder round-trip
+  latency to system_server for these calls, occasionally fast,
+  occasionally very slow. Moved MainActivity.onResume()'s call to a
+  background thread, so a slow Binder round-trip can no longer block
+  the window from becoming visible/responsive - refreshUi() runs
+  immediately with whatever's already known, then again once the
+  background enforcement pass finishes.
+- Known follow-up, not done tonight: several other screens also call
+  BlockEnforcer.reapplyAndReschedule() synchronously after saving a
+  change (e.g. the Blocks Pause button, Alarm/Block editors) and
+  could theoretically hit the same OEM latency, just less
+  disruptively (a saved screen briefly not responding vs. the whole
+  app failing to open at all). Worth revisiting if any of those show
+  the same symptom.
+- debuggable is still left as true for now, in case another LogCat
+  capture is needed to confirm this actually fixed it - revert once
+  confirmed.
+
+WHAT CHANGED IN 4.62
+-----------------------
+- NEW: "Pause All Blocks for 1 Hour (One-Time Use)" on the main
+  screen's Safety Valve section. Immediately unsuspends every
+  currently-blocked app for exactly 1 hour, then Blocks resume
+  automatically on their own - no further action needed, and no way
+  to get stuck "paused forever" behind a locked schedule. Built for
+  exactly the situation of needing blocked tools (AIDE, etc.) to keep
+  debugging this app while a Lock Schedule sleep window is about to
+  suspend them. Same one-time-only design as Clear Current
+  Punishment: usable exactly once, ever, not gated on Lock Schedule's
+  unlocked state (needs to work while locked to be useful at all).
+  Shows a live countdown while active, then disappears for good once
+  the hour is up.
+
+WHAT CHANGED IN 4.61
+-----------------------
+- Diagnostic build for a new white-screen freeze on open, reported
+  even after the 4.59 missed-alarms fix (so it's a different cause).
+  Added Log.d breadcrumbs through every step of
+  BlockEnforcer.applyNow() (the same method that had the 4.59 bug) -
+  whatever's the last line printed in LogCat before it freezes again
+  will pinpoint exactly which step is stuck. Also added a hard
+  1000-iteration safety cap to checkForMissedAlarms()'s catch-up loop,
+  defense-in-depth against any other edge case (not just the
+  epoch-start one already fixed) that could make it grind through an
+  implausible number of iterations.
+- android:debuggable temporarily set back to true, same as the last
+  diagnostic round - needed for AIDE's LogCat to show anything at
+  all. Revert to false once this is found and fixed.
+
+WHAT CHANGED IN 4.60
+-----------------------
+- NEW: "Clear Current Punishment (One-Time Use)" on the main screen's
+  Safety Valve section - clears any Block currently widened by a
+  missed Alarm. Built specifically to recover from 4.59's freeze bug
+  wrongly applying punishment for occurrences that never actually
+  happened, but is general-purpose: clears whatever punishment state
+  exists at the time it's used. Deliberately a ONE-TIME action - the
+  button disappears forever the instant it's used, so it can't become
+  a repeatable way to dodge deserved punishment (which would undermine
+  the entire point of the feature). Unlike every other weakening
+  action in this app, it's NOT gated behind an unlocked Lock Schedule -
+  being usable exactly once, ever, already prevents it from being a
+  loophole, and gating it to unlocked-only could make it unusable
+  right when it's actually needed.
+
+WHAT CHANGED IN 4.59
+-----------------------
+- FIXED: the app could freeze for a very long time (no crash, no ANR
+  dialog, just stuck on the launch splash) after creating a new Alarm
+  and reopening the app before that Alarm had ever rung even once.
+  Root cause: BlockEnforcer.checkForMissedAlarms() (runs on every app
+  resume, catches up on Alarm occurrences missed while the phone was
+  powered off) starts walking forward from
+  AlarmRuntimeStorage.getLastHandledOccurrence(), which defaults to 0
+  (epoch/1970) for an Alarm that's never been resolved even once -
+  including one just created. That made it walk forward one
+  occurrence at a time from January 1970 all the way to today -
+  thousands of theoretical weekly occurrences, each one incorrectly
+  treated as a missed alarm and punished (widening Blocks) for
+  something that never actually happened, all synchronously on the
+  main thread. A same-day test alarm usually rings shortly after
+  creation, seeding this value via the normal path before ever
+  hitting the bug - a next-day (or otherwise delayed) trigger sits
+  unrung long enough that the very next app resume hits it.
+- Fix: an Alarm with no prior handled occurrence at all now seeds
+  straight to the current time instead of walking forward from epoch
+  - there's no legitimate prior occurrence to catch up on for an
+  Alarm that was never tracked before anyway. Self-healing: the fix
+  applies to any already-broken Alarm the moment this update runs, no
+  need to delete and recreate it.
+
+WHAT CHANGED IN 4.58
+-----------------------
+- The manual "Scan to Dismiss" ringing-alarm button (4.57) now shows a
+  live countdown to the same RING_MINUTES deadline the normal ring
+  flow already uses, e.g. "Scan to Dismiss: Morning Alarm (7:32 left)"
+  - ticks every second while the main screen is visible, so it's clear
+  exactly how long is left before it disappears, instead of it just
+  silently vanishing with no warning once the deadline passes. The
+  button doesn't grant any extra time of its own - it's showing the
+  same deadline the automatic flow was always bound by.
+- Side benefit of how this was built: the button now also
+  appears/updates/disappears live if an Alarm's ringing state changes
+  while already sitting on the main screen (starts ringing, gets
+  dismissed some other way, or times out), not just when the screen is
+  next opened or resumed.
+
+WHAT CHANGED IN 4.57
+-----------------------
+- NEW: a manual "Scan to Dismiss" button on the main screen, shown only
+  when an Alarm has an unresolved ringing occurrence (per
+  AlarmRuntimeStorage's persisted state) - for whenever the ring
+  service/notification/full-screen alarm somehow fails to show
+  normally, but you're otherwise aware an Alarm should be ringing right
+  now. Tapping it goes straight to the same scan-to-dismiss screen the
+  normal ring flow uses (showing the alarm's name, same barcode-pair
+  requirement); with more than one Alarm ringing at once, it asks which
+  one first. Hidden the rest of the time.
+- FIXED (found while building the above): AlarmRingActivity's "is this
+  occurrence already resolved" checks, and AlarmRingService's dismiss
+  handling, were gated on AlarmRingService.isRingingFor() - whether
+  that PARTICULAR service instance is alive - rather than on whether
+  the occurrence is actually still unresolved. Those aren't the same
+  thing: if the service ever died or failed to start for any reason
+  (independent of today's ANR fix), a correct barcode scan on the
+  ring screen would silently fail to register as dismissed, and the
+  occurrence would still get punished at the 10-minute deadline
+  despite being scanned correctly. Now checked against
+  AlarmRuntimeStorage's persisted ringing-occurrence state instead,
+  which is what actually tracks resolution and survives the service
+  not existing at all - needed for the new manual button above to
+  work, but also a real correctness fix for the existing automatic
+  flow.
+
+WHAT CHANGED IN 4.56
+-----------------------
+- FIXED (probably the real root cause of the long-standing "alarm
+  crashes app when triggered while already inside app" issue):
+  AlarmRingService was calling MediaPlayer.prepare() - the
+  SYNCHRONOUS/blocking variant - to load the alarm sound.
+  Service.onStartCommand() runs on the app's main thread by default,
+  so this blocked the entire UI while the sound loaded. Normally
+  that's fast enough not to notice, but confirmed today: triggering
+  an Alarm while the app was already open showed Android's "isn't
+  responding / Wait" dialog (an ANR, not an actual crash - a
+  different system dialog than a real crash shows), and tapping Wait
+  let it finish and ring completely normally. Switched to
+  MediaPlayer.prepareAsync(), which loads the sound off the main
+  thread and starts playback once ready via a listener instead of
+  blocking anything.
+- What was previously reported/treated as a "crash" earlier this
+  session (fixed then with defensive try/catch hardening and a crash
+  reporter, since the exact cause couldn't be confirmed without a
+  real stack trace) may well have been this same ANR all along -
+  worth re-testing the original scenario now that the actual
+  blocking call is fixed, rather than just caught defensively.
+
+WHAT CHANGED IN 4.55
+-----------------------
+- FIXED: Kiosk Mode (Beta) failed to start with "Cannot use
+  LOCK_TASK_FEATURE_OVERVIEW without LOCK_TASK_FEATURE_HOME" - a real
+  Android API constraint (setLockTaskFeatures throws
+  IllegalArgumentException if OVERVIEW is set without HOME also being
+  set), not a bug specific to this app. Enabling LOCK_TASK_FEATURE_HOME
+  needs a designated home activity among the allowed packages, which is
+  more setup than this beta needs just to show the Recents button while
+  pinned - so OVERVIEW was dropped instead, keeping only
+  LOCK_TASK_FEATURE_SYSTEM_INFO (status bar clock/battery still shown
+  during a session).
+
+WHAT CHANGED IN 4.54
+-----------------------
+- FIXED: the app crashed immediately on every open (before showing
+  anything, including its own crash dialog). Root cause: the
+  SectionHeader style added back in 4.50's visual redesign only
+  defines text properties (size, color, bold, letter-spacing,
+  padding) - it never defines layout_width/layout_height, which
+  every View requires. Every OTHER screen's use of that style
+  (and ScreenDescription/LockedMessageBox/ListCardRow) already
+  supplied those explicitly alongside the style, but
+  activity_main.xml's five section headers ("Manage", "Safety
+  Valve", "System", "Backup", and this version's new "Kiosk Mode
+  (Beta)") never did - a bug that's been sitting in the main screen's
+  layout since 4.50 and just hadn't been hit by a real device open
+  since then. Fixed by adding explicit layout_width="match_parent"
+  layout_height="wrap_content" to all five.
+- Diagnosed using this app's own on-device tooling: AIDE's LogCat
+  view showed nothing until android:debuggable was temporarily set
+  to true (a non-debuggable process's logs aren't visible without a
+  debugger attached) - that surfaced the real
+  android.view.InflateException with the exact line number. Reverted
+  debuggable back to false once the actual bug was found and fixed.
+
+WHAT CHANGED IN 4.53
+-----------------------
+- Kiosk Mode (Beta): added the AlarmManager safety net for the "session
+  Activity died mid-session" gap described in 4.52's known limitation
+  below. A KioskTimeoutReceiver is now scheduled (via KioskScheduler)
+  for the session's end time the moment a session starts, the same
+  pattern already used for Alarms (AlarmPunishmentDeadlineReceiver
+  backstopping AlarmRingService's in-process timer). If
+  KioskSessionActivity ends the session normally - timer or "End
+  Session Now" - it cancels this alarm; if it never gets the chance to,
+  the receiver still fires at the same end time, marks the session
+  ended, and clears the Device Owner's lock task allowlist
+  (setLockTaskPackages with an empty list), which forces Android to
+  exit lock task mode for whatever's still pinned even without an
+  explicit stopLockTask() call from inside the pinned Activity.
+- This does not cover a reboot mid-session (lock task pinning doesn't
+  survive a reboot in the first place, and no boot-time rescheduling
+  was added for this beta feature) - only the in-session Activity-death
+  case described in 4.52.
+
+WHAT CHANGED IN 4.52
+-----------------------
+- NEW (BETA): Kiosk Mode, a new "Kiosk Mode (Beta)" section on the main
+  screen. Pick which apps stay usable, set a time limit in minutes, and
+  start a session - while it's running, the device is pinned (Android
+  Lock Task Mode) so nothing outside the allowed apps (or this app's
+  own countdown/End Session screen) can be reached at all, not even by
+  leaving the app, opening Recents, or an intent from another app.
+  Ends automatically when the timer runs out, or any time via the "End
+  Session Now" button on the pinned screen.
+- This is explicitly a beta/demo feature, kept completely separate from
+  the existing Blocks system (a different KioskModeStorage, its own two
+  screens) rather than merged into BlockEnforcer - Lock Task Mode is a
+  fundamentally different mechanism (pin-the-whole-device vs suspend-
+  specific-packages), and mixing them risked the well-tested existing
+  system for the sake of an experimental one.
+- Known limitation, stated honestly since this is a beta: the
+  auto-end-at-timer behavior relies on a Handler-based countdown inside
+  the pinned session Activity itself, not an AlarmManager backstop -
+  there's no DevicePolicyManager API to force-unpin from outside the
+  currently-pinned Activity, so if that Activity were somehow killed
+  mid-session, the automatic end wouldn't fire (the manual End Session
+  button, and simply reopening the app, both still work). Under normal
+  operation nothing else can preempt the pinned Activity, so this is
+  expected to be reliable in practice, but it hasn't been hardened the
+  way the rest of the app's enforcement has.
+
+WHAT CHANGED IN 4.51
+-----------------------
+- NEW: Export Backup / Import Backup, on the main screen. Exports
+  everything meaningful you've configured - Blocks, Lock Schedule,
+  Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms (with
+  their barcode pairs), the Blocks-paused toggle, and Location Override
+  - to a plain JSON file you pick a save location for (Downloads,
+  Google Drive, wherever) via Android's standard file picker. No
+  storage permission needed, and the file survives this app being
+  uninstalled, unlike the app's own data - which is exactly the point:
+  this exists so an uninstall/reinstall (e.g. to switch which key
+  signs the app - see the BUILDING WITHOUT AIDE note near the top of
+  this file) doesn't mean losing everything you've set up.
+- Deliberately NOT included in the backup: Emergency Safety's engaged/
+  deleted-forever state (restoring "deleted forever" back from an old
+  backup would undermine the entire point of that being irreversible),
+  and all runtime/operational bookkeeping (alarm ring history, active
+  punishment windows, crash logs, installed-app snapshots) - none of
+  that makes sense replayed from an earlier point in time.
+- Import replaces ALL current Blocks/Lock Schedule/Holiday Breaks/
+  Websites/Barcodes/Alarms/Location Override with the backup's
+  contents - a confirmation dialog spells this out before it happens.
+  Gated behind an unlocked Lock Schedule period, same as anything else
+  that could weaken protection (an old backup could have fewer/no
+  Blocks configured) - this does NOT block the actual intended use
+  case (restoring right after a fresh reinstall), since Lock Schedule
+  is always open on a blank install with no ranges saved yet.
+- Export is never gated - reading out current state can't weaken
+  anything.
+
+WHAT CHANGED IN 4.50
+-----------------------
+- NEW: a real visual design system, applied app-wide - previously there
+  was no theme, no color palette, and no shared styles at all, just
+  scattered hardcoded colors per-screen. Added:
+  - A cohesive color palette (res/values/colors.xml): a calm slate-blue
+    brand color instead of default system gray, plus semantic
+    success/danger/warning colors reused consistently everywhere they
+    already applied (green = active/good, red = paused/danger, amber =
+    "needs attention").
+  - An app theme (res/values/styles.xml + applied in the manifest) that
+    reskins every screen's action bar, every plain Button, and every
+    dialog automatically - no per-screen edits needed for this part.
+    Buttons are now rounded, colored, and have a visible disabled state
+    (previously a disabled button looked identical to an enabled one).
+  - A light background color app-wide (previously stark white).
+- Main screen reorganized into clearly labeled sections ("Manage",
+  "Safety Valve", "System") instead of one long undifferentiated column
+  of buttons, with the Device Owner status + pause button grouped into
+  a distinct status card at the top. Each nav button also got a small
+  icon prefix for quicker visual scanning.
+- Every list screen (Blocks, Alarms, Barcodes, Holiday Breaks, Websites,
+  triggers, barcode pairs) now renders its rows as distinct rounded
+  cards instead of plain flat rows separated by nothing.
+- The "this can only be done during an unlocked time" notices, shown on
+  several screens, are now a soft amber box instead of plain text - more
+  noticeable, reads as informative rather than alarming.
+- Emergency Safety's button now visibly turns red while engaged (since
+  that means everything is disabled), and "Delete Emergency Safety
+  Forever" is now visibly red as the destructive action it is.
+- NOT changed: the app's launcher icon (still the default) - a proper
+  custom icon needs real image assets, which isn't something achievable
+  through layout/style XML alone.
+
+WHAT CHANGED IN 4.49
+-----------------------
+- NEW: registering a barcode now requires scanning it TWICE to confirm -
+  each scan shows the decoded number on screen and asks for confirmation
+  before moving on. Guards against a misread getting silently registered
+  as a Barcode's permanent value; if the two scans don't match, it says
+  so and starts over from the first scan.
+- BIG CHANGE: Alarms now require PAIRS of barcodes, not single ones. When
+  editing an Alarm, "Select Barcodes" is replaced by "+ Add Barcode
+  Pair" (pick two different registered barcodes to form one pair - an
+  Alarm can have several pairs, any one of which dismisses it). To
+  dismiss a ringing Alarm, BOTH barcodes of one pair must be scanned, in
+  either order, within 3 seconds of each other - scanning only one,
+  scanning something unrelated, or letting 3 seconds pass resets and
+  that pair has to be started over from its first scan. The scan screen
+  shows a live countdown while waiting for the second code.
+- This is a genuine breaking change to how existing Alarms are stored -
+  an Alarm saved before this version will come back with no pairs
+  configured (the old single-barcode selection doesn't carry over) and
+  will need its barcode pairs set up again before it can ring properly.
+- INVESTIGATING: "Alarm crashes the app when triggered while already
+  inside the app" - couldn't reproduce this directly without a stack
+  trace (this app avoids relying on logcat, same reasoning as
+  everywhere else), so two things instead:
+  1. The app now catches its own crashes and shows the last one's exact
+     stack trace in a dialog the next time it's opened - if this still
+     happens, that dialog will have the real answer instead of another
+     guess. Please screenshot/send it back if you see it.
+  2. Fixed a real, related gap either way: AlarmRingActivity is a
+     launchMode="singleInstance" screen but had no onNewIntent handling
+     - if a second Alarm fired while this screen was already showing
+     (only possible while something in the app was already open/active,
+     which lines up with the reported pattern), the existing instance
+     would get silently reused with stale data instead of updating.
+     Also hardened AlarmRingService's onStartCommand and AlarmRingActivity's
+     onCreate/onNewIntent against any other unexpected exception taking
+     the whole app down with them, and made sure a very-close second
+     Alarm firing can't leak the first one's MediaPlayer/Vibrator.
+
+WHAT CHANGED IN 4.48
+-----------------------
+- FIXED: Holiday Breaks list screen's "+ Add Holiday Break" button (and
+  its click handler) was gating navigation on the CURRENT Lock Schedule
+  lock state - but the whole point of the "later app-day" 2am exception
+  built in 4.35 is that creation can be allowed depending on the START
+  DATE the user is about to pick, which isn't known until they're
+  actually on the edit screen choosing it. The list screen was blocking
+  entry before that logic ever got a chance to run, effectively
+  disabling the 2am exception entirely. The button now always navigates
+  there - HolidayBreakEditActivity was already the only place that
+  correctly decides and enforces this, so nothing else needed to change.
+- NEW: Registered Barcodes list now shows each barcode's actual scanned
+  value under its label, in a smaller font.
+- NEW: when an Alarm starts ringing, the alarm volume is pushed to max
+  once, right at the start - not held there. Turning it back down with
+  the volume buttons while it's ringing is respected; nothing re-forces
+  it back up after that first push.
+
+WHAT CHANGED IN 4.47
+-----------------------
+- NEW: any settings change made during a 20km-away Location Override
+  window is now temporary - it reverts the instant you're back in range,
+  as if it never happened. The moment the override turns on, everything
+  Lock Schedule normally protects gets snapshotted (Blocks, the schedule
+  itself, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms,
+  and the Blocks-paused toggle); the moment it turns back off, all of
+  that gets restored, discarding whatever changed in between - additions
+  included, not just removals/weakenings. The whole point of the window
+  is to not be stuck locked out while away, not to let changes made in it
+  stick without ever passing through a real unlocked period at home.
+- Not snapshotted/restored: Emergency Safety (already its own separate,
+  freely-togglable thing, untouched by Lock Schedule before this feature
+  existed too) and the home location/override toggle themselves (that'd
+  be circular).
+- Detected via a new persisted "was the override active last check" flag
+  (HomeLocationStorage), checked every enforcement cycle - the snapshot
+  and restore both run as the very first thing in that cycle, before
+  anything else reads Blocks/Holiday Breaks/Alarms, so a restore takes
+  effect immediately rather than a cycle late.
+
+WHAT CHANGED IN 4.46
+-----------------------
+- Build fix: HomeLocationChecker.java failed to compile in AIDE with
+  "Method onProviderEnabled does not override method from its
+  superclass" (and same for onProviderDisabled) - AIDE's compiler (ECJ)
+  doesn't reliably recognize @Override on those two specific
+  LocationListener methods against newer android.jar versions, even
+  though the signature is correct. Removed @Override from just those
+  two (onLocationChanged and onStatusChanged, which compiled fine, keep
+  theirs) - still a correct interface implementation either way.
+
+WHAT CHANGED IN 4.45
+-----------------------
+- NEW: an optional "Location Override" (new screen, off by default). When
+  turned on, Lock Schedule's editing-protection, all Blocks, and Alarms
+  stop applying whenever you're more than 20km from a home location you
+  set (stand there and tap "Set This As Home" - no maps library needed).
+  If your location can't be determined for any reason - permission not
+  granted, Location turned off, no fix available - everything stays
+  exactly as it would without this feature; restrictions still apply.
+  That fail-safe direction is deliberate and matches how every other
+  "can't tell" case in this app already behaves.
+- Deliberately NOT affected by this, regardless of location: the
+  permanent Device Owner protections (uninstall block, VPN block, safe
+  boot/factory reset/add-user block, the Chrome content policy, the
+  other-browsers lock) and the Termux/Shizuku/debugging-features
+  anti-tamper locks. Those exist to protect the app itself, not to
+  enforce a schedule, so they stay on no matter where the phone is.
+- Changing an ALREADY-SET home location is gated by the true Lock
+  Schedule state, not by this same location override - on purpose. If it
+  used the location override too, being far from home would unlock the
+  ability to redefine what "home" means, and a single trip could
+  permanently disable the whole feature (reset home to wherever you
+  currently are while the override has already kicked in, and your real
+  home becomes "far away" forever after that). First-time setup, with no
+  location saved yet, is always allowed, same as every other "add" in
+  this app.
+- Location permission (fine + background) is granted silently via Device
+  Owner - no runtime prompt - only while the feature is turned on, and
+  released back to the normal default otherwise, so nothing is held onto
+  for no reason. Uses plain framework LocationManager, not Play Services
+  (no Gradle dependency to build against here); a cached fix older than
+  15 minutes is treated as "not found" rather than trusted.
+- Known limitation: no location history is kept, so resolving a missed
+  Alarm from while the phone was off uses today's current location as a
+  best-effort stand-in for "was I far from home when it actually rang",
+  not the true location at that past moment.
+
+WHAT CHANGED IN 4.44
+-----------------------
+- NEW: an Alarm no longer rings at all while any Holiday Break is active
+  - not just this Alarm's own affected Blocks' breaks, any active break
+  - at the exact moment it was due. No sound, no vibration, no lock
+    screen takeover, and it's not treated as missed either, so nothing
+    gets punished once the break ends. This is a different, broader rule
+    than the existing "punishment doesn't apply to a Block on an active
+    break" one from 4.34 - that one only ever affected whether a specific
+    Block got widened; this one stops the Alarm from ringing in the first
+    place.
+  - Applies to the live trigger (AlarmRingReceiver) and to the catch-up
+    scan for occurrences missed while the phone was off - the same
+    Holiday-Break check runs against each occurrence's own actual time,
+    not just "right now", so a phone that was off through an occurrence
+    that fell inside a break window is handled the same way it would
+    have been handled live.
+
+WHAT CHANGED IN 4.43
+-----------------------
+- Browser lockdown from 4.42 relied only on a fixed list of known browser
+  package names - a browser installed from Play Store that wasn't on that
+  list would have stayed completely unblocked. Switched to live
+  detection: every cycle, any app that resolves a plain, host-agnostic
+  http:// link gets suspended along with the named ones - that's the
+  exact same mechanism Android itself uses to decide what shows up in the
+  "Open with..." chooser, so it catches a newly installed or previously
+  unrecognized browser automatically instead of needing its package name
+  added by hand.
+- A small exclude-list (Google app/Assistant, Gmail, Google Drive, Google
+  Messages, Google Maps, Play Store) is never auto-suspended by this
+  detection, even if one of them happens to register a generic link
+  handler for its own link-preview purposes - avoids silently breaking
+  an app that isn't actually a standalone browser.
+- The fixed package-name list from 4.42 is kept too, as a backup for the
+  rare case a browser's own intent filter is built unusually enough to
+  not get picked up by the live check.
+
+WHAT CHANGED IN 4.42
+-----------------------
+- NEW: adult-content blocking, with no DNS, VPN, Accessibility Service or
+  Usage Stats involved. Two permanent protections, always on, not tied to
+  Blocks or Lock Schedule:
+  1. Chrome managed policy, pushed straight into Chrome via
+     setApplicationRestrictions (the same mechanism real enterprise MDM
+     apps use): blocks mature/explicit sites in general
+     (SafeSitesFilterBehavior), forces Google SafeSearch, forces YouTube's
+     Strict restricted mode, and disables Incognito. This is enforced
+     inside Chrome itself, so it applies to every tab Chrome opens - not
+     something this app has to watch for.
+  2. Every other common browser (Firefox, Opera, Samsung Internet, Brave,
+     Edge, DuckDuckGo, UC Browser, Vivaldi, Kiwi, Mi Browser, Yandex, Tor
+     Browser, Chrome's own Beta/Dev/Canary channels, and more) is kept
+     permanently suspended, so Chrome can't just be swapped out for one
+     that doesn't have the policy. Self-healing - a newly installed
+     browser gets suspended again on the next periodic check (within
+     about a minute).
+- The existing "Blocked Websites" list is now actually enforced for the
+  first time - it used to just be recorded with nothing acting on it
+  (leftover from when the VPN-based filter was removed). Domains there
+  are now pushed into Chrome's URLBlocklist policy: a domain blocks that
+  host and every subdomain of it. Adding/removing a domain now applies
+  immediately instead of waiting for the next unrelated enforcement pass.
+- The background periodic check (roughly once a minute while the screen
+  is on, throttled back automatically by Android's own Doze system
+  otherwise) now always runs, even for a user with zero Blocks configured
+  - needed so these new permanent protections (and the existing Device
+  Owner ones) keep self-healing regardless of whether any Blocks exist.
+- Known gap, inherent to this approach rather than a bug: in-app browsers
+  and WebViews inside other apps (e.g. a link opened inside Reddit,
+  Instagram, X) aren't covered by a Chrome-only policy - only Chrome
+  itself, and only Chrome, is being locked down and filtered here.
+
+WHAT CHANGED IN 4.41
+-----------------------
+- FIXED: "alarm is ringing and vibrating but there's no place to scan
+  the barcode and dismiss it." The sound/vibration run from the
+  foreground service directly and don't depend on the notification, so
+  they always work - but the full-screen ringing screen only launches
+  automatically when the phone's screen was off or locked at the
+  moment the alarm fired. If the screen was already on and unlocked
+  (e.g. actively using the phone, or testing), Android suppresses the
+  automatic full-screen takeover and shows only a small notification
+  instead - easy to miss if you don't realize it's tappable.
+- The alarm notification now has its own explicit "Scan Barcode to
+  Dismiss" action button, so there's always a visible, obvious way in
+  even when the full-screen screen doesn't appear on its own. Also
+  marked the notification as an alarm-category, publicly-visible
+  notification so it's treated with the same priority/lock-screen
+  visibility as a normal alarm clock's notification.
+- If tapping that notification action still doesn't get you to a scan
+  screen, that would point to something else (like the notification
+  not showing at all, e.g. due to a device-specific battery/autostart
+  restriction) - let me know exactly what you do or don't see when the
+  next alarm fires (any notification banner at all? was the phone
+  locked or already unlocked/in use at the time?).
+
+WHAT CHANGED IN 4.40
+-----------------------
+- The 4.39 fix stopped the crash on every decode attempt (confirmed by
+  the diagnostics: "Last decode error" now correctly shows the normal
+  NotFoundException instead of a crash), but scanning a real barcode
+  still wasn't succeeding - photos of the attempt showed the barcode
+  held at a visible angle/tilt in frame. ZXing's default decode mode
+  is a fast/light pass tuned for a clean, well-aligned code; it's much
+  less tolerant of skew and blur than that.
+- Enabled ZXing's TRY_HARDER decode hint, which makes the readers do a
+  more thorough scan (more tolerant of angle, blur and noise) at the
+  cost of some extra CPU time per attempt - acceptable here since only
+  one decode runs at a time, on a background thread.
+- If scanning still doesn't succeed after this, try holding the phone
+  so the barcode's bars are roughly horizontal/parallel with the
+  screen's top and bottom edges (not tilted diagonally), filling a
+  good portion of the frame, held steady long enough to focus.
+
+WHAT CHANGED IN 4.39
+-----------------------
+- ACTUAL REMAINING ROOT CAUSE FOUND (via the 4.38 on-screen diagnostics):
+  every single decode attempt was throwing
+  ArrayIndexOutOfBoundsException, not just failing to find a code. The
+  NV21 90-degree rotation helper added in 4.37 had a bug in its own
+  chroma (VU) plane loop - it indexed that plane using the same
+  full-resolution row range as the Y plane (height rows), but the
+  chroma plane for NV21 only actually has height/2 rows. That mismatch
+  read/wrote past the end of the buffer on every frame, before ZXing
+  ever got a valid image to look at.
+- FIXED: the chroma loop now correctly indexes only the height/2 rows
+  the chroma plane actually has, matching the standard, well-known
+  NV21 rotation algorithm. This is what was actually breaking barcode
+  scanning - the 4.37 fix corrected the right idea (the buffer does
+  need rotating), but the rotation code itself had this bug the whole
+  time.
+- The 4.38 on-screen diagnostics are left in place for this build so
+  the fix can be confirmed directly (frames received/decode attempts
+  climbing with no repeating exception, and a successful scan actually
+  finishing the screen).
+
+WHAT CHANGED IN 4.38
+-----------------------
+- TEMPORARY DIAGNOSTIC BUILD: the 4.37 orientation fix alone did not
+  resolve "barcode scanning still not working" as reported after
+  rebuilding, so there's at least one more bug still present. Rather
+  than guess again, the barcode scan screen now shows live on-screen
+  diagnostics (same philosophy as the rest of this app - no logcat
+  reliance, since that's not practically accessible on a non-rooted
+  device): preview size and format (compared against the NV21 format
+  ZXing decoding assumes), a running count of camera preview frames
+  received, a running count of decode attempts made, and the most
+  recent decode error/result (including the previously-silent "no code
+  in this frame" case).
+- If the camera fails to open, the screen no longer immediately closes
+  - it now stays open showing the exact failure so it can actually be
+  read, instead of an instant close with nothing visible.
+- A sanity check was added before decoding: if the raw frame buffer is
+  smaller than the claimed preview width x height, that's now reported
+  as a specific error instead of silently failing or crashing.
+- This diagnostic readout temporarily replaces the normal
+  scan-instructions/wrong-code text on this screen - accepted for this
+  debug build so the real remaining cause can be pinned down from what
+  gets reported back (camera never opening vs. zero frames arriving
+  vs. a real exception vs. a preview-format mismatch vs. a buffer-size
+  mismatch).
+
+WHAT CHANGED IN 4.37
+-----------------------
+- ACTUAL ROOT CAUSE FOUND for "camera shows, but never detects any
+  barcode": camera.setDisplayOrientation(90) only rotates what's rendered
+  on screen for the user to see - it does NOT rotate the raw preview
+  buffer delivered to onPreviewFrame(). That buffer stays in the camera
+  sensor's native (landscape) orientation regardless, so every decode
+  attempt was analyzing a sideways image the whole time. A QR code's
+  detector is rotation-tolerant enough to sometimes survive this, but a
+  real 1D barcode essentially never does - matching exactly what was
+  reported (nothing detected, ever).
+- FIXED: the raw NV21 buffer is now rotated 90 degrees clockwise (the
+  standard, well-known NV21 rotation routine) to match
+  setDisplayOrientation(90) before being handed to ZXing, so the decoder
+  now sees the same upright orientation the user sees on screen.
+
+WHAT CHANGED IN 4.36
+-----------------------
+- NEW: a "Flashlight" toggle button on the barcode scan screen (top-right
+  corner), for scanning in the dark - relevant since a wake-up alarm's
+  barcode is exactly the kind of thing you'd be scanning first thing in
+  the morning with the lights off. Uses the same classic Camera API
+  already used for scanning (Camera.Parameters.FLASH_MODE_TORCH) - no new
+  permission needed (CAMERA already covers it) and no new dependency.
+- Only shown on devices that actually report torch support
+  (getSupportedFlashModes().contains(FLASH_MODE_TORCH)) - hidden entirely
+  otherwise rather than showing a button that would just fail. Always
+  starts off when the scan screen opens, and is force-turned-off whenever
+  the camera itself stops (leaving the screen, camera error, etc.) so it
+  can never get left on by accident.
+
+WHAT CHANGED IN 4.35
+-----------------------
+- NEW EXCEPTION to Holiday Break creation: previously it required the Lock
+  Schedule to currently be unlocked, full stop. Now it's also allowed
+  during a locked period if the break's chosen START doesn't take effect
+  until a later "app-day" - and for this specific purpose, a day is
+  defined as starting at 2:00 AM instead of midnight, so e.g. 1:30 AM
+  still counts as the day before, while 2:00 AM onward counts as the new
+  one. The reasoning: a break that only starts on a genuinely later day
+  can't weaken anything happening right now, so gating it behind "is the
+  schedule unlocked THIS EXACT MOMENT" was blocking harmless future
+  planning for no real reason.
+- This is purely an ADDITIONAL way creation becomes allowed - the existing
+  unlocked-Lock-Schedule path still works exactly as before, unchanged.
+  Nothing about how an already-created break is enforced changed at all
+  (still starts/ends at its exact stored millis, same as always) -
+  ONLY the creation-time permission check gained this one exception.
+- The on-screen note and locked-message string now explain the 2:00 AM
+  rule directly, and update live as you change the picked start date/time
+  (previously the whole form was just disabled outright while locked,
+  which no longer makes sense once whether it's allowed depends on what
+  start time you end up picking).
+
+WHAT CHANGED IN 4.34
+-----------------------
+- FIXED (4.33 follow-up): AlarmPunisher.resolveMissed() now explicitly
+  skips any Block that's currently on an active Holiday Break at the
+  moment a miss is resolved, same per-block check computeActiveBlockedPackages()
+  already used to let a Break override a Block's normal schedule. Before
+  this, a punished Block on Break would still have gotten a stored widen
+  window - harmless in practice (the Break already overrides it at
+  enforcement time, every time computeActiveBlockedPackages() runs), but
+  now it's an explicit rule instead of an incidental side effect, and the
+  widen window is never even recorded for that Block in the first place.
+- The already-existing "skipped entirely if the whole Lock Schedule is
+  currently unlocked" rule from 4.33 is unchanged - this adds the Holiday
+  Break exception alongside it, per-Block rather than all-or-nothing.
+
+WHAT CHANGED IN 4.33
+-----------------------
+- NEW: "Alarms" - inspired by "I Can't Wake Up!"-style alarm apps, but with
+  exactly one dismiss method and nothing else: scanning a registered
+  barcode/QR code. No snooze, no back button, no swipe-to-dismiss. An Alarm
+  can have several triggers (each its own time + set of days, e.g. 6:00 AM
+  weekdays and 8:00 AM weekends), and any one of several registered
+  barcodes you choose can dismiss it - register a barcode once (under the
+  new "Registered Barcodes" screen) by scanning it, then place that object
+  somewhere that actually requires getting up.
+- NEW: missing an Alarm (no correct scan within 10 minutes of it ringing)
+  punishes the Blocks you chose for that Alarm: each one's current/next
+  occurrence gets widened by 1 hour earlier on the start and 1 hour later
+  on the end (e.g. 6:00 AM-6:00 PM becomes 5:00 AM-7:00 PM), capped so a
+  single occurrence never exceeds a full 24-hour day. This is deliberately
+  ONE-TIME, not permanent - it applies to that one occurrence only, and
+  the Block reverts to its normal configured schedule the next time
+  around, achieved by never touching the Block's own stored ranges at all
+  (see BlockPunishmentStorage) - just a temporary, self-expiring override
+  consulted at evaluation time.
+- The punishment is skipped entirely if the moment the 10-minute window
+  expires falls during a currently UNLOCKED Lock Schedule period.
+- Missing an Alarm because the phone was powered off through its entire
+  ring window still punishes it - BlockEnforcer now catches up on any
+  fully-elapsed, never-resolved Alarm occurrence the next time the app or
+  device wakes up (see checkForMissedAlarms), walking forward through any
+  backlog one occurrence at a time.
+- Uses ZXing's core barcode-decoding library (a single, dependency-free
+  jar - no native code, no AAR, nothing like the AmneziaWG library
+  situation from 4.30) paired with the classic Camera API for the actual
+  scanning, kept deliberately in the same "plain SDK, zero real
+  dependencies" style as the rest of this app.
+- New permissions: CAMERA (for scanning), VIBRATE/WAKE_LOCK/
+  FOREGROUND_SERVICE/USE_FULL_SCREEN_INTENT (for the ringing screen and
+  sound/vibration while an Alarm is active).
+- HONEST LIMIT: like every app on Android, this cannot truly prevent
+  force-stopping Self-Control itself from Settings, or powering the phone
+  off - Device Owner has no API for either. The phone-off case is
+  specifically handled by the missed-alarm catch-up above; force-stop
+  during an active ring isn't preventable by any app, same limitation this
+  README has always been honest about for Settings access generally.
+
+WHAT CHANGED IN 4.32
+-----------------------
+- FOLLOW-UP TO 4.31: not just re-enforcing DISALLOW_CONFIG_VPN - this app's
+  own VPN is now gone entirely, by explicit request. DnsVpnService (the
+  hand-rolled DNS-filtering/TCP-UDP-relay engine this whole project's
+  history - versions 4.7 through 4.29 - was built around) is deleted,
+  along with everything that only existed to support it:
+  - DnsVpnService.java, TcpSession.java, UdpRelaySession.java,
+    IpV4UdpPacket.java, TcpPacket.java, DnsMessage.java, ChecksumUtil.java
+    (the packet-relay engine itself)
+  - VpnSafetyStorage.java and the "VPN Safety" / "Delete VPN Safety
+    Forever" buttons on the main screen (a kill switch for a VPN that no
+    longer exists has nothing left to switch)
+  - DiagnosticActivity.java and the "Network Diagnostics" screen (it
+    existed specifically to debug DnsVpnService's pipeline - nothing left
+    to diagnose)
+  - The <service> declaration for DnsVpnService in the manifest
+  - The INTERNET and ACCESS_NETWORK_STATE permissions (nothing in this
+    app talks to the network anymore at all)
+- App-suspension-based blocking (Blocks, Lock Schedule, Holiday Breaks,
+  Master Safety) is completely unaffected - none of it ever depended on
+  the VPN. This is the app's actual, real blocking mechanism and it's
+  untouched.
+- IMPORTANT - Blocked Websites is now unenforced. The list (Blocks >
+  Blocked Websites) still exists and can still be edited, but nothing
+  currently blocks the domains on it - that enforcement was entirely
+  DnsVpnService's job, and no replacement exists. The screen's own
+  description now says this directly. If domain-level blocking is wanted
+  again later, it needs a new mechanism - not necessarily VPN-based.
+- WHY: a full-tunnel VPN (this app's own DNS-filter engine, and separately
+  the WireGuard/AmneziaWG self-hosted-server replacement explored in
+  4.30/4.31) breaks banking apps, which do their own VPN-detection as a
+  fraud-prevention measure. That's a hard blocker for daily-driver use,
+  independent of how well any particular VPN engine is built or
+  configured - this isn't a bug to fix, it's why VPN-based blocking is
+  being abandoned as an approach entirely.
+
+WHAT CHANGED IN 4.31
+-----------------------
+- VPN-BASED BLOCKING PLAN ABANDONED: after 4.30's temporary release of
+  DISALLOW_CONFIG_VPN (to test WireGuard/AmneziaWG apps against a real
+  self-hosted server), the whole idea of running this app's traffic
+  through a full-tunnel VPN was dropped - a full VPN breaks banking apps
+  (a real, common fraud-prevention check many of them do), which makes it
+  unworkable as a daily-driver device restriction, regardless of which VPN
+  engine or how well it's configured.
+- FIXED (reverted 4.30): that restriction is back to being actively
+  enforced (addUserRestriction, not cleared) every cycle, same as every
+  version before 4.30. No third-party VPN app - including the ones used
+  for 4.30's testing - can be authorized on this device anymore. This
+  closes the temporary gap 4.30 deliberately left open.
+- The self-hosted WireGuard/AmneziaWG server itself (Oracle Cloud) is
+  untouched by this change - it's just no longer anything this app points
+  at or depends on.
+
+WHAT CHANGED IN 4.30
+-----------------------
+- CONTEXT: this app's whole custom VPN engine (DnsVpnService's hand-rolled
+  TCP/UDP relay) is being replaced with the official WireGuard protocol -
+  a real, standard remote VPN server, not custom packet-relay code. Step
+  one is proving the new server works at all, using the official WireGuard
+  Android app before writing the real integration into this app.
+- PROBLEM HIT: applyPermanentDeviceOwnerProtections() has always
+  unconditionally applied UserManager.DISALLOW_CONFIG_VPN as a permanent,
+  every-cycle restriction (real tamper-resistance - stops anyone from
+  bypassing Blocks by just installing a different VPN app). That's exactly
+  right for the finished product, but it also means Android silently
+  refuses to authorize ANY third-party VPN app - including the official
+  WireGuard app being used to test the replacement server - with no
+  in-app toggle to release it. ("VPN service not authorized by user" in
+  WireGuard, with no obvious cause, is what this restriction looks like
+  from the other app's side.)
+- FIXED (temporarily): that one addUserRestriction() call now calls
+  clearUserRestriction() instead, so any third-party VPN - specifically
+  the WireGuard app - can be authorized again while the new engine is
+  being built and tested against the real server.
+- THIS IS NOT THE FINAL STATE. Once WireGuard is integrated directly into
+  this app (replacing DnsVpnService, same package, same Device Owner),
+  DISALLOW_CONFIG_VPN needs to go back to being actively enforced -
+  otherwise this specific protection is simply off, permanently, on any
+  device running this build. Revert this one line back to
+  addUserRestriction() as part of that integration work, not before.
+
+WHAT CHANGED IN 4.29
+-----------------------
+- ACTUAL ROOT CAUSE FOUND, after 4.21-4.28 chased (and ruled out one by one,
+  each with real evidence) thread starvation, a single point of failure in
+  DNS forwarding, Block-list drops, network validation, and silently-dropped
+  IPv6 - none of which were it. A live diagnostic capture caught the real
+  thing directly: a working "Via" browser session (three established
+  connections loading Wikipedia, a fourth just-established connection to
+  Google) got torn down ALL AT ONCE - "client sent RST" on every single one
+  simultaneously - immediately followed by an unrelated Instagram flow
+  failing to write to the tunnel with EIO (I/O error). That is not four
+  separate app-level failures - it is the VPN tunnel itself being torn down
+  and recreated out from under everything using it at that exact instant.
+- Background apps (WhatsApp, Instagram) silently reconnect when this
+  happens and look completely unaffected. A browser's one-shot page load
+  caught mid-flight when it happens just fails outright, with no retry -
+  which is exactly the "some things work, some randomly don't" pattern
+  reported throughout this app's entire history, on every network, every
+  browser, every Android build tested.
+- WHY it was restarting: BlockEnforcer.applyVpnLockdownAndServiceState()
+  runs on every reapply cycle - every time the app is opened, every
+  settings save, AND a periodic safety-net alarm that fires roughly every
+  60 seconds whenever any Block exists (see scheduleNextAlarm). Every
+  single one of those calls unconditionally called
+  DevicePolicyManager.setAlwaysOnVpnPackage() again, even when the value
+  being set was byte-for-byte identical to what was already configured.
+  Android does not appear to treat a redundant call as a no-op - it
+  restarts the VPN network's association regardless, tearing down every
+  live connection through it. With a Block configured, this was happening
+  roughly once a minute, indefinitely, for as long as the app has existed.
+- FIXED: applyVpnLockdownAndServiceState() now reads the CURRENT always-on
+  assignment first (DevicePolicyManager.getAlwaysOnVpnPackage()) and only
+  calls setAlwaysOnVpnPackage() when it actually needs to change - VPN
+  Safety just got toggled, or the assignment is missing/wrong for some
+  other reason. On every other reapply cycle (the vast majority of them),
+  this is now a no-op, and the tunnel stays up uninterrupted.
+
+WHAT CHANGED IN 4.28
+-----------------------
+- A live capture ruled out Google-specific behavior directly: loading
+  wikipedia.org (unrelated to Google entirely) failed with the exact same
+  DNS_PROBE_FINISHED_BAD_CONFIG error, and the log around that moment
+  showed www.wikipedia.org queried from TWO different source ports almost
+  simultaneously - the classic signature of a dual-stack resolver sending
+  separate A (IPv4) and AAAA (IPv6) queries. Both got real answers and
+  were forwarded correctly. After that, same pattern as every previous
+  capture: no TCP or UDP connection for actually fetching the page ever
+  appeared anywhere in the log, for any app attribution, at all.
+- NEW LEADING THEORY: this VPN has a known, already-documented limitation
+  - it never declares any IPv6 address or route, so IPv6-version packets
+  landing on the tun interface were only ever silently counted
+  ("ipv6NoiseCount"), never individually logged, on the unverified
+  assumption they were just routine background noise (NDP/MLD etc). If a
+  browser's dual-stack connection logic gets a real IPv6 answer (which
+  this app DOES forward correctly, since DNS is plain UDP/53 regardless of
+  A vs AAAA) and prefers IPv6 for the actual page-load connection
+  (standard "Happy Eyeballs" behavior in modern browsers when a real
+  AAAA record exists), that connection attempt would land in this exact
+  silent-count-only path and vanish with zero trace - matching "DNS
+  visibly works, the real connection leaves no trace anywhere" exactly,
+  for every site/app combination observed so far (Google, Wikipedia,
+  Facebook's own CDN, Anthropic's API - all real, modern, IPv6-enabled
+  services; WhatsApp/Instagram/Facebook Lite, which don't race IPv6 the
+  same way, keep working).
+- NOT YET CONFIRMED - this is a theory pending direct evidence, deliberately
+  not accompanied by a speculative "fix" this time. FIXED (diagnostic-only):
+  what used to be an anonymous, undifferentiated counter now logs the real
+  destination, protocol, owning app, and whether it's a TCP SYN (i.e. a
+  genuine new connection attempt, not routine housekeeping) for every IPv6
+  TCP/UDP packet silently dropped this way. The next capture during a real
+  failure should show definitively whether this is actually what's
+  happening.
+
+WHAT CHANGED IN 4.27
+-----------------------
+- NEW: "Start Live Monitoring" button on the Diagnostics screen. Previously
+  every diagnostic was a single snapshot - you had to reproduce a failure,
+  THEN open Diagnostics, by which point the exact failing moment was often
+  already gone or buried under whatever happened after. Live monitoring
+  keeps the traffic counters and live log refreshing on-screen every ~1
+  second (auto-scrolling to the newest entries) so you can start it BEFORE
+  reproducing the problem and watch it happen in real time, and it keeps
+  running until you tap "Stop Live Monitoring" - not a fixed duration.
+- Only the traffic counters + log actually repeat every second - the real
+  network probes (direct DNS queries to CleanBrowsing/Google/Cloudflare,
+  the self-test, raw TCP tests) still run ONCE per Start/Run press, not
+  every tick. Repeating those every second would hammer external DNS
+  servers for no reason, which is a real concern given a live diagnostic
+  earlier in this app's history directly caught CleanBrowsing itself
+  rate-limiting this network.
+- Leaving the Diagnostics screen automatically stops live monitoring
+  (it would otherwise leak the screen's views and keep waking the app up
+  in the background for nothing) - come back and tap Start again to
+  resume watching.
+
+WHAT CHANGED IN 4.26
+-----------------------
+- 4.25's Block-drop logging came back completely clean (no DROPPED/reaper
+  lines at all) on a live diagnostic where Chrome's DNS still succeeded but
+  NO TCP or UDP connection for com.android.chrome appeared anywhere else in
+  the log - ruling out the Block-list theory directly. Chrome's actual
+  page-load connection isn't reaching this app's code at all - not
+  mishandled, not dropped, just never arriving - meaning whatever's wrong
+  is between Chrome and this app's tun interface, not inside DnsVpnService.
+- ADDED: the diagnostic now reports whether Android has actually marked
+  the active (VPN) network as VALIDATED (NetworkCapabilities.
+  NET_CAPABILITY_VALIDATED), alongside the INTERNET and CAPTIVE_PORTAL
+  capabilities. This is a real, separate Android mechanism: the OS runs
+  its own connectivity probe on every network including a VPN's, and
+  Chrome specifically is known to refuse to load pages over a network
+  that hasn't been validated yet, even while DNS lookups and other apps
+  may proceed regardless. If VALIDATED=false shows up, that's very likely
+  the actual explanation for "DNS/some apps work, Chrome shows nothing" -
+  and it would mean the fix is in how/whether this VPN's Builder responds
+  to Android's own validation probe, not in packet-by-packet relay logic
+  that's already been gone through in detail without finding a bug there.
+
+WHAT CHANGED IN 4.25
+-----------------------
+- LIKELY REAL FINDING, from reading a live diagnostic with 4.24's new
+  app-attribution logging: Chrome's DNS query for google.com appeared in
+  the log and succeeded normally (app=com.android.chrome, 540ms, response
+  written back to tun) - but NO TCP or UDP connection for Chrome appeared
+  anywhere else in the same window. Chrome resolved a real IP and then
+  never even attempted to open the actual page-load connection through the
+  tunnel, as far as this app's own log could show.
+- ROOT CAUSE (found by re-reading dispatchUdp/dispatchTcp with this in
+  mind): DNS queries (port 53) are NEVER checked against
+  isOwningAppBlocked() at all - only regular TCP connections and non-DNS
+  UDP flows are. And when isOwningAppBlocked() DOES return true for one of
+  those, the code silently returns with NO log line whatsoever. So if an
+  app ends up in an active Block's package list - deliberately, or via the
+  auto-add-new-installs feature, which has had at least one real bug
+  before (see 4.20) - the exact symptom is: its DNS keeps resolving fine
+  (never checked), while every actual connection just vanishes with zero
+  trace. That matches every report in this whole troubleshooting session:
+  DNS always looked healthy, specific apps' real traffic just disappeared.
+- FIXED (diagnostic-only, not yet confirmed as THE root cause): the
+  silent Block-drop in dispatchTcp, dispatchUdp, and the idle-session
+  reaper now all log which app got dropped and why. The next diagnostic
+  taken while something is broken will show definitively whether this is
+  what's actually happening.
+- IF THIS IS CONFIRMED: the real fix is checking (and if needed, editing)
+  the Blocks list in the app itself - Blocks > each Block > its app list -
+  to make sure Chrome/whatever isn't in there by accident. This isn't
+  something a code patch should silently override, since deliberately
+  blocking an app is the entire point of this app's Blocks feature.
+
+WHAT CHANGED IN 4.24
+-----------------------
+- DIAGNOSTIC IMPROVEMENT, not a fix - because 4.23 didn't actually fix the
+  underlying problem. A diagnostic taken right after 4.23 showed the DNS
+  pipeline completely healthy (CleanBrowsing resolving in 162ms, every
+  query in the log succeeding, no fallback ever needed, self-test passing)
+  while Chrome was STILL broken - proving the DNS-forwarding/CleanBrowsing
+  theory from 4.23, while real, was never the (or not the only) actual
+  cause of "some apps work, others don't". The live log had no way to show
+  WHICH app a given packet or query belonged to, so there was no way to
+  tell "Chrome's traffic never reached the tunnel at all" apart from "it
+  reached the tunnel and something else went wrong" - both looked
+  identical in the log.
+- ADDED: every DNS query, new TCP connection, and new UDP flow logged by
+  DnsVpnService now includes "app=<package name>" (via
+  ConnectivityManager.getConnectionOwnerUid - the same per-connection
+  owner lookup already used to decide what's blocked, just also used for
+  log attribution now). The next diagnostic taken while something is
+  actually broken will show directly whether the failing app's own
+  traffic is showing up in this log at all - that's the key fact still
+  missing to find the real cause.
+
+WHAT CHANGED IN 4.23
+-----------------------
+- ACTUAL ROOT CAUSE FOUND for "some apps work, others (especially Chrome)
+  don't" - and it was never the 4.21/4.22 threading changes at all. A live
+  diagnostic caught it directly: the diagnostic's OWN direct probe to
+  CleanBrowsing (185.228.168.168, our ONLY upstream DNS resolver at the
+  time) timed out after 4s - completely bypassing the VPN and every line of
+  code touched in 4.21/4.22 - while the exact same diagnostic's direct
+  probes to Google, Cloudflare, and the network's own router DNS all
+  succeeded normally. The live pipeline log showed the identical
+  SocketTimeoutException happening inside forwardToRealDns at the same
+  time. CleanBrowsing was simply unreachable/rate-limited on this network
+  at that moment - nothing wrong with this app's code, but this app had
+  ZERO fallback: every query that landed in that window just failed
+  outright, with no way to recover it. A browser loading a page touches
+  many distinct domains per load, so it was far more likely to hit that
+  failure window than a low-request-volume app like Facebook Lite - that
+  alone fully explains "some apps work, others don't" without needing any
+  threading explanation.
+- FIXED: forwardToRealDns now tries CleanBrowsing first as before, but on
+  timeout/failure automatically retries once against a fallback resolver -
+  Cloudflare's Family filter (1.1.1.2, blocks malware + adult content).
+  Deliberately NOT a plain unfiltered resolver like 8.8.8.8/1.1.1.1 - a
+  fallback should never silently remove the content filtering this app
+  exists for. Per-attempt timeout reduced from 5s to 3s so a
+  primary-then-fallback worst case stays around 6s instead of a full 10s.
+- DiagnosticActivity's "How to read this" section now specifically calls
+  out this exact failure pattern (CleanBrowsing direct test fails while
+  Google/Cloudflare direct succeed) so it's identifiable at a glance in
+  future, instead of needing a full manual read-through of the raw log
+  like this time.
+
+WHAT CHANGED IN 4.22
+-----------------------
+- REAL FIX for a regression 4.21 itself introduced: right after that update,
+  reports came in of "Facebook Lite works, but Facebook videos won't play,
+  Chrome doesn't work, and other apps sometimes don't work" - worse than
+  before, not better. Root cause: 4.21 fixed the old per-UDP-packet raw-
+  Thread storm by moving ALL UDP dispatch (DNS queries AND everything else)
+  onto one shared 64-thread pool. That merged two very different workloads
+  onto the same pool: DNS forwarding, which legitimately blocks for up to
+  5s waiting on the upstream resolver, and generic UDP relay dispatch
+  (overwhelmingly QUIC/HTTP3 - what Chrome, video streaming, and most
+  modern apps actually use for real data transfer), where each task is
+  meant to be near-instant. A burst of slow DNS lookups could occupy every
+  worker in the shared pool for seconds at a time, and every OTHER queued
+  UDP packet - including live QUIC data for a connection Chrome or a video
+  player already had open - queued up behind them. Facebook Lite (plain
+  HTTP over TCP, which bypasses this pool entirely - TCP is handled
+  inline) kept working fine throughout, which is exactly the split that
+  was reported.
+- FIXED: DNS forwarding and generic UDP relay dispatch now run on two
+  SEPARATE bounded pools (DNS_FORWARD_THREADS=32, UDP_DISPATCH_THREADS=64
+  in DnsVpnService), chosen via a cheap peek at the UDP destination port
+  before the full packet parse. A burst of slow DNS lookups can no longer
+  block the fast relay path Chrome/video actually depend on for data, and
+  vice versa.
+- FIXED (found while investigating the above, not yet reported as its own
+  symptom): the UDP dispatch pool being shut down mid-flight (normal VPN
+  Safety toggle or service restart) could throw an uncaught
+  RejectedExecutionException on the tun-read thread. Android's default
+  behavior is to kill the ENTIRE app process on ANY uncaught exception on
+  ANY thread, not just that feature - meaning a plain VPN restart could, in
+  principle, crash the whole app and briefly take real internet down with
+  it while it restarted. Both dispatch pools' submissions are now
+  defensively guarded against this.
+
+WHAT CHANGED IN 4.21
+-----------------------
+- LIKELY REAL FIX for intermittent "Chrome says DNS_PROBE_FINISHED_BAD_CONFIG,
+  other apps sometimes don't load" while every diagnostic test (direct DNS,
+  the in-process self-test, raw TCP) reports success: DnsVpnService was
+  spawning a brand-new raw Thread for EVERY single UDP packet it read off
+  the tun interface - not one thread per flow, one thread per packet. That
+  includes every DNS query AND every other UDP packet (QUIC/HTTP3, which is
+  most of what modern Chrome traffic actually is). A real diagnostic
+  session showed 5,000+ UDP packets, meaning 5,000+ raw OS threads created
+  in one sitting - and the live pipeline log showed DNS forwards that
+  should take ~200-800ms (confirmed by the diagnostic's own direct-probe
+  timings to the same upstream) instead taking 3.8-4.1 seconds under load.
+  That's thread-scheduling contention, not network latency - enough of it
+  that Chrome (and other apps) legitimately give up and report DNS as
+  broken outright rather than just slow.
+- FIXED: UDP packet dispatch now runs on a bounded fixed thread pool
+  (UDP_DISPATCH_THREADS = 64) instead of an unbounded Thread-per-packet.
+  One slow upstream DNS response still can't block the next query (the
+  original point of dispatching UDP off the tun-read thread at all) -
+  concurrency is preserved, just capped instead of unbounded.
+- INCREASED the in-app diagnostic log buffer (DiagnosticActivity's live
+  pipeline log) from the last 60 events to the last 400. At real traffic
+  volumes (thousands of packets per session) 60 entries got overwritten
+  within seconds, which meant the exact moment something actually failed
+  was almost always already evicted by the time you opened Diagnostics to
+  look. 400 gives a much better chance the failure itself is still in the
+  visible window.
+- Diagnostic report text size increased (12sp -> 15sp) - easier to actually
+  read the report on-device without zooming, per direct request.
 
 WHAT CHANGED IN 4.20
 -----------------------
