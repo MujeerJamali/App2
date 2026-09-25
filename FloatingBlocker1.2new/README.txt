@@ -87,6 +87,16 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.77
+-----------------------
+- NEW: "Clear Current Punishment #3 (One-Time Use)" on the main
+  screen's Safety Valve section - a third, independent one-time Clear
+  Current Punishment action, tracked under its own used-flag so it
+  stays available even after the first two one-time Clear Current
+  Punishment buttons have already been spent. Same behavior as the
+  first two - clears every Block's current widen window - and same
+  one-time-only rule: gone for good once used.
+
 WHAT CHANGED IN 4.76
 -----------------------
 - NEW: "View Active Punishments" screen (main screen, Manage section).

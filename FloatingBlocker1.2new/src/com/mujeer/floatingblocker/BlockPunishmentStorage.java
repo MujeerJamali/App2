@@ -150,4 +150,18 @@ public class BlockPunishmentStorage {
     public void markOneTimeClearUsed2() {
         prefs.edit().putBoolean("one_time_clear_used_2", true).apply();
     }
+
+    /**
+     * A third, independent one-time Clear Current Punishment action, for
+     * when the first two have already been spent. Same reasoning as
+     * hasUsedOneTimeClear2/markOneTimeClearUsed2 above, tracked under its
+     * own flag so using either of the earlier two doesn't use this one up.
+     */
+    public boolean hasUsedOneTimeClear3() {
+        return prefs.getBoolean("one_time_clear_used_3", false);
+    }
+
+    public void markOneTimeClearUsed3() {
+        prefs.edit().putBoolean("one_time_clear_used_3", true).apply();
+    }
 }

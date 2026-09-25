@@ -50,6 +50,13 @@
     <string name="confirm_clear_punishment_yes_2">Yes, clear it (uses this up forever)</string>
     <string name="msg_punishment_cleared_2">Cleared. This one-time action has now been used.</string>
 
+    <!-- Clear Current Punishment #3 - a third, independent one-time use, for after the first two are already spent -->
+    <string name="clear_punishment_button_3">🧹 Clear Current Punishment #3 (One-Time Use)</string>
+    <string name="confirm_clear_punishment_title_3">Clear all current punishment?</string>
+    <string name="confirm_clear_punishment_message_3">This clears any Blocks currently widened by a missed Alarm. This is a third, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
+    <string name="confirm_clear_punishment_yes_3">Yes, clear it (uses this up forever)</string>
+    <string name="msg_punishment_cleared_3">Cleared. This one-time action has now been used.</string>
+
     <!-- Active Punishments status screen -->
     <string name="view_punishments_button">View Active Punishments</string>
     <string name="punishments_screen_title">Active Punishments</string>
