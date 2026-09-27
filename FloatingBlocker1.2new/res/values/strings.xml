@@ -57,6 +57,14 @@
     <string name="confirm_clear_punishment_yes_3">Yes, clear it (uses this up forever)</string>
     <string name="msg_punishment_cleared_3">Cleared. This one-time action has now been used.</string>
 
+    <!-- Stop All Ringing Alarms - one-time only -->
+    <string name="stop_all_ringing_button">🔕 Stop All Ringing Alarms (One-Time Use)</string>
+    <string name="confirm_stop_all_ringing_title">Stop every ringing Alarm right now?</string>
+    <string name="confirm_stop_all_ringing_message">This force-stops any Alarm currently ringing - sound, vibration, and the ring screen - WITHOUT scanning a barcode. It counts as dismissed, not missed, so nothing gets punished. It can only ever be used once - after this it\'s gone for good, so only use it if a ring is genuinely stuck with no other way to dismiss it.</string>
+    <string name="confirm_stop_all_ringing_yes">Yes, stop it (uses this up forever)</string>
+    <string name="msg_stopped_ringing_alarms">Stopped %1$d ringing Alarm(s). This one-time action has now been used.</string>
+    <string name="msg_no_ringing_alarms">Nothing is currently ringing. This one-time action has now been used.</string>
+
     <!-- Active Punishments status screen -->
     <string name="view_punishments_button">View Active Punishments</string>
     <string name="punishments_screen_title">Active Punishments</string>

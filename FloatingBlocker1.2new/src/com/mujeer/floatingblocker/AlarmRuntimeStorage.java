@@ -40,4 +40,13 @@ public class AlarmRuntimeStorage {
     public void clearRinging(String alarmId) {
         prefs.edit().remove("ringing_" + alarmId).apply();
     }
+
+    /** Whether the one-time Stop All Ringing Alarms action has already been used - it can only ever be used once. */
+    public boolean hasUsedOneTimeStopAllRinging() {
+        return prefs.getBoolean("one_time_stop_all_ringing_used", false);
+    }
+
+    public void markOneTimeStopAllRingingUsed() {
+        prefs.edit().putBoolean("one_time_stop_all_ringing_used", true).apply();
+    }
 }

@@ -87,6 +87,17 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.78
+-----------------------
+- NEW: "Stop All Ringing Alarms (One-Time Use)" on the main screen's
+  Safety Valve section - force-stops every currently-ringing Alarm
+  (sound, vibration, the full-screen ring activity) WITHOUT scanning a
+  barcode. Resolved as dismissed, not missed (AlarmPunisher.
+  stopAllRinging), so it doesn't punish anything either. Meant for a
+  ring that's genuinely stuck with no other way to dismiss it (lost
+  barcodes, a broken camera). Usable exactly once, ever, like every
+  other safety valve in this app - after that it's gone for good.
+
 WHAT CHANGED IN 4.77
 -----------------------
 - NEW: "Clear Current Punishment #3 (One-Time Use)" on the main

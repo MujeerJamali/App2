@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private Button btnClearPunishment;
     private Button btnClearPunishment2;
     private Button btnClearPunishment3;
+    private Button btnStopAllRinging;
     private Button btnPauseAllOneHour;
     private Button btnPauseUntil11pm;
     private Button btnExcludeBusinessErp;
@@ -89,6 +90,7 @@ public class MainActivity extends Activity {
         btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
         btnClearPunishment2 = (Button) findViewById(R.id.btnClearPunishment2);
         btnClearPunishment3 = (Button) findViewById(R.id.btnClearPunishment3);
+        btnStopAllRinging = (Button) findViewById(R.id.btnStopAllRinging);
         btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
         btnPauseUntil11pm = (Button) findViewById(R.id.btnPauseUntil11pm);
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
@@ -160,6 +162,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onClearPunishment3Clicked();
+            }
+        });
+
+        btnStopAllRinging.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onStopAllRingingClicked();
             }
         });
 
@@ -405,6 +414,8 @@ public class MainActivity extends Activity {
                 ? android.view.View.GONE : android.view.View.VISIBLE);
         btnClearPunishment3.setVisibility(punishmentStorage.hasUsedOneTimeClear3()
                 ? android.view.View.GONE : android.view.View.VISIBLE);
+        btnStopAllRinging.setVisibility(new AlarmRuntimeStorage(this).hasUsedOneTimeStopAllRinging()
+                ? android.view.View.GONE : android.view.View.VISIBLE);
 
         refreshPauseAllButton();
         refreshPauseUntil11pmButton();
@@ -498,6 +509,39 @@ public class MainActivity extends Activity {
                         punishmentStorage.clearAll();
                         punishmentStorage.markOneTimeClearUsed3();
                         Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_3, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    /**
+     * A one-time-only escape hatch for an Alarm ring that's genuinely stuck
+     * with no other way to dismiss it (e.g. lost barcodes, a broken
+     * camera) - force-stops every currently-ringing Alarm without a scan.
+     * Resolved as dismissed, not missed (see AlarmPunisher.stopAllRinging),
+     * so nothing gets punished by using it. Not gated on Lock Schedule's
+     * unlocked state, same reasoning as the other one-time safety valves,
+     * and gone forever once used.
+     */
+    private void onStopAllRingingClicked() {
+        final AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(this);
+        if (runtime.hasUsedOneTimeStopAllRinging()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_stop_all_ringing_title)
+                .setMessage(R.string.confirm_stop_all_ringing_message)
+                .setPositiveButton(R.string.confirm_stop_all_ringing_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        int stopped = AlarmPunisher.stopAllRinging(MainActivity.this);
+                        runtime.markOneTimeStopAllRingingUsed();
+                        String message = stopped > 0
+                                ? String.format(getString(R.string.msg_stopped_ringing_alarms), stopped)
+                                : getString(R.string.msg_no_ringing_alarms);
+                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
                         refreshUi();
                     }
                 })

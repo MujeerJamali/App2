@@ -30,6 +30,30 @@ public class AlarmPunisher {
     }
 
     /**
+     * Emergency, one-time-only escape hatch: force-stops every Alarm that's
+     * currently ringing (sound, vibration, the full-screen ring activity)
+     * WITHOUT scanning a barcode - resolved as dismissed, not missed, so it
+     * doesn't punish anything either. Meant for a ring that's genuinely
+     * stuck (e.g. lost barcodes, a broken camera) with no other way out -
+     * see MainActivity's Stop All Ringing Alarms button, which is the only
+     * caller and enforces the one-time-only part via
+     * AlarmRuntimeStorage.hasUsedOneTimeStopAllRinging(). Returns how many
+     * Alarms were actually stopped.
+     */
+    public static int stopAllRinging(Context context) {
+        AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
+        int stopped = 0;
+        for (Alarm alarm : new AlarmsStorage(context).loadAlarms()) {
+            long ringingOccurrence = runtime.getRingingOccurrence(alarm.id);
+            if (ringingOccurrence != 0) {
+                markDismissed(context, alarm.id, ringingOccurrence);
+                stopped++;
+            }
+        }
+        return stopped;
+    }
+
+    /**
      * True if ANY Holiday Break at all - not just ones covering this
      * Alarm's own affected Blocks - is active at the given moment. An
      * Alarm never rings while this is true (see AlarmRingReceiver and
