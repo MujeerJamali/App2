@@ -68,6 +68,8 @@ public class BlockEnforcer {
         Log.d(TAG, "applyNow: after releaseStrictPrivateDnsIfLocked");
         applyDebuggingFeaturesLock(context, dpm, admin);
         Log.d(TAG, "applyNow: after applyDebuggingFeaturesLock");
+        applyTimeChangeLock(context, dpm, admin);
+        Log.d(TAG, "applyNow: after applyTimeChangeLock");
         applyBootstrapToolsLock(context, dpm, admin);
         Log.d(TAG, "applyNow: after applyBootstrapToolsLock");
         checkForNewlyInstalledApps(context, ownPackage);
@@ -481,6 +483,31 @@ public class BlockEnforcer {
                 dpm.addUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES);
             } else {
                 dpm.clearUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES);
+            }
+        } catch (Exception e) {
+            // Best effort - if this specific restriction can't be applied, everything else still runs.
+        }
+    }
+
+    /**
+     * Every enforcement decision in this whole app (Blocks, Lock Schedule
+     * itself, Alarm triggers, punishment windows) runs on the device's own
+     * wall-clock time. Being able to hand-set that clock is a hole big
+     * enough to walk any of it back through - wind the clock past a locked
+     * window, or past an Alarm's trigger, and the schedule never actually
+     * applied at all. Locked the same way and on the same signal as the
+     * debugging-features lock above: only while Lock Schedule is currently
+     * locked, released the instant it isn't. The OS still keeps itself on
+     * network/GPS time throughout - this only blocks a HAND-set date, time,
+     * or timezone via Settings.
+     */
+    private static void applyTimeChangeLock(Context context, DevicePolicyManager dpm, ComponentName admin) {
+        boolean shouldBeLocked = new LockScheduleStorage(context).isCurrentlyLocked();
+        try {
+            if (shouldBeLocked) {
+                dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_DATE_TIME);
+            } else {
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_DATE_TIME);
             }
         } catch (Exception e) {
             // Best effort - if this specific restriction can't be applied, everything else still runs.

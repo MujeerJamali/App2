@@ -87,6 +87,20 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.79
+-----------------------
+- NEW: hand-setting the date, time, or timezone via Settings is now
+  blocked (DISALLOW_CONFIG_DATE_TIME) whenever Lock Schedule is
+  currently locked - same automatic, no-button pattern already used
+  for the debugging-features lock, released the instant it unlocks.
+  Every enforcement decision in this app (Blocks, Alarm triggers,
+  punishment windows) runs on the device's wall-clock time, so being
+  able to hand-set that clock was a way to walk any of it back -
+  winding the clock past a locked window or past an Alarm's trigger
+  meant the schedule never actually applied. The OS still keeps
+  itself on network/GPS time throughout; this only blocks a manual
+  override of it.
+
 WHAT CHANGED IN 4.78
 -----------------------
 - NEW: "Stop All Ringing Alarms (One-Time Use)" on the main screen's
