@@ -138,11 +138,13 @@
     <!-- Holiday Breaks -->
     <string name="holiday_breaks_button">🏖️  Holiday Breaks</string>
     <string name="holiday_breaks_screen_title">Holiday Breaks</string>
-    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is allowed during an unlocked Lock Schedule time, or any time if its start doesn\'t take effect until a later day (a day starts at 2:00 AM for this purpose, so 1:30 AM still counts as the day before). Cancelling one early is always allowed, any time.</string>
+    <string name="holiday_breaks_desc">A Holiday Break pauses the Blocks and Alarms you choose, for one specific date-and-time window you set ahead of time - as many as you want. Creating one is allowed during an unlocked Lock Schedule time, or any time if its start doesn\'t take effect until a later day (a day starts at 2:00 AM for this purpose, so 1:30 AM still counts as the day before). Cancelling one early is always allowed, any time.</string>
     <string name="msg_holiday_breaks_locked">This can only be created during an unlocked time, unless its start is on a later day (a day starts at 2:00 AM) - check your Lock Schedule, or pick a later start date/time.</string>
     <string name="add_holiday_break_button">+ Add Holiday Break</string>
     <string name="cancel_break_button">Cancel Break</string>
     <string name="confirm_cancel_break_message">Cancel this Holiday Break now? The affected Blocks will resume their normal schedule immediately.</string>
+    <string name="break_blocks_prefix">Blocks: </string>
+    <string name="break_alarms_prefix">Alarms: </string>
     <string name="holiday_break_edit_screen_title">New Holiday Break</string>
     <string name="break_name_hint">Break name (e.g. Eid Trip)</string>
     <string name="msg_enter_break_name">Enter a name for this Holiday Break.</string>
@@ -152,6 +154,8 @@
     <string name="pick_time_button">Pick Time</string>
     <string name="select_blocks_button">Select Blocks</string>
     <string name="msg_no_blocks_to_select">You don\'t have any Blocks yet - create one first under Blocks.</string>
+    <string name="select_alarms_button">Select Alarms</string>
+    <string name="msg_no_alarms_to_select">You don\'t have any Alarms yet - create one first under Alarms.</string>
     <string name="msg_break_end_before_start">The end date/time must be after the start date/time.</string>
     <string name="msg_select_at_least_one_block">Select at least one Block for this break to affect.</string>
     <string name="msg_break_saved">Holiday Break saved.</string>

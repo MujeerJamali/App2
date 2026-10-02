@@ -87,6 +87,26 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.80
+-----------------------
+- NEW: Holiday Breaks now also ask which specific Alarms they affect,
+  the exact same way they already ask which Blocks they affect
+  (HolidayBreak.affectedAlarmIds). An Alarm not selected on a Break
+  rings normally even while that Break is active - previously ANY
+  active Break silenced EVERY Alarm unconditionally, with no way to
+  choose. Existing Breaks saved before this update are migrated once
+  to keep their old behavior (every Alarm that existed at the time),
+  so nothing already relying on a Break to silence every Alarm
+  changes; newly created Breaks start from an explicit, deliberate
+  selection instead, just like Blocks. New Alarms are also now
+  automatically added to every existing Break's selection, mirroring
+  how new Blocks already work.
+- NEW: com.heytap.browser (Heytap/ColorOS's built-in browser) is now
+  permanently suspended, unconditionally, every cycle - added to the
+  existing known-browsers list that already backs up live browser
+  detection for the content-filtering protections. Not affected by
+  Blocks Pause or anything else; it stays suspended regardless.
+
 WHAT CHANGED IN 4.79
 -----------------------
 - NEW: hand-setting the date, time, or timezone via Settings is now

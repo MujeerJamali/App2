@@ -238,7 +238,7 @@ public class BlockEnforcer {
                 // should have rung in the first place (same rule
                 // AlarmRingReceiver applies live) - not just unpunished,
                 // but not counted as missed at all.
-                if (AlarmPunisher.isSuppressed(context, next)) {
+                if (AlarmPunisher.isSuppressed(context, alarm.id, next)) {
                     runtime.setLastHandledOccurrence(alarm.id, next);
                 } else {
                     AlarmPunisher.resolveMissed(context, alarm, next);
@@ -382,6 +382,7 @@ public class BlockEnforcer {
             "com.ecosia.android",
             "com.yandex.browser",
             "com.jio.web",
+            "com.heytap.browser",
     };
 
     /**

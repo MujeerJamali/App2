@@ -30,6 +30,7 @@ public class HolidayBreaksListActivity extends Activity {
 
     private HolidayBreaksStorage holidayBreaksStorage;
     private BlocksStorage blocksStorage;
+    private AlarmsStorage alarmsStorage;
     private LinearLayout breaksContainer;
     private Button btnAddHolidayBreak;
 
@@ -41,6 +42,7 @@ public class HolidayBreaksListActivity extends Activity {
 
         holidayBreaksStorage = new HolidayBreaksStorage(this);
         blocksStorage = new BlocksStorage(this);
+        alarmsStorage = new AlarmsStorage(this);
 
         breaksContainer = (LinearLayout) findViewById(R.id.breaksContainer);
         btnAddHolidayBreak = (Button) findViewById(R.id.btnAddHolidayBreak);
@@ -69,6 +71,7 @@ public class HolidayBreaksListActivity extends Activity {
             }
         });
         List<Block> allBlocks = blocksStorage.loadBlocks();
+        List<Alarm> allAlarms = alarmsStorage.loadAlarms();
 
         for (final HolidayBreak h : breaks) {
             View row = LayoutInflater.from(this).inflate(R.layout.list_item_holiday_break, breaksContainer, false);
@@ -77,7 +80,16 @@ public class HolidayBreaksListActivity extends Activity {
             Button btnCancel = (Button) row.findViewById(R.id.btnCancelBreak);
 
             txtRange.setText(h.name);
-            txtBlocks.setText(h.format() + "\n" + affectedBlockNames(h, allBlocks));
+            String blockNames = affectedBlockNames(h, allBlocks);
+            String alarmNames = affectedAlarmNames(h, allAlarms);
+            StringBuilder details = new StringBuilder(h.format());
+            if (!blockNames.isEmpty()) {
+                details.append("\n").append(getString(R.string.break_blocks_prefix)).append(blockNames);
+            }
+            if (!alarmNames.isEmpty()) {
+                details.append("\n").append(getString(R.string.break_alarms_prefix)).append(alarmNames);
+            }
+            txtBlocks.setText(details.toString());
 
             btnCancel.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -114,6 +126,17 @@ public class HolidayBreaksListActivity extends Activity {
             if (h.affectedBlockIds.contains(b.id)) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(b.name);
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "";
+    }
+
+    private String affectedAlarmNames(HolidayBreak h, List<Alarm> allAlarms) {
+        StringBuilder sb = new StringBuilder();
+        for (Alarm a : allAlarms) {
+            if (h.affectedAlarmIds.contains(a.id)) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(a.name);
             }
         }
         return sb.length() > 0 ? sb.toString() : "";

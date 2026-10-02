@@ -40,7 +40,7 @@ public class AlarmRingReceiver extends BroadcastReceiver {
         // reschedule) is keyed off this nominal time, not the raw one.
         long occurrenceMillis = alarm.nominalOccurrenceNear(System.currentTimeMillis());
 
-        if (AlarmPunisher.isSuppressed(context, occurrenceMillis)) {
+        if (AlarmPunisher.isSuppressed(context, alarmId, occurrenceMillis)) {
             // A Holiday Break is active right now, or the phone is far
             // enough from a configured home location - either way, this
             // occurrence doesn't ring at all (no sound, no vibration, no

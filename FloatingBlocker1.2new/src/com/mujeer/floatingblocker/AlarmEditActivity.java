@@ -391,7 +391,8 @@ public class AlarmEditActivity extends Activity {
                 break;
             }
         }
-        if (target == null) {
+        boolean isNewAlarm = (target == null);
+        if (isNewAlarm) {
             // Creating a brand new Alarm is always allowed, regardless of lock state.
             target = new Alarm();
             target.id = UUID.randomUUID().toString();
@@ -407,6 +408,19 @@ public class AlarmEditActivity extends Activity {
 
         alarmsStorage.saveAlarms(alarms);
         AlarmScheduler.rescheduleAll(this);
+
+        if (isNewAlarm) {
+            // Newly created Alarms are automatically covered by every
+            // existing Holiday Break too, same as newly created Blocks -
+            // so old Breaks don't need to be manually re-edited every time
+            // a new Alarm is added.
+            HolidayBreaksStorage holidayBreaksStorage = new HolidayBreaksStorage(this);
+            List<HolidayBreak> existingBreaks = holidayBreaksStorage.loadBreaks();
+            for (HolidayBreak h : existingBreaks) {
+                h.affectedAlarmIds.add(target.id);
+            }
+            holidayBreaksStorage.saveBreaks(existingBreaks);
+        }
 
         Toast.makeText(this, R.string.msg_alarm_saved, Toast.LENGTH_SHORT).show();
         finish();

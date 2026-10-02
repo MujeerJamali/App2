@@ -54,16 +54,19 @@ public class AlarmPunisher {
     }
 
     /**
-     * True if ANY Holiday Break at all - not just ones covering this
-     * Alarm's own affected Blocks - is active at the given moment. An
-     * Alarm never rings while this is true (see AlarmRingReceiver and
-     * BlockEnforcer.checkForMissedAlarms): a Holiday Break means "leave me
-     * alone during this window", and that includes not being woken up or
-     * forced to scan a barcode at all, not just not being punished.
+     * True if a Holiday Break that specifically lists this Alarm (via
+     * affectedAlarmIds) is active at the given moment - a Break that's
+     * active but doesn't list this Alarm has no effect on it, exactly
+     * like a Break not listing a given Block leaves that Block enforced.
+     * An Alarm never rings while this is true (see AlarmRingReceiver and
+     * BlockEnforcer.checkForMissedAlarms): being listed on an active Break
+     * means "leave me alone during this window", and that includes not
+     * being woken up or forced to scan a barcode at all, not just not
+     * being punished.
      */
-    public static boolean isSuppressedByHolidayBreak(Context context, long atMillis) {
+    public static boolean isSuppressedByHolidayBreak(Context context, String alarmId, long atMillis) {
         for (HolidayBreak h : new HolidayBreaksStorage(context).loadBreaks()) {
-            if (h.isActiveNow(atMillis)) {
+            if (h.isActiveNow(atMillis) && h.affectedAlarmIds.contains(alarmId)) {
                 return true;
             }
         }
@@ -71,17 +74,17 @@ public class AlarmPunisher {
     }
 
     /**
-     * Everything that stops an Alarm from ringing at all: an active
-     * Holiday Break at the given time, OR being far enough from a
-     * configured home location that restrictions don't apply right now
+     * Everything that stops an Alarm from ringing at all: being listed on
+     * an active Holiday Break at the given time, OR being far enough from
+     * a configured home location that restrictions don't apply right now
      * (see HomeLocationChecker). Unlike the Holiday Break check, the
      * location check has no history to look back on - it only ever
      * reflects the CURRENT position, regardless of what atMillis is, so a
      * past occurrence being resolved after the fact uses today's current
      * location as a best-effort stand-in.
      */
-    public static boolean isSuppressed(Context context, long atMillis) {
-        return isSuppressedByHolidayBreak(context, atMillis) || HomeLocationChecker.isFarFromHome(context);
+    public static boolean isSuppressed(Context context, String alarmId, long atMillis) {
+        return isSuppressedByHolidayBreak(context, alarmId, atMillis) || HomeLocationChecker.isFarFromHome(context);
     }
 
     public static void resolveMissed(Context context, Alarm alarm, long occurrenceMillis) {

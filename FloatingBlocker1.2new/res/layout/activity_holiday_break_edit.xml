@@ -89,6 +89,13 @@
             android:text="@string/select_blocks_button" />
 
         <Button
+            android:id="@+id/btnSelectAlarms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/select_alarms_button" />
+
+        <Button
             android:id="@+id/btnSaveBreak"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
