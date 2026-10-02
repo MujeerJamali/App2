@@ -87,6 +87,26 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.81
+-----------------------
+- NEW: "Confirmations" - a lighter sibling of Alarms. Same recurring
+  time+days triggers, and the same missed-occurrence punishment
+  (widening the chosen Blocks by 1 hour each side), but nothing rings
+  and there's no barcode scan: firing just posts a plain notification
+  reminder, and the only thing needed to resolve it is opening this
+  app at all within 10 minutes - simply landing on the main screen
+  resolves every Confirmation currently pending, no per-item action
+  needed (ConfirmationPunisher.confirmAllPending, called from
+  MainActivity.onResume). Builds on the exact same early-delivery
+  tolerance fix from 4.74 from day one (Confirmation.
+  nominalOccurrenceNear), so it isn't exposed to the alarm double-
+  fire/false-punishment bug that affected Alarms before that fix.
+  Holiday Breaks gained a third picker (Select Confirmations,
+  alongside Blocks and Alarms) so a Break can choose to cover specific
+  Confirmations too; new Confirmations are auto-added to every
+  existing Break's selection, same as new Alarms/Blocks. Confirmations
+  are included in Export/Import Backup alongside Blocks and Alarms.
+
 WHAT CHANGED IN 4.80
 -----------------------
 - NEW: Holiday Breaks now also ask which specific Alarms they affect,

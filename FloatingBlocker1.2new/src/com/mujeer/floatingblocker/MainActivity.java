@@ -102,6 +102,7 @@ public class MainActivity extends Activity {
         Button btnHolidayBreaks = (Button) findViewById(R.id.btnHolidayBreaks);
         Button btnWebsites = (Button) findViewById(R.id.btnWebsites);
         Button btnAlarms = (Button) findViewById(R.id.btnAlarms);
+        Button btnConfirmations = (Button) findViewById(R.id.btnConfirmations);
         Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
         Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
         Button btnViewPunishments = (Button) findViewById(R.id.btnViewPunishments);
@@ -228,6 +229,13 @@ public class MainActivity extends Activity {
             }
         });
 
+        btnConfirmations.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, ConfirmationsListActivity.class));
+            }
+        });
+
         btnBarcodes.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
@@ -301,6 +309,16 @@ public class MainActivity extends Activity {
         // immediately. That's consistent with a reported spurious second
         // ring a few minutes off from the real trigger time.
         AlarmScheduler.rescheduleAll(this);
+        // Same main-thread reasoning as AlarmScheduler.rescheduleAll() right
+        // above - ConfirmationFireReceiver also reschedules its own
+        // Confirmation's next occurrence on the main thread when it fires.
+        ConfirmationScheduler.rescheduleAll(this);
+
+        // Simply having gotten this far means the app was just opened -
+        // that's the entire "task" for a Confirmation (see Confirmation.java),
+        // so resolve every one currently pending right here. Cheap (no
+        // DevicePolicyManager calls), so no need to background it.
+        ConfirmationPunisher.confirmAllPending(this);
 
         // BlockEnforcer.applyNow() makes well over a dozen synchronous
         // DevicePolicyManager Binder calls back-to-back. Logged evidence

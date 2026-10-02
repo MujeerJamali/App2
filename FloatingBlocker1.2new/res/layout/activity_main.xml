@@ -84,6 +84,13 @@
             android:text="@string/alarms_button" />
 
         <Button
+            android:id="@+id/btnConfirmations"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/confirmations_button" />
+
+        <Button
             android:id="@+id/btnBarcodes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

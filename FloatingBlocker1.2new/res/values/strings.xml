@@ -145,6 +145,7 @@
     <string name="confirm_cancel_break_message">Cancel this Holiday Break now? The affected Blocks will resume their normal schedule immediately.</string>
     <string name="break_blocks_prefix">Blocks: </string>
     <string name="break_alarms_prefix">Alarms: </string>
+    <string name="break_confirmations_prefix">Confirmations: </string>
     <string name="holiday_break_edit_screen_title">New Holiday Break</string>
     <string name="break_name_hint">Break name (e.g. Eid Trip)</string>
     <string name="msg_enter_break_name">Enter a name for this Holiday Break.</string>
@@ -239,6 +240,29 @@
     <string name="alarm_ring_scan_hint">No snooze, no back button - scanning both barcodes of one pair, within 3 seconds of each other, is the only way to stop this.</string>
     <string name="scan_to_dismiss_button">Scan Barcodes to Dismiss</string>
     <string name="alarm_notification_channel_name">Alarm ringing</string>
+
+    <!-- Confirmations -->
+    <string name="confirmations_button">✅  Confirmations</string>
+    <string name="confirmations_screen_title">Confirmations</string>
+    <string name="add_confirmation_button">+ Add Confirmation</string>
+    <string name="msg_confirmations_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
+    <string name="confirmation_subtitle_format">%1$d trigger(s), %2$d block(s) punished on miss</string>
+    <string name="delete_confirmation_button">Delete This Confirmation</string>
+    <string name="select_confirmations_button">Select Confirmations</string>
+    <string name="msg_no_confirmations_to_select">You don\'t have any Confirmations yet - create one first under Confirmations.</string>
+
+    <!-- Confirmation edit screen -->
+    <string name="confirmation_edit_screen_title">Edit Confirmation</string>
+    <string name="confirmation_name_hint">Confirmation name (e.g. Evening check-in)</string>
+    <string name="confirmation_triggers_label">Reminds at (pick a time, then Add Trigger to choose its days)</string>
+    <string name="confirmation_affected_blocks_label">Not opening this app within 10 minutes widens these Blocks by 1 hour each side, once</string>
+    <string name="msg_enter_confirmation_name">Enter a name for this Confirmation.</string>
+    <string name="msg_confirmation_saved">Confirmation saved.</string>
+
+    <!-- Confirmation reminder notification -->
+    <string name="confirmation_notification_channel_name">Confirmation reminder</string>
+    <string name="confirmation_notification_title">%1$s</string>
+    <string name="confirmation_notification_text">Open Self-Control within 10 minutes to confirm this.</string>
 
     <!-- Home Location Override -->
     <string name="home_location_button">📍  Location Override</string>

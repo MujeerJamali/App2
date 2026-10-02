@@ -78,6 +78,8 @@ public class BlockEnforcer {
         Log.d(TAG, "applyNow: after cleanUpExpiredBreaks");
         checkForMissedAlarms(context);
         Log.d(TAG, "applyNow: after checkForMissedAlarms");
+        checkForMissedConfirmations(context);
+        Log.d(TAG, "applyNow: after checkForMissedConfirmations");
 
         List<Block> blocks = new BlocksStorage(context).loadBlocks();
         Set<String> allManaged = new HashSet<String>();
@@ -242,6 +244,41 @@ public class BlockEnforcer {
                     runtime.setLastHandledOccurrence(alarm.id, next);
                 } else {
                     AlarmPunisher.resolveMissed(context, alarm, next);
+                }
+                cursor = next;
+            }
+        }
+    }
+
+    /** Confirmation equivalent of checkForMissedAlarms - same walk-forward catch-up logic, same safety cap. */
+    private static void checkForMissedConfirmations(Context context) {
+        long now = System.currentTimeMillis();
+        long confirmMillis = Confirmation.CONFIRM_MINUTES * 60L * 1000L;
+        ConfirmationRuntimeStorage runtime = new ConfirmationRuntimeStorage(context);
+        for (Confirmation confirmation : new ConfirmationsStorage(context).loadConfirmations()) {
+            long cursor = runtime.getLastHandledOccurrence(confirmation.id);
+            if (cursor <= 0) {
+                runtime.setLastHandledOccurrence(confirmation.id, now);
+                continue;
+            }
+            final int MAX_CATCHUP_ITERATIONS = 1000;
+            int iterations = 0;
+            while (true) {
+                long next = confirmation.nextOccurrenceAfter(cursor);
+                if (next <= 0 || next > now || now < next + confirmMillis) {
+                    break;
+                }
+                if (++iterations > MAX_CATCHUP_ITERATIONS) {
+                    Log.e(TAG, "checkForMissedConfirmations: confirmation=" + confirmation.id
+                            + " hit the " + MAX_CATCHUP_ITERATIONS + "-iteration safety cap - "
+                            + "bailing out instead of continuing to walk forward");
+                    runtime.setLastHandledOccurrence(confirmation.id, now);
+                    break;
+                }
+                if (ConfirmationPunisher.isSuppressed(context, confirmation.id, next)) {
+                    runtime.setLastHandledOccurrence(confirmation.id, next);
+                } else {
+                    ConfirmationPunisher.resolveMissed(context, confirmation, next);
                 }
                 cursor = next;
             }

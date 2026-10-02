@@ -24,6 +24,7 @@ public class HolidayBreakEditActivity extends Activity {
     private HolidayBreaksStorage holidayBreaksStorage;
     private BlocksStorage blocksStorage;
     private AlarmsStorage alarmsStorage;
+    private ConfirmationsStorage confirmationsStorage;
     private LockScheduleStorage lockScheduleStorage;
 
     private TextView txtLockedMessage;
@@ -34,12 +35,14 @@ public class HolidayBreakEditActivity extends Activity {
     private Button btnPickEndTime;
     private Button btnSelectBlocks;
     private Button btnSelectAlarms;
+    private Button btnSelectConfirmations;
     private Button btnSaveBreak;
 
     private final Calendar startCal = Calendar.getInstance();
     private final Calendar endCal = Calendar.getInstance();
     private final Set<String> selectedBlockIds = new HashSet<String>();
     private final Set<String> selectedAlarmIds = new HashSet<String>();
+    private final Set<String> selectedConfirmationIds = new HashSet<String>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +53,7 @@ public class HolidayBreakEditActivity extends Activity {
         holidayBreaksStorage = new HolidayBreaksStorage(this);
         blocksStorage = new BlocksStorage(this);
         alarmsStorage = new AlarmsStorage(this);
+        confirmationsStorage = new ConfirmationsStorage(this);
         lockScheduleStorage = new LockScheduleStorage(this);
 
         txtLockedMessage = (TextView) findViewById(R.id.txtLockedMessage);
@@ -60,6 +64,7 @@ public class HolidayBreakEditActivity extends Activity {
         btnPickEndTime = (Button) findViewById(R.id.btnPickEndTime);
         btnSelectBlocks = (Button) findViewById(R.id.btnSelectBlocks);
         btnSelectAlarms = (Button) findViewById(R.id.btnSelectAlarms);
+        btnSelectConfirmations = (Button) findViewById(R.id.btnSelectConfirmations);
         btnSaveBreak = (Button) findViewById(R.id.btnSaveBreak);
 
         // Whether creation is actually allowed depends on the chosen start
@@ -87,6 +92,9 @@ public class HolidayBreakEditActivity extends Activity {
         });
         btnSelectAlarms.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { onSelectAlarmsClicked(); }
+        });
+        btnSelectConfirmations.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { onSelectConfirmationsClicked(); }
         });
         btnSaveBreak.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { onSaveClicked(); }
@@ -242,6 +250,45 @@ public class HolidayBreakEditActivity extends Activity {
                 .show();
     }
 
+    /** Same optional-selection rule as Alarms above - choosing zero Confirmations is valid. */
+    private void onSelectConfirmationsClicked() {
+        final List<Confirmation> allConfirmations = confirmationsStorage.loadConfirmations();
+        if (allConfirmations.isEmpty()) {
+            Toast.makeText(this, R.string.msg_no_confirmations_to_select, Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String[] labels = new String[allConfirmations.size()];
+        final String[] confirmationIds = new String[allConfirmations.size()];
+        final boolean[] checked = new boolean[allConfirmations.size()];
+        for (int i = 0; i < allConfirmations.size(); i++) {
+            labels[i] = allConfirmations.get(i).name;
+            confirmationIds[i] = allConfirmations.get(i).id;
+            checked[i] = selectedConfirmationIds.contains(confirmationIds[i]);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.select_confirmations_button)
+                .setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        checked[which] = isChecked;
+                    }
+                })
+                .setPositiveButton(R.string.ok_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        selectedConfirmationIds.clear();
+                        for (int i = 0; i < checked.length; i++) {
+                            if (checked[i]) {
+                                selectedConfirmationIds.add(confirmationIds[i]);
+                            }
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
     private void onSaveClicked() {
         boolean allowed = lockScheduleStorage.isEditingAllowed()
                 || isOnLaterAppDay(startCal.getTimeInMillis(), System.currentTimeMillis());
@@ -270,6 +317,7 @@ public class HolidayBreakEditActivity extends Activity {
         h.endMillis = endCal.getTimeInMillis();
         h.affectedBlockIds.addAll(selectedBlockIds);
         h.affectedAlarmIds.addAll(selectedAlarmIds);
+        h.affectedConfirmationIds.addAll(selectedConfirmationIds);
 
         List<HolidayBreak> breaks = holidayBreaksStorage.loadBreaks();
         breaks.add(h);

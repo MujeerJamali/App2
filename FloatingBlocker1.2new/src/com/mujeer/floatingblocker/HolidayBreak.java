@@ -27,6 +27,7 @@ public class HolidayBreak {
     public long endMillis;
     public Set<String> affectedBlockIds = new LinkedHashSet<String>();
     public Set<String> affectedAlarmIds = new LinkedHashSet<String>();
+    public Set<String> affectedConfirmationIds = new LinkedHashSet<String>();
 
     public boolean isActiveNow(long nowMillis) {
         return nowMillis >= startMillis && nowMillis < endMillis;
@@ -49,6 +50,9 @@ public class HolidayBreak {
         JSONArray alarmArr = new JSONArray();
         for (String alarmId : affectedAlarmIds) alarmArr.put(alarmId);
         o.put("alarms", alarmArr);
+        JSONArray confirmationArr = new JSONArray();
+        for (String confirmationId : affectedConfirmationIds) confirmationArr.put(confirmationId);
+        o.put("confirmations", confirmationArr);
         return o;
     }
 
@@ -68,6 +72,12 @@ public class HolidayBreak {
         if (alarmArr != null) {
             for (int i = 0; i < alarmArr.length(); i++) {
                 h.affectedAlarmIds.add(alarmArr.getString(i));
+            }
+        }
+        JSONArray confirmationArr = o.optJSONArray("confirmations");
+        if (confirmationArr != null) {
+            for (int i = 0; i < confirmationArr.length(); i++) {
+                h.affectedConfirmationIds.add(confirmationArr.getString(i));
             }
         }
         return h;

@@ -24,9 +24,9 @@ import java.util.Set;
 /**
  * Exports/imports everything meaningful a user has configured - Blocks,
  * Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes,
- * Alarms (with their barcode pairs), the Blocks-paused toggle, and the
- * Home Location override - to/from a plain JSON file the user picks a
- * location for (Downloads, Google Drive, wherever), via the standard
+ * Alarms (with their barcode pairs), Confirmations, the Blocks-paused
+ * toggle, and the Home Location override - to/from a plain JSON file the
+ * user picks a location for (Downloads, Google Drive, wherever), via the standard
  * Android file picker (Storage Access Framework) so no storage permission
  * is needed and the file survives this app being uninstalled.
  *
@@ -85,6 +85,12 @@ public class BackupManager {
             alarmsArr.put(a.toJson());
         }
         root.put("alarms", alarmsArr);
+
+        JSONArray confirmationsArr = new JSONArray();
+        for (Confirmation c : new ConfirmationsStorage(context).loadConfirmations()) {
+            confirmationsArr.put(c.toJson());
+        }
+        root.put("confirmations", confirmationsArr);
 
         root.put("blocksPaused", new BlocksPauseStorage(context).isPaused());
 
@@ -186,6 +192,15 @@ public class BackupManager {
         }
         new AlarmsStorage(context).saveAlarms(alarms);
 
+        List<Confirmation> confirmations = new ArrayList<Confirmation>();
+        JSONArray confirmationsArr = root.optJSONArray("confirmations");
+        if (confirmationsArr != null) {
+            for (int i = 0; i < confirmationsArr.length(); i++) {
+                confirmations.add(Confirmation.fromJson(confirmationsArr.getJSONObject(i)));
+            }
+        }
+        new ConfirmationsStorage(context).saveConfirmations(confirmations);
+
         new BlocksPauseStorage(context).setPaused(root.optBoolean("blocksPaused", false));
 
         HomeLocationStorage homeLocationStorage = new HomeLocationStorage(context);
@@ -198,5 +213,6 @@ public class BackupManager {
 
         BlockEnforcer.reapplyAndReschedule(context);
         AlarmScheduler.rescheduleAll(context);
+        ConfirmationScheduler.rescheduleAll(context);
     }
 }
