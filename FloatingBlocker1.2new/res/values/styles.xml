@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AppTheme" parent="android:Theme.Material.Light.DarkActionBar">
+        <item name="android:colorPrimary">@color/primary</item>
+        <item name="android:colorPrimaryDark">@color/primary_dark</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:buttonStyle">@style/AppButton</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:alertDialogTheme">@style/AppAlertDialogTheme</item>
+    </style>
+
+    <!-- Deliberately isolates AlertDialog's own OK/Cancel/etc. buttons from
+         AppTheme's app-wide android:buttonStyle override above - without
+         this, those buttons inherit AppButton's white text color, but NOT
+         its dark bg_button background (AlertDialog renders its own action
+         buttons as flat/borderless over the dialog's plain white
+         background, ignoring a custom Button style's background), leaving
+         invisible white-on-white text. Falling back to the platform's
+         default alert dialog theme keeps every dialog's buttons properly
+         contrasted, with zero effect on any other button in the app. -->
+    <style name="AppAlertDialogTheme" parent="android:Theme.Material.Light.Dialog.Alert" />
+
+    <!-- Applied app-wide via the theme's android:buttonStyle, so every
+         plain Button gets this look with no per-layout changes needed. -->
+    <style name="AppButton" parent="android:Widget.Material.Light.Button">
+        <item name="android:background">@drawable/bg_button</item>
+        <item name="android:textColor">@color/button_text_color</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:paddingLeft">20dp</item>
+        <item name="android:paddingRight">20dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+    </style>
+
+    <!-- A bold, spaced-out label for grouping related buttons/content on
+         a screen - e.g. MainActivity's "Manage", "Safety" sections. -->
+    <style name="SectionHeader">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:paddingTop">20dp</item>
+        <item name="android:paddingBottom">6dp</item>
+    </style>
+
+    <!-- A plain explanatory paragraph at the top of a screen. -->
+    <style name="ScreenDescription">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:paddingBottom">16dp</item>
+    </style>
+
+    <!-- The "this can only be done during an unlocked time" style notices
+         used throughout - a soft amber box instead of plain red-flag text,
+         so it reads as informative rather than alarming. -->
+    <style name="LockedMessageBox">
+        <item name="android:background">@drawable/bg_warning_box</item>
+        <item name="android:textColor">@color/color_warning</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
+    </style>
+
+    <!-- A single row in a list screen (Blocks, Alarms, Barcodes, etc.) -
+         a distinct card instead of a bare row, so a list of several reads
+         as organized items rather than a wall of text. -->
+    <style name="ListCardRow">
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:padding">14dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+    </style>
+
+</resources>

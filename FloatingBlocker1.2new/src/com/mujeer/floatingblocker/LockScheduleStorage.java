@@ -30,9 +30,11 @@ public class LockScheduleStorage {
     private static final String PREFS_NAME = "floating_blocker_lock_schedule_prefs";
     private static final String KEY_RANGES = "lock_ranges_json";
 
+    private final Context context;
     private final SharedPreferences prefs;
 
     public LockScheduleStorage(Context context) {
+        this.context = context;
         prefs = DeviceProtectedPrefs.get(context, PREFS_NAME);
     }
 
@@ -93,8 +95,18 @@ public class LockScheduleStorage {
         return false;
     }
 
-    /** Editing (this schedule, Blocks, apps within Blocks) is only allowed while not locked. */
+    /**
+     * Editing (this schedule, Blocks, apps within Blocks) is only allowed
+     * while not locked - OR while far enough from a configured home
+     * location that Lock Schedule doesn't apply at all right now (see
+     * HomeLocationChecker). Deliberately NOT used by the anti-tamper
+     * checks in BlockEnforcer (debugging-features lock, bootstrap-tools
+     * lock) or by changing an already-set home location itself - those
+     * stay governed by the true schedule via isCurrentlyLocked() directly,
+     * regardless of location, so this override can never be used to
+     * un-protect the app or redefine what "home" means while away.
+     */
     public boolean isEditingAllowed() {
-        return !isCurrentlyLocked();
+        return !isCurrentlyLocked() || HomeLocationChecker.isFarFromHome(context);
     }
 }

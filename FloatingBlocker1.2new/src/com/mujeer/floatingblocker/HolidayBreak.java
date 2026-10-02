@@ -14,7 +14,10 @@ import java.util.Set;
  * A one-time (non-recurring) break: a specific start date+time through a
  * specific end date+time, during which the selected Blocks are paused -
  * a scheduled-ahead-of-time version of the Pause button, but scoped to
- * only the Blocks chosen and only for that one window.
+ * only the Blocks chosen and only for that one window. Also covers the
+ * specific Alarms chosen in affectedAlarmIds the same way - an Alarm not
+ * listed here still rings normally even while this Break is active,
+ * exactly like a Block not listed in affectedBlockIds stays enforced.
  */
 public class HolidayBreak {
 
@@ -23,6 +26,8 @@ public class HolidayBreak {
     public long startMillis;
     public long endMillis;
     public Set<String> affectedBlockIds = new LinkedHashSet<String>();
+    public Set<String> affectedAlarmIds = new LinkedHashSet<String>();
+    public Set<String> affectedConfirmationIds = new LinkedHashSet<String>();
 
     public boolean isActiveNow(long nowMillis) {
         return nowMillis >= startMillis && nowMillis < endMillis;
@@ -42,6 +47,12 @@ public class HolidayBreak {
         JSONArray arr = new JSONArray();
         for (String blockId : affectedBlockIds) arr.put(blockId);
         o.put("blocks", arr);
+        JSONArray alarmArr = new JSONArray();
+        for (String alarmId : affectedAlarmIds) alarmArr.put(alarmId);
+        o.put("alarms", alarmArr);
+        JSONArray confirmationArr = new JSONArray();
+        for (String confirmationId : affectedConfirmationIds) confirmationArr.put(confirmationId);
+        o.put("confirmations", confirmationArr);
         return o;
     }
 
@@ -55,6 +66,18 @@ public class HolidayBreak {
         if (arr != null) {
             for (int i = 0; i < arr.length(); i++) {
                 h.affectedBlockIds.add(arr.getString(i));
+            }
+        }
+        JSONArray alarmArr = o.optJSONArray("alarms");
+        if (alarmArr != null) {
+            for (int i = 0; i < alarmArr.length(); i++) {
+                h.affectedAlarmIds.add(alarmArr.getString(i));
+            }
+        }
+        JSONArray confirmationArr = o.optJSONArray("confirmations");
+        if (confirmationArr != null) {
+            for (int i = 0; i < confirmationArr.length(); i++) {
+                h.affectedConfirmationIds.add(confirmationArr.getString(i));
             }
         }
         return h;
