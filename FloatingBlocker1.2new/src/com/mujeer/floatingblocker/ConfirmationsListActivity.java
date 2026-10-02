@@ -63,7 +63,7 @@ public class ConfirmationsListActivity extends Activity {
             Button btnDelete = (Button) row.findViewById(R.id.btnDeleteConfirmation);
 
             txtName.setText(c.name);
-            txtSubtitle.setText(getString(R.string.confirmation_subtitle_format, c.triggers.size(), c.affectedBlockIds.size()));
+            txtSubtitle.setText(getString(R.string.confirmation_subtitle_format, c.triggers.size(), c.affectedBlockIds.size(), c.punishmentMinutes));
             btnDelete.setEnabled(editingAllowed);
 
             row.setOnClickListener(new View.OnClickListener() {

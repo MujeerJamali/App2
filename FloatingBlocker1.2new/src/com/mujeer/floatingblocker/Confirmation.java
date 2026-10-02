@@ -22,11 +22,16 @@ public class Confirmation {
 
     public static final int CONFIRM_MINUTES = 10;
 
+    /** Default widen duration (minutes, each side) when none was set - matches the fixed amount Alarms have always used. */
+    public static final int DEFAULT_PUNISHMENT_MINUTES = 60;
+
     public String id;
     public String name;
     public boolean enabled = true;
     public List<AlarmTrigger> triggers = new ArrayList<AlarmTrigger>();
     public Set<String> affectedBlockIds = new LinkedHashSet<String>();
+    /** How many minutes, each side, a missed occurrence widens the affected Blocks by - chosen per-Confirmation at creation time (see ConfirmationEditActivity), unlike Alarms' fixed 1 hour. */
+    public int punishmentMinutes = DEFAULT_PUNISHMENT_MINUTES;
 
     /** Next absolute time (millis) any of this Confirmation's triggers fires strictly after afterMillis. -1 if none. */
     public long nextOccurrenceAfter(long afterMillis) {
@@ -74,6 +79,7 @@ public class Confirmation {
         JSONArray blockArr = new JSONArray();
         for (String id : affectedBlockIds) blockArr.put(id);
         o.put("blocks", blockArr);
+        o.put("punishmentMinutes", punishmentMinutes);
         return o;
     }
 
@@ -94,6 +100,7 @@ public class Confirmation {
                 c.affectedBlockIds.add(blockArr.getString(i));
             }
         }
+        c.punishmentMinutes = o.optInt("punishmentMinutes", DEFAULT_PUNISHMENT_MINUTES);
         return c;
     }
 }

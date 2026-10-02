@@ -38,6 +38,7 @@ public class ConfirmationEditActivity extends Activity {
     private Button btnPickTriggerTime;
     private Button btnAddTrigger;
     private Button btnSelectAffectedBlocks;
+    private EditText editPunishmentMinutes;
     private Button btnSaveConfirmation;
     private Button btnDeleteConfirmation;
 
@@ -63,10 +64,14 @@ public class ConfirmationEditActivity extends Activity {
         btnPickTriggerTime = (Button) findViewById(R.id.btnPickTriggerTime);
         btnAddTrigger = (Button) findViewById(R.id.btnAddTrigger);
         btnSelectAffectedBlocks = (Button) findViewById(R.id.btnSelectAffectedBlocks);
+        editPunishmentMinutes = (EditText) findViewById(R.id.editPunishmentMinutes);
         btnSaveConfirmation = (Button) findViewById(R.id.btnSaveConfirmation);
         btnDeleteConfirmation = (Button) findViewById(R.id.btnDeleteConfirmation);
 
         confirmationId = getIntent().getStringExtra(ConfirmationsListActivity.EXTRA_CONFIRMATION_ID);
+        if (confirmationId == null) {
+            editPunishmentMinutes.setText(String.valueOf(Confirmation.DEFAULT_PUNISHMENT_MINUTES));
+        }
         loadExistingConfirmationIfAny();
 
         editingAllowed = lockScheduleStorage.isEditingAllowed();
@@ -104,6 +109,7 @@ public class ConfirmationEditActivity extends Activity {
                 editConfirmationName.setText(c.name);
                 triggers.addAll(c.triggers);
                 selectedBlockIds.addAll(c.affectedBlockIds);
+                editPunishmentMinutes.setText(String.valueOf(c.punishmentMinutes));
                 return;
             }
         }
@@ -240,11 +246,22 @@ public class ConfirmationEditActivity extends Activity {
             target.id = UUID.randomUUID().toString();
             confirmations.add(target);
         }
+        int punishmentMinutes;
+        try {
+            punishmentMinutes = Integer.parseInt(editPunishmentMinutes.getText().toString().trim());
+        } catch (NumberFormatException e) {
+            punishmentMinutes = 0;
+        }
+        if (punishmentMinutes <= 0) {
+            punishmentMinutes = Confirmation.DEFAULT_PUNISHMENT_MINUTES;
+        }
+
         target.name = name;
         target.triggers.clear();
         target.triggers.addAll(triggers);
         target.affectedBlockIds.clear();
         target.affectedBlockIds.addAll(selectedBlockIds);
+        target.punishmentMinutes = punishmentMinutes;
 
         confirmationsStorage.saveConfirmations(confirmations);
         ConfirmationScheduler.rescheduleAll(this);

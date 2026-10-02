@@ -92,7 +92,7 @@ public class ConfirmationPunisher {
             }
             Block block = findBlock(allBlocks, blockId);
             if (block != null) {
-                punishmentStorage.applyPunishment(block, now);
+                punishmentStorage.applyPunishment(block, now, confirmation.punishmentMinutes * 60L * 1000L);
             }
         }
     }

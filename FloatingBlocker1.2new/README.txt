@@ -87,6 +87,16 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.82
+-----------------------
+- NEW: Confirmations now ask for a punishment duration (in minutes,
+  each side) when you create one, instead of always using the fixed 1
+  hour Alarms use (Confirmation.punishmentMinutes, defaults to 60 if
+  left blank or invalid). BlockPunishmentStorage.applyPunishment()
+  gained an overload taking a custom widen duration; Alarms are
+  unaffected and still use the original fixed-1-hour method. Shown on
+  each Confirmation's row in the list too.
+
 WHAT CHANGED IN 4.81
 -----------------------
 - NEW: "Confirmations" - a lighter sibling of Alarms. Same recurring

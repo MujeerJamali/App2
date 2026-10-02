@@ -246,7 +246,7 @@
     <string name="confirmations_screen_title">Confirmations</string>
     <string name="add_confirmation_button">+ Add Confirmation</string>
     <string name="msg_confirmations_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
-    <string name="confirmation_subtitle_format">%1$d trigger(s), %2$d block(s) punished on miss</string>
+    <string name="confirmation_subtitle_format">%1$d trigger(s), %2$d block(s) widened %3$d min each side on miss</string>
     <string name="delete_confirmation_button">Delete This Confirmation</string>
     <string name="select_confirmations_button">Select Confirmations</string>
     <string name="msg_no_confirmations_to_select">You don\'t have any Confirmations yet - create one first under Confirmations.</string>
@@ -255,7 +255,9 @@
     <string name="confirmation_edit_screen_title">Edit Confirmation</string>
     <string name="confirmation_name_hint">Confirmation name (e.g. Evening check-in)</string>
     <string name="confirmation_triggers_label">Reminds at (pick a time, then Add Trigger to choose its days)</string>
-    <string name="confirmation_affected_blocks_label">Not opening this app within 10 minutes widens these Blocks by 1 hour each side, once</string>
+    <string name="confirmation_affected_blocks_label">Not opening this app within 10 minutes widens these Blocks by the punishment duration below, each side, once</string>
+    <string name="confirmation_punishment_minutes_label">Punishment: widen the Blocks above by this many minutes, each side, if missed</string>
+    <string name="confirmation_punishment_minutes_hint">Minutes each side (default 60)</string>
     <string name="msg_enter_confirmation_name">Enter a name for this Confirmation.</string>
     <string name="msg_confirmation_saved">Confirmation saved.</string>
 

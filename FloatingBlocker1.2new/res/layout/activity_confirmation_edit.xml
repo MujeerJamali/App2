@@ -65,6 +65,21 @@
             android:layout_marginTop="8dp"
             android:text="@string/select_blocks_button" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/confirmation_punishment_minutes_label"
+            android:textStyle="bold"
+            android:paddingTop="16dp" />
+
+        <EditText
+            android:id="@+id/editPunishmentMinutes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:inputType="number"
+            android:hint="@string/confirmation_punishment_minutes_hint" />
+
         <Button
             android:id="@+id/btnSaveConfirmation"
             android:layout_width="match_parent"

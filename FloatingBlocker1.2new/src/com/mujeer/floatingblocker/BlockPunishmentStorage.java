@@ -33,12 +33,24 @@ public class BlockPunishmentStorage {
      * no upcoming/active occurrence at all.
      */
     public void applyPunishment(Block block, long nowMillis) {
+        applyPunishment(block, nowMillis, HOUR_MS);
+    }
+
+    /**
+     * Same as applyPunishment(block, nowMillis), but with a caller-chosen
+     * widen duration on each side instead of the fixed 1 hour - see
+     * Confirmation.punishmentMinutes, which lets this be set per-Confirmation
+     * at creation time instead of always being the same fixed amount. Still
+     * capped so the widened occurrence never spans more than 24 hours,
+     * regardless of how large widenMillis is.
+     */
+    public void applyPunishment(Block block, long nowMillis, long widenMillis) {
         long[] occurrence = block.currentOrNextOccurrence(nowMillis);
         if (occurrence == null) {
             return;
         }
-        long widenedStart = occurrence[0] - HOUR_MS;
-        long widenedEnd = occurrence[1] + HOUR_MS;
+        long widenedStart = occurrence[0] - widenMillis;
+        long widenedEnd = occurrence[1] + widenMillis;
         if (widenedEnd - widenedStart > DAY_MS) {
             widenedStart = widenedEnd - DAY_MS;
         }
