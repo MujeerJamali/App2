@@ -87,6 +87,17 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.83
+-----------------------
+- NEW: "Clear Current Punishment #4 - Alarms & Confirmations
+  (One-Time Use)" on the main screen's Safety Valve section - a
+  fourth, independent one-time Clear Current Punishment action.
+  Functionally identical to the first three (clears every Block's
+  current widen window) - added explicitly covering both sources now
+  that Confirmations can also apply this same punishment alongside
+  Alarms, tracked under its own used-flag so it stays available even
+  after the first three have already been spent.
+
 WHAT CHANGED IN 4.82
 -----------------------
 - NEW: Confirmations now ask for a punishment duration (in minutes,

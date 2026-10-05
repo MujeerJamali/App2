@@ -176,4 +176,22 @@ public class BlockPunishmentStorage {
     public void markOneTimeClearUsed3() {
         prefs.edit().putBoolean("one_time_clear_used_3", true).apply();
     }
+
+    /**
+     * A fourth, independent one-time Clear Current Punishment action, for
+     * when the first three have already been spent - added once
+     * Confirmations could also apply this same widen punishment (see
+     * ConfirmationPunisher.resolveMissed), alongside Alarms. clearAll()
+     * already wipes every Block's widen window regardless of which of the
+     * two caused it, since punishment is tracked per-Block, not per-source
+     * - this is just a fresh one-time use of that same clear, tracked under
+     * its own flag so using any of the earlier three doesn't use this one up.
+     */
+    public boolean hasUsedOneTimeClear4() {
+        return prefs.getBoolean("one_time_clear_used_4", false);
+    }
+
+    public void markOneTimeClearUsed4() {
+        prefs.edit().putBoolean("one_time_clear_used_4", true).apply();
+    }
 }

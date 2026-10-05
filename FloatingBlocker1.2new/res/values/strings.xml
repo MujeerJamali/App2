@@ -57,6 +57,13 @@
     <string name="confirm_clear_punishment_yes_3">Yes, clear it (uses this up forever)</string>
     <string name="msg_punishment_cleared_3">Cleared. This one-time action has now been used.</string>
 
+    <!-- Clear Current Punishment #4 - a fourth, independent one-time use, covering punishment from both Alarms and Confirmations -->
+    <string name="clear_punishment_button_4">🧹 Clear Current Punishment #4 - Alarms &amp; Confirmations (One-Time Use)</string>
+    <string name="confirm_clear_punishment_title_4">Clear all current punishment?</string>
+    <string name="confirm_clear_punishment_message_4">This clears any Blocks currently widened by a missed Alarm OR a missed Confirmation - both work the same way under the hood, so one clear covers both. This is a fourth, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
+    <string name="confirm_clear_punishment_yes_4">Yes, clear it (uses this up forever)</string>
+    <string name="msg_punishment_cleared_4">Cleared. This one-time action has now been used.</string>
+
     <!-- Stop All Ringing Alarms - one-time only -->
     <string name="stop_all_ringing_button">🔕 Stop All Ringing Alarms (One-Time Use)</string>
     <string name="confirm_stop_all_ringing_title">Stop every ringing Alarm right now?</string>

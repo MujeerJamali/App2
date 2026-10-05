@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private Button btnClearPunishment;
     private Button btnClearPunishment2;
     private Button btnClearPunishment3;
+    private Button btnClearPunishment4;
     private Button btnStopAllRinging;
     private Button btnPauseAllOneHour;
     private Button btnPauseUntil11pm;
@@ -90,6 +91,7 @@ public class MainActivity extends Activity {
         btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
         btnClearPunishment2 = (Button) findViewById(R.id.btnClearPunishment2);
         btnClearPunishment3 = (Button) findViewById(R.id.btnClearPunishment3);
+        btnClearPunishment4 = (Button) findViewById(R.id.btnClearPunishment4);
         btnStopAllRinging = (Button) findViewById(R.id.btnStopAllRinging);
         btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
         btnPauseUntil11pm = (Button) findViewById(R.id.btnPauseUntil11pm);
@@ -163,6 +165,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onClearPunishment3Clicked();
+            }
+        });
+
+        btnClearPunishment4.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onClearPunishment4Clicked();
             }
         });
 
@@ -432,6 +441,8 @@ public class MainActivity extends Activity {
                 ? android.view.View.GONE : android.view.View.VISIBLE);
         btnClearPunishment3.setVisibility(punishmentStorage.hasUsedOneTimeClear3()
                 ? android.view.View.GONE : android.view.View.VISIBLE);
+        btnClearPunishment4.setVisibility(punishmentStorage.hasUsedOneTimeClear4()
+                ? android.view.View.GONE : android.view.View.VISIBLE);
         btnStopAllRinging.setVisibility(new AlarmRuntimeStorage(this).hasUsedOneTimeStopAllRinging()
                 ? android.view.View.GONE : android.view.View.VISIBLE);
 
@@ -527,6 +538,36 @@ public class MainActivity extends Activity {
                         punishmentStorage.clearAll();
                         punishmentStorage.markOneTimeClearUsed3();
                         Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_3, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    /**
+     * A fourth, independent one-time-only escape hatch for punishment
+     * caused by a missed Alarm OR a missed Confirmation - both widen a
+     * Block's occurrence the exact same way (see BlockPunishmentStorage),
+     * so this one clear covers either source. Tracked under its own
+     * used-flag (hasUsedOneTimeClear4) so it stays available even after
+     * the first three Clear Current Punishment buttons have already been
+     * spent. Same reasoning as the earlier three: not gated on Lock
+     * Schedule's unlocked state, and gone forever once used.
+     */
+    private void onClearPunishment4Clicked() {
+        if (punishmentStorage.hasUsedOneTimeClear4()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_clear_punishment_title_4)
+                .setMessage(R.string.confirm_clear_punishment_message_4)
+                .setPositiveButton(R.string.confirm_clear_punishment_yes_4, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        punishmentStorage.clearAll();
+                        punishmentStorage.markOneTimeClearUsed4();
+                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_4, Toast.LENGTH_LONG).show();
                         refreshUi();
                     }
                 })
