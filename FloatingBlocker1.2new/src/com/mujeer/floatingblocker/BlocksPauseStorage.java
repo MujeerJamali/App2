@@ -70,4 +70,22 @@ public class BlocksPauseStorage {
     public void markOneTimePauseUntil11pmUsed() {
         prefs.edit().putBoolean("one_time_pause_until_11pm_used", true).apply();
     }
+
+    /**
+     * Whether the freely-reusable "Pause Lock Schedule for N minutes"
+     * button (custom duration, typed in each time - see MainActivity) has
+     * been permanently deleted. Unlike the one-time pauses above, this
+     * button itself never goes away just from being used - it can be used
+     * as many times as wanted (each use only ever extends the shared
+     * temporary-override window, same as the one-time pauses). Deleting it
+     * forever is the only thing that ever turns it off, and that's
+     * irreversible by design, same reasoning as Master Safety/Kiosk Safety.
+     */
+    public boolean isCustomPauseDeletedForever() {
+        return prefs.getBoolean("custom_pause_deleted_forever", false);
+    }
+
+    public void deleteCustomPauseForever() {
+        prefs.edit().putBoolean("custom_pause_deleted_forever", true).apply();
+    }
 }

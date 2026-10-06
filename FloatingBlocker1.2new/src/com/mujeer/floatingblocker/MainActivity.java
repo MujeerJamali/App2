@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,6 +44,9 @@ public class MainActivity extends Activity {
     private Button btnStopAllRinging;
     private Button btnPauseAllOneHour;
     private Button btnPauseUntil11pm;
+    private EditText editCustomPauseMinutes;
+    private Button btnCustomPause;
+    private Button btnDeleteCustomPauseForever;
     private Button btnExcludeBusinessErp;
     private BlockPunishmentStorage punishmentStorage;
     private PermanentAppExclusionStorage permanentExclusionStorage;
@@ -56,6 +60,7 @@ public class MainActivity extends Activity {
             refreshRingingAlarmButton();
             refreshPauseAllButton();
             refreshPauseUntil11pmButton();
+            refreshCustomPauseButton();
             ringingAlarmHandler.postDelayed(this, 1000);
         }
     };
@@ -95,6 +100,9 @@ public class MainActivity extends Activity {
         btnStopAllRinging = (Button) findViewById(R.id.btnStopAllRinging);
         btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
         btnPauseUntil11pm = (Button) findViewById(R.id.btnPauseUntil11pm);
+        editCustomPauseMinutes = (EditText) findViewById(R.id.editCustomPauseMinutes);
+        btnCustomPause = (Button) findViewById(R.id.btnCustomPause);
+        btnDeleteCustomPauseForever = (Button) findViewById(R.id.btnDeleteCustomPauseForever);
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
@@ -193,6 +201,20 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onPauseUntil11pmClicked();
+            }
+        });
+
+        btnCustomPause.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onCustomPauseClicked();
+            }
+        });
+
+        btnDeleteCustomPauseForever.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onDeleteCustomPauseForeverClicked();
             }
         });
 
@@ -448,6 +470,7 @@ public class MainActivity extends Activity {
 
         refreshPauseAllButton();
         refreshPauseUntil11pmButton();
+        refreshCustomPauseButton();
 
         btnExcludeBusinessErp.setVisibility(permanentExclusionStorage.isExcluded(BUSINESS_ERP_PACKAGE)
                 ? android.view.View.GONE : android.view.View.VISIBLE);
@@ -716,6 +739,91 @@ public class MainActivity extends Activity {
         btnPauseUntil11pm.setVisibility(android.view.View.VISIBLE);
         btnPauseUntil11pm.setEnabled(false);
         btnPauseUntil11pm.setText(getString(R.string.pause_until_11pm_button_active_format, formatRemaining(remainingMillis)));
+    }
+
+    /**
+     * Unlike the two one-time pauses above, this one never uses itself up -
+     * it can be triggered again and again, for whatever duration is typed
+     * in each time, extending the same shared temporary-override window
+     * (BlocksPauseStorage.setTemporaryOverrideUntilMillis - extend-only, so
+     * this composes safely with the one-time pauses too). The only thing
+     * that ever turns it off is deleteCustomPauseForever() below, which is
+     * irreversible by design - not gated on Lock Schedule's unlocked
+     * state, same reasoning as every other safety valve in this app.
+     */
+    private void onCustomPauseClicked() {
+        if (blocksPauseStorage.isCustomPauseDeletedForever()) {
+            return;
+        }
+        final int minutes;
+        try {
+            minutes = Integer.parseInt(editCustomPauseMinutes.getText().toString().trim());
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, R.string.msg_enter_custom_pause_minutes, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (minutes <= 0) {
+            Toast.makeText(this, R.string.msg_enter_custom_pause_minutes, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_custom_pause_title)
+                .setMessage(getString(R.string.confirm_custom_pause_message, minutes))
+                .setPositiveButton(getString(R.string.confirm_custom_pause_yes, minutes), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        blocksPauseStorage.setTemporaryOverrideUntilMillis(
+                                System.currentTimeMillis() + (minutes * 60L * 1000L));
+                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    /**
+     * Irreversible: once deleted, onCustomPauseClicked() refuses to do
+     * anything ever again, and this button (plus the minutes field above
+     * it) disappears for good. Not gated on whether a pause window is
+     * currently active - any already-running override still finishes on
+     * its own either way, since deleting this just stops FUTURE uses.
+     */
+    private void onDeleteCustomPauseForeverClicked() {
+        if (blocksPauseStorage.isCustomPauseDeletedForever()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_delete_custom_pause_title)
+                .setMessage(R.string.confirm_delete_custom_pause_message)
+                .setPositiveButton(R.string.confirm_delete_custom_pause_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        blocksPauseStorage.deleteCustomPauseForever();
+                        Toast.makeText(MainActivity.this, R.string.msg_custom_pause_deleted, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    private void refreshCustomPauseButton() {
+        if (blocksPauseStorage.isCustomPauseDeletedForever()) {
+            editCustomPauseMinutes.setVisibility(android.view.View.GONE);
+            btnCustomPause.setVisibility(android.view.View.GONE);
+            btnDeleteCustomPauseForever.setVisibility(android.view.View.GONE);
+            return;
+        }
+        editCustomPauseMinutes.setVisibility(android.view.View.VISIBLE);
+        btnDeleteCustomPauseForever.setVisibility(android.view.View.VISIBLE);
+        btnCustomPause.setVisibility(android.view.View.VISIBLE);
+        long remainingMillis = blocksPauseStorage.getTemporaryOverrideUntilMillis() - System.currentTimeMillis();
+        if (remainingMillis > 0) {
+            btnCustomPause.setText(getString(R.string.custom_pause_button_active_format, formatRemaining(remainingMillis)));
+        } else {
+            btnCustomPause.setText(R.string.custom_pause_button);
+        }
     }
 
     /**

@@ -87,6 +87,20 @@ Floating Blocker - version 4.19 (per-app internet cutoff, Play Store block remov
 Floating Blocker - version 4.20 (fixed: app updates could mass-add everything to every Block)
 ===================================================================================
 
+WHAT CHANGED IN 4.84
+-----------------------
+- NEW: "Pause Lock Schedule for Selected Time" on the main screen's
+  Safety Valve section - type in any number of minutes and pause
+  Lock Schedule/Blocks for exactly that long. Unlike the two existing
+  one-time pause buttons, this one is freely reusable - it never uses
+  itself up. The only thing that ever turns it off is the new
+  "Delete This Pause Button Forever" button right below it, which is
+  irreversible: once deleted, the custom-duration pause is gone for
+  good (the one-time pauses, if not already used, remain unaffected).
+  Shares the same extend-only temporary-override window as the
+  existing one-time pauses (BlocksPauseStorage), so using any of them
+  in any order composes safely instead of one cutting another short.
+
 WHAT CHANGED IN 4.83
 -----------------------
 - NEW: "Clear Current Punishment #4 - Alarms & Confirmations

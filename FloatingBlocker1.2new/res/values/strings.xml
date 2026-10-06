@@ -101,6 +101,21 @@
     <string name="confirm_pause_until_11pm_message">This immediately unsuspends every currently-blocked app until 11:00 PM, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
     <string name="confirm_pause_until_11pm_yes">Yes, disable until 11 PM (uses this up forever)</string>
 
+    <!-- Custom-duration Pause - freely reusable until deleted forever -->
+    <string name="custom_pause_minutes_hint">Minutes to pause for</string>
+    <string name="custom_pause_button">⏸️ Pause Lock Schedule for Selected Time</string>
+    <string name="custom_pause_button_active_format">⏸️ Paused - %1$s Remaining</string>
+    <string name="custom_pause_deleted_button">Pause (Deleted Forever)</string>
+    <string name="msg_enter_custom_pause_minutes">Enter how many minutes to pause for.</string>
+    <string name="confirm_custom_pause_title">Pause Lock Schedule?</string>
+    <string name="confirm_custom_pause_message">This immediately unsuspends every currently-blocked app for %1$d minute(s), then Blocks resume automatically on their own. Unlike the one-time pause buttons above, this one can be used again - only the Delete This Button Forever button below ever turns it off for good.</string>
+    <string name="confirm_custom_pause_yes">Yes, pause for %1$d minute(s)</string>
+    <string name="delete_custom_pause_forever_button">🗑️ Delete This Pause Button Forever</string>
+    <string name="confirm_delete_custom_pause_title">Permanently delete this Pause button?</string>
+    <string name="confirm_delete_custom_pause_message">This cannot be undone. The custom-duration Pause button above will disappear forever - you\'ll be left with only the one-time Pause buttons (if not already used) and no way to pause Lock Schedule for a custom amount of time ever again.</string>
+    <string name="confirm_delete_custom_pause_yes">Yes, delete it forever</string>
+    <string name="msg_custom_pause_deleted">Deleted. This button is now gone forever.</string>
+
     <!-- DNS Filter Lock -->
 
 

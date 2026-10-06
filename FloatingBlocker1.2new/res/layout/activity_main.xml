@@ -186,6 +186,28 @@
             android:visibility="gone"
             android:text="@string/pause_until_11pm_button_activate" />
 
+        <EditText
+            android:id="@+id/editCustomPauseMinutes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:inputType="number"
+            android:hint="@string/custom_pause_minutes_hint" />
+
+        <Button
+            android:id="@+id/btnCustomPause"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/custom_pause_button" />
+
+        <Button
+            android:id="@+id/btnDeleteCustomPauseForever"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/delete_custom_pause_forever_button" />
+
         <Button
             android:id="@+id/btnExcludeBusinessErp"
             android:layout_width="match_parent"
