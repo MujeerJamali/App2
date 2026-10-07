@@ -23,6 +23,8 @@ public class HolidayBreakEditActivity extends Activity {
 
     private HolidayBreaksStorage holidayBreaksStorage;
     private BlocksStorage blocksStorage;
+    private AlarmsStorage alarmsStorage;
+    private ConfirmationsStorage confirmationsStorage;
     private LockScheduleStorage lockScheduleStorage;
 
     private TextView txtLockedMessage;
@@ -32,11 +34,15 @@ public class HolidayBreakEditActivity extends Activity {
     private Button btnPickEndDate;
     private Button btnPickEndTime;
     private Button btnSelectBlocks;
+    private Button btnSelectAlarms;
+    private Button btnSelectConfirmations;
     private Button btnSaveBreak;
 
     private final Calendar startCal = Calendar.getInstance();
     private final Calendar endCal = Calendar.getInstance();
     private final Set<String> selectedBlockIds = new HashSet<String>();
+    private final Set<String> selectedAlarmIds = new HashSet<String>();
+    private final Set<String> selectedConfirmationIds = new HashSet<String>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +52,8 @@ public class HolidayBreakEditActivity extends Activity {
 
         holidayBreaksStorage = new HolidayBreaksStorage(this);
         blocksStorage = new BlocksStorage(this);
+        alarmsStorage = new AlarmsStorage(this);
+        confirmationsStorage = new ConfirmationsStorage(this);
         lockScheduleStorage = new LockScheduleStorage(this);
 
         txtLockedMessage = (TextView) findViewById(R.id.txtLockedMessage);
@@ -55,18 +63,16 @@ public class HolidayBreakEditActivity extends Activity {
         btnPickEndDate = (Button) findViewById(R.id.btnPickEndDate);
         btnPickEndTime = (Button) findViewById(R.id.btnPickEndTime);
         btnSelectBlocks = (Button) findViewById(R.id.btnSelectBlocks);
+        btnSelectAlarms = (Button) findViewById(R.id.btnSelectAlarms);
+        btnSelectConfirmations = (Button) findViewById(R.id.btnSelectConfirmations);
         btnSaveBreak = (Button) findViewById(R.id.btnSaveBreak);
 
-        boolean creationAllowed = lockScheduleStorage.isEditingAllowed();
-        txtLockedMessage.setVisibility(creationAllowed ? View.GONE : View.VISIBLE);
-        editBreakName.setEnabled(creationAllowed);
-        btnPickStartDate.setEnabled(creationAllowed);
-        btnPickStartTime.setEnabled(creationAllowed);
-        btnPickEndDate.setEnabled(creationAllowed);
-        btnPickEndTime.setEnabled(creationAllowed);
-        btnSelectBlocks.setEnabled(creationAllowed);
-        btnSaveBreak.setEnabled(creationAllowed);
-
+        // Whether creation is actually allowed depends on the chosen start
+        // time (see isOnLaterAppDay), so nothing is disabled up front here -
+        // updateButtonLabels() (called after every date/time pick, and once
+        // now for the initial default) keeps txtLockedMessage in sync with
+        // whatever start time is currently selected. The real check happens
+        // again in onSaveClicked() regardless.
         updateButtonLabels();
 
         btnPickStartDate.setOnClickListener(new View.OnClickListener() {
@@ -83,6 +89,12 @@ public class HolidayBreakEditActivity extends Activity {
         });
         btnSelectBlocks.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { onSelectBlocksClicked(); }
+        });
+        btnSelectAlarms.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { onSelectAlarmsClicked(); }
+        });
+        btnSelectConfirmations.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { onSelectConfirmationsClicked(); }
         });
         btnSaveBreak.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { onSaveClicked(); }
@@ -118,6 +130,33 @@ public class HolidayBreakEditActivity extends Activity {
         btnPickStartTime.setText(formatTime(startCal) + "\n" + getString(R.string.pick_time_button));
         btnPickEndDate.setText(formatDate(endCal) + "\n" + getString(R.string.pick_date_button));
         btnPickEndTime.setText(formatTime(endCal) + "\n" + getString(R.string.pick_time_button));
+        boolean allowed = lockScheduleStorage.isEditingAllowed()
+                || isOnLaterAppDay(startCal.getTimeInMillis(), System.currentTimeMillis());
+        txtLockedMessage.setVisibility(allowed ? View.GONE : View.VISIBLE);
+    }
+
+    /**
+     * True if momentMillis falls on a later "app-day" than referenceMillis,
+     * where the day boundary is 2:00 AM instead of midnight - so e.g.
+     * 1:30 AM still counts as the previous day, but 2:00 AM onward counts
+     * as the new one. Used to let a Holiday Break be created even during a
+     * locked Lock Schedule period, as long as its start doesn't take effect
+     * until a genuinely later day - it can't weaken anything happening now.
+     */
+    private static boolean isOnLaterAppDay(long momentMillis, long referenceMillis) {
+        return appDayStartMillis(momentMillis) > appDayStartMillis(referenceMillis);
+    }
+
+    private static long appDayStartMillis(long momentMillis) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(momentMillis);
+        c.add(Calendar.HOUR_OF_DAY, -2);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        c.add(Calendar.HOUR_OF_DAY, 2);
+        return c.getTimeInMillis();
     }
 
     private String formatDate(Calendar c) {
@@ -167,8 +206,93 @@ public class HolidayBreakEditActivity extends Activity {
                 .show();
     }
 
+    /**
+     * Unlike Blocks (where at least one must be selected for a Break to
+     * mean anything), choosing zero Alarms here is valid - it just means
+     * this Break doesn't affect any Alarm, only whatever Blocks were
+     * chosen above.
+     */
+    private void onSelectAlarmsClicked() {
+        final List<Alarm> allAlarms = alarmsStorage.loadAlarms();
+        if (allAlarms.isEmpty()) {
+            Toast.makeText(this, R.string.msg_no_alarms_to_select, Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String[] labels = new String[allAlarms.size()];
+        final String[] alarmIds = new String[allAlarms.size()];
+        final boolean[] checked = new boolean[allAlarms.size()];
+        for (int i = 0; i < allAlarms.size(); i++) {
+            labels[i] = allAlarms.get(i).name;
+            alarmIds[i] = allAlarms.get(i).id;
+            checked[i] = selectedAlarmIds.contains(alarmIds[i]);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.select_alarms_button)
+                .setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        checked[which] = isChecked;
+                    }
+                })
+                .setPositiveButton(R.string.ok_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        selectedAlarmIds.clear();
+                        for (int i = 0; i < checked.length; i++) {
+                            if (checked[i]) {
+                                selectedAlarmIds.add(alarmIds[i]);
+                            }
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    /** Same optional-selection rule as Alarms above - choosing zero Confirmations is valid. */
+    private void onSelectConfirmationsClicked() {
+        final List<Confirmation> allConfirmations = confirmationsStorage.loadConfirmations();
+        if (allConfirmations.isEmpty()) {
+            Toast.makeText(this, R.string.msg_no_confirmations_to_select, Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String[] labels = new String[allConfirmations.size()];
+        final String[] confirmationIds = new String[allConfirmations.size()];
+        final boolean[] checked = new boolean[allConfirmations.size()];
+        for (int i = 0; i < allConfirmations.size(); i++) {
+            labels[i] = allConfirmations.get(i).name;
+            confirmationIds[i] = allConfirmations.get(i).id;
+            checked[i] = selectedConfirmationIds.contains(confirmationIds[i]);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.select_confirmations_button)
+                .setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        checked[which] = isChecked;
+                    }
+                })
+                .setPositiveButton(R.string.ok_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        selectedConfirmationIds.clear();
+                        for (int i = 0; i < checked.length; i++) {
+                            if (checked[i]) {
+                                selectedConfirmationIds.add(confirmationIds[i]);
+                            }
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
     private void onSaveClicked() {
-        if (!lockScheduleStorage.isEditingAllowed()) {
+        boolean allowed = lockScheduleStorage.isEditingAllowed()
+                || isOnLaterAppDay(startCal.getTimeInMillis(), System.currentTimeMillis());
+        if (!allowed) {
             Toast.makeText(this, R.string.msg_holiday_breaks_locked, Toast.LENGTH_LONG).show();
             return;
         }
@@ -192,6 +316,8 @@ public class HolidayBreakEditActivity extends Activity {
         h.startMillis = startCal.getTimeInMillis();
         h.endMillis = endCal.getTimeInMillis();
         h.affectedBlockIds.addAll(selectedBlockIds);
+        h.affectedAlarmIds.addAll(selectedAlarmIds);
+        h.affectedConfirmationIds.addAll(selectedConfirmationIds);
 
         List<HolidayBreak> breaks = holidayBreaksStorage.loadBreaks();
         breaks.add(h);

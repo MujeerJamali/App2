@@ -10,26 +10,29 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- * Creating a Holiday Break is gated by the Lock Schedule (only allowed
- * while unlocked), since it schedules restriction being lifted ahead of
- * time - same idea as the Pause button needing an unlocked moment.
- * Cancelling one early is always allowed any time, since that restores
- * restriction sooner rather than removing it.
+ * Creating a Holiday Break is NOT gated here - whether it's actually
+ * allowed depends on the start date/time the user is about to pick
+ * (Lock Schedule locked "now" doesn't matter if the chosen start is on a
+ * later app-day - see HolidayBreakEditActivity.isOnLaterAppDay), which
+ * isn't known until they're on that screen choosing it. So the Add
+ * button here always navigates there; HolidayBreakEditActivity is the
+ * only place that actually decides and enforces this. Cancelling one
+ * early is always allowed any time, since that restores restriction
+ * sooner rather than removing it.
  */
 public class HolidayBreaksListActivity extends Activity {
 
     private HolidayBreaksStorage holidayBreaksStorage;
     private BlocksStorage blocksStorage;
-    private LockScheduleStorage lockScheduleStorage;
+    private AlarmsStorage alarmsStorage;
+    private ConfirmationsStorage confirmationsStorage;
     private LinearLayout breaksContainer;
-    private TextView txtLockedMessage;
     private Button btnAddHolidayBreak;
 
     @Override
@@ -40,19 +43,15 @@ public class HolidayBreaksListActivity extends Activity {
 
         holidayBreaksStorage = new HolidayBreaksStorage(this);
         blocksStorage = new BlocksStorage(this);
-        lockScheduleStorage = new LockScheduleStorage(this);
+        alarmsStorage = new AlarmsStorage(this);
+        confirmationsStorage = new ConfirmationsStorage(this);
 
         breaksContainer = (LinearLayout) findViewById(R.id.breaksContainer);
-        txtLockedMessage = (TextView) findViewById(R.id.txtLockedMessage);
         btnAddHolidayBreak = (Button) findViewById(R.id.btnAddHolidayBreak);
 
         btnAddHolidayBreak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!lockScheduleStorage.isEditingAllowed()) {
-                    Toast.makeText(HolidayBreaksListActivity.this, R.string.msg_holiday_breaks_locked, Toast.LENGTH_LONG).show();
-                    return;
-                }
                 startActivity(new Intent(HolidayBreaksListActivity.this, HolidayBreakEditActivity.class));
             }
         });
@@ -61,9 +60,6 @@ public class HolidayBreaksListActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        boolean creationAllowed = lockScheduleStorage.isEditingAllowed();
-        txtLockedMessage.setVisibility(creationAllowed ? View.GONE : View.VISIBLE);
-        btnAddHolidayBreak.setEnabled(creationAllowed);
         renderBreaks();
     }
 
@@ -77,6 +73,8 @@ public class HolidayBreaksListActivity extends Activity {
             }
         });
         List<Block> allBlocks = blocksStorage.loadBlocks();
+        List<Alarm> allAlarms = alarmsStorage.loadAlarms();
+        List<Confirmation> allConfirmations = confirmationsStorage.loadConfirmations();
 
         for (final HolidayBreak h : breaks) {
             View row = LayoutInflater.from(this).inflate(R.layout.list_item_holiday_break, breaksContainer, false);
@@ -85,7 +83,20 @@ public class HolidayBreaksListActivity extends Activity {
             Button btnCancel = (Button) row.findViewById(R.id.btnCancelBreak);
 
             txtRange.setText(h.name);
-            txtBlocks.setText(h.format() + "\n" + affectedBlockNames(h, allBlocks));
+            String blockNames = affectedBlockNames(h, allBlocks);
+            String alarmNames = affectedAlarmNames(h, allAlarms);
+            String confirmationNames = affectedConfirmationNames(h, allConfirmations);
+            StringBuilder details = new StringBuilder(h.format());
+            if (!blockNames.isEmpty()) {
+                details.append("\n").append(getString(R.string.break_blocks_prefix)).append(blockNames);
+            }
+            if (!alarmNames.isEmpty()) {
+                details.append("\n").append(getString(R.string.break_alarms_prefix)).append(alarmNames);
+            }
+            if (!confirmationNames.isEmpty()) {
+                details.append("\n").append(getString(R.string.break_confirmations_prefix)).append(confirmationNames);
+            }
+            txtBlocks.setText(details.toString());
 
             btnCancel.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -122,6 +133,28 @@ public class HolidayBreaksListActivity extends Activity {
             if (h.affectedBlockIds.contains(b.id)) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(b.name);
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "";
+    }
+
+    private String affectedAlarmNames(HolidayBreak h, List<Alarm> allAlarms) {
+        StringBuilder sb = new StringBuilder();
+        for (Alarm a : allAlarms) {
+            if (h.affectedAlarmIds.contains(a.id)) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(a.name);
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "";
+    }
+
+    private String affectedConfirmationNames(HolidayBreak h, List<Confirmation> allConfirmations) {
+        StringBuilder sb = new StringBuilder();
+        for (Confirmation c : allConfirmations) {
+            if (h.affectedConfirmationIds.contains(c.id)) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(c.name);
             }
         }
         return sb.length() > 0 ? sb.toString() : "";

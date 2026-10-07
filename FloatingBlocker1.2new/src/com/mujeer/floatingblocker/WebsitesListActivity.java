@@ -69,6 +69,7 @@ public class WebsitesListActivity extends Activity {
         Set<String> domains = websitesStorage.loadDomains();
         domains.add(domain);
         websitesStorage.saveDomains(domains);
+        BlockEnforcer.reapplyAndReschedule(this);
         editDomain.setText("");
         Toast.makeText(this, R.string.msg_website_added, Toast.LENGTH_SHORT).show();
         renderDomains(lockScheduleStorage.isEditingAllowed());
@@ -96,6 +97,7 @@ public class WebsitesListActivity extends Activity {
                     Set<String> current = websitesStorage.loadDomains();
                     current.remove(domain);
                     websitesStorage.saveDomains(current);
+                    BlockEnforcer.reapplyAndReschedule(WebsitesListActivity.this);
                     renderDomains(editingAllowed);
                 }
             });
