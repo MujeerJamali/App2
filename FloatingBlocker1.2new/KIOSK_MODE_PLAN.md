@@ -311,6 +311,15 @@ decisions survive even if the conversation gets summarized/compacted.
     still holds - this correction is purely about an OS-level constraint,
     not a change of intent.
 
+38. **Allow-list refresh while Kiosk is pinned**: both - event-driven via
+    the existing `BlockAlarmReceiver` (Block start/end alarms) as the
+    primary mechanism, plus a lightweight periodic recheck (e.g. every
+    minute) that only runs while the Kiosk screen is actually on-screen and
+    pinned. The periodic check costs nothing extra (no background wakeup,
+    only ticks while already visible) and catches a delayed/missed alarm -
+    which matters more here than elsewhere, since a stale allow-list while
+    physically pinned can't be worked around by switching apps.
+
 34. **Kiosk screen timing display**: shows a countdown to when Lock
     Schedule will next unlock, AND, if a Block is currently active, when
     that Block's own schedule ends (so the user can see when the allowed-
