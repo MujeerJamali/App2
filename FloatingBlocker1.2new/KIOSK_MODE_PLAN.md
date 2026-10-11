@@ -237,3 +237,8 @@ decisions survive even if the conversation gets summarized/compacted.
     pinning kicked in. Simpler (no `UsageStatsManager`/task-querying needed)
     and sufficient, since forced immediate entry (#12/#21) leaves little
     room for that case to matter anyway.
+
+23. **Recent list filtering**: an entry is hidden from the "Recent" tab the
+    moment its app is no longer in the currently active allow-list -
+    not shown greyed-out or tappable-with-a-toast. The Recent tab always
+    reflects only what's actually reachable right now.
