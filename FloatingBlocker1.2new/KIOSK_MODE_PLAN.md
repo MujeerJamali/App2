@@ -246,3 +246,8 @@ decisions survive even if the conversation gets summarized/compacted.
 24. **Notifications tab tap action**: tapping a notification opens the
     source app, same as a real system notification would - not a
     read-only display.
+
+25. **Notifications tab dismiss behavior**: dismissing/clearing a
+    notification in-app only hides it from our own list - it does NOT
+    cancel the real system notification. The real notification (and
+    whatever the source app itself does with it) is left untouched.
