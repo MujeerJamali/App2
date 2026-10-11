@@ -230,3 +230,10 @@ decisions survive even if the conversation gets summarized/compacted.
     Lock Schedule transition happens to catch an app already in the
     foreground. Reinforces #12 (force immediate entry) to cover the
     screen-off case explicitly.
+
+22. **"Recent" tab scope**: only tracks apps launched from within the Kiosk
+    grid itself (we log it ourselves at the same point we fire the launch
+    Intent) - not whatever happened to be in the foreground the instant
+    pinning kicked in. Simpler (no `UsageStatsManager`/task-querying needed)
+    and sufficient, since forced immediate entry (#12/#21) leaves little
+    room for that case to matter anyway.
