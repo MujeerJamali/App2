@@ -299,3 +299,10 @@ decisions survive even if the conversation gets summarized/compacted.
     screen prompts the user to pick one, rather than silently skipping that
     Tier-1 slot. Ensures those two Tier-1 slots stay filled instead of
     quietly going missing.
+
+33. **When the default-picker prompt (#32) can fire**: any time, including
+    while Kiosk is actively pinned - not gated to unlocked Lock Schedule
+    time. Picking a default Dialer/SMS app isn't a restriction-weakening
+    edit like the others (#6), it's just filling a Tier-1 slot that should
+    already exist, so there's no reason to delay it to the next unlocked
+    window.
