@@ -293,3 +293,9 @@ decisions survive even if the conversation gets summarized/compacted.
     automatically once its app is uninstalled from the device - not kept
     around in case it's reinstalled later. If reinstalled, it has to be
     added back through the picker.
+
+32. **Missing default Dialer/SMS app (#5)**: if `getDefaultDialerPackage()`
+    or `getDefaultSmsPackage()` returns null (no default chosen), the Kiosk
+    screen prompts the user to pick one, rather than silently skipping that
+    Tier-1 slot. Ensures those two Tier-1 slots stay filled instead of
+    quietly going missing.
