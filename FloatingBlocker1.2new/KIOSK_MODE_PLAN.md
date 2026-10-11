@@ -159,8 +159,24 @@ decisions survive even if the conversation gets summarized/compacted.
 15. **"Always Allowed Apps" picker scope**: shows all installed apps, no
     filtering/restriction.
 
-## Not yet discussed
-
-- Migration handling for existing Blocks (blocklist data can't be safely
-  reinterpreted as whitelist data - needs a one-time migration, as
-  designed in the previous abandoned round).
+16. **Migration: full app-wide fresh-start reset**, not a partial/surgical
+    migration. On this update's first run:
+    - Blocks, Holiday Breaks, Alarms, Confirmations, and all punishment
+      history (widen windows) are wiped completely clean - not just app
+      lists; the records themselves are gone. Names, schedules, everything.
+    - **Lock Schedule's own configured hours are ALSO wiped** ("everything"
+      - confirmed explicitly, not just the records governed by it). Until
+      reconfigured, nothing is locked at all, and the new Kiosk lockdown
+      has no trigger.
+    - The six existing one-time/single-use safety-valve features are
+      **deleted from the codebase entirely** (not reset-to-unused, actually
+      removed as features): all four Clear Punishment buttons, both
+      one-time Pause buttons (1 Hour, Until 11 PM), AND **Stop All Ringing**.
+      The first five are genuinely superseded (the new reusable
+      custom-duration Pause button already overrides any punishment
+      widen-window too, for as long as it's active). Stop All Ringing is
+      NOT superseded by anything - it force-stops a stuck Alarm ring
+      without a barcode scan, and nothing in the new design replaces that.
+      **Explicitly accepted gap**: if barcodes are ever lost or the camera
+      breaks while an Alarm is ringing, there will be no way out except
+      a successful barcode scan. Confirmed anyway, deliberately.
