@@ -222,3 +222,11 @@ decisions survive even if the conversation gets summarized/compacted.
     Once the feature is built and tested as reliable, the existing
     one-way "delete this safety forever" button (#9) is used to remove the
     escape hatch permanently.
+
+21. **Forced entry when the device was asleep through the transition**:
+    confirmed - if Lock Schedule's locked window begins while the screen is
+    off/locked, Kiosk still forces itself onto the screen the instant the
+    device is unlocked (first thing the user sees), not just when a Block/
+    Lock Schedule transition happens to catch an app already in the
+    foreground. Reinforces #12 (force immediate entry) to cover the
+    screen-off case explicitly.
