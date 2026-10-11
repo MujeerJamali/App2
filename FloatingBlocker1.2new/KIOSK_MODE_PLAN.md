@@ -197,3 +197,10 @@ decisions survive even if the conversation gets summarized/compacted.
       Schedule. This refines/confirms #3: #3 only described the locked case;
       this makes explicit that Blocks and Lock Schedule are two independent
       layers that merely combine their effects while Lock Schedule is locked.
+
+18. **Kiosk screen layout**: one single Activity (`KioskSessionActivity`)
+    with tabs inside it - "Apps" (the allowed-apps grid, the main surface),
+    "Recent", and "Notifications" - rather than three separate Activities
+    navigated to from a home screen. Keeps one source of truth for "which
+    apps are allowed" feeding all three tabs, and avoids Activity-transition
+    edge cases on the pinned screen.
