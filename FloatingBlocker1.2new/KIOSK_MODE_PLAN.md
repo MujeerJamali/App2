@@ -251,3 +251,11 @@ decisions survive even if the conversation gets summarized/compacted.
     notification in-app only hides it from our own list - it does NOT
     cancel the real system notification. The real notification (and
     whatever the source app itself does with it) is left untouched.
+
+26. **Exiting Kiosk pinning**: fully automatic - the moment Lock Schedule
+    transitions to unlocked, `stopLockTask()` fires and the device drops
+    back to the real home screen, no button/explicit action needed.
+    Symmetric with how entry is automatic (#2): Lock Schedule is the one
+    trigger for both directions. The Kiosk Safety toggle (#19/#20) already
+    covers the "something's wrong, let me out" case, so no separate manual
+    exit button is needed on the Kiosk screen itself.
