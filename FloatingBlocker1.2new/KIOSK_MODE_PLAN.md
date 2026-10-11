@@ -86,15 +86,13 @@ decisions survive even if the conversation gets summarized/compacted.
     sets via the normal Lock Schedule screen. Explicitly: "No matter
     whatever schedule is."
 
-## Open / needs clarification before coding
+## Resolved (previously open)
 
-- **OS-hardening sequencing** (making USB debugging/ADB permanently
-  blocked at all times, instead of only while Lock Schedule is locked, plus
-  locking Developer Options): the answer given ("Everything should be
-  unlocked") is ambiguous between "yes, bundle this in now, make it
-  permanent" and "no, leave USB debugging tied to Lock Schedule's unlocked/
-  locked state as it already is, don't make it permanently always-blocked."
-  Needs a direct follow-up before this is settled.
+11. **OS-hardening sequencing**: resolved as (a) - USB debugging/ADB stays
+    exactly as it already is, tied to Lock Schedule's locked/unlocked state
+    (blocked while locked, open while unlocked). It is NOT being made
+    permanently always-blocked. No change needed here at all - existing
+    behavior is kept as-is.
 
 ## Not yet discussed
 
