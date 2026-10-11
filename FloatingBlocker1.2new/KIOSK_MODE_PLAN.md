@@ -306,3 +306,8 @@ decisions survive even if the conversation gets summarized/compacted.
     edit like the others (#6), it's just filling a Tier-1 slot that should
     already exist, so there's no reason to delay it to the next unlocked
     window.
+
+34. **Kiosk screen timing display**: shows a countdown to when Lock
+    Schedule will next unlock, AND, if a Block is currently active, when
+    that Block's own schedule ends (so the user can see when the allowed-
+    apps grid is about to change, not just when Kiosk itself will release).
