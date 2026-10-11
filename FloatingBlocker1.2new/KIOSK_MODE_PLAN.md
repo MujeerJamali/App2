@@ -288,3 +288,8 @@ decisions survive even if the conversation gets summarized/compacted.
     Holiday Breaks/Alarms/Confirmations: independent entries, no
     cross-record validation). No need to prevent it either, since #29
     already defines exactly what happens when schedules do overlap.
+
+31. **Always Allowed Apps (#4) auto-pruning**: an entry is removed
+    automatically once its app is uninstalled from the device - not kept
+    around in case it's reinstalled later. If reinstalled, it has to be
+    added back through the picker.
