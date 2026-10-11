@@ -242,3 +242,7 @@ decisions survive even if the conversation gets summarized/compacted.
     moment its app is no longer in the currently active allow-list -
     not shown greyed-out or tappable-with-a-toast. The Recent tab always
     reflects only what's actually reachable right now.
+
+24. **Notifications tab tap action**: tapping a notification opens the
+    source app, same as a real system notification would - not a
+    read-only display.
