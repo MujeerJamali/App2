@@ -321,3 +321,14 @@ decisions survive even if the conversation gets summarized/compacted.
     system Settings screen for it (Settings -> Special app access ->
     Notification access), rather than staying empty/hidden and leaving the
     user to discover the setting on their own.
+
+37. **Grant-access button while Kiosk is pinned**: resolved as (a) - the
+    button only appears/works while Lock Schedule is unlocked (Kiosk not
+    actively pinning); if tapped while pinned it shows a note to come back
+    once unlocked. Not (b) briefly calling `stopLockTask()` to let Settings
+    open and re-pinning afterward - that would mean the app itself
+    deliberately breaking its own pin, which is a bigger risk than the
+    inconvenience of waiting for an unlocked window. This is a narrow,
+    OS-level exception to #36/#33's general "doesn't need to wait" stance:
+    lock task mode won't let the app launch the system Settings app at all
+    while pinned, regardless of intent.
