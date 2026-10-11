@@ -315,3 +315,9 @@ decisions survive even if the conversation gets summarized/compacted.
 35. **Timing display with multiple overlapping active Blocks (#29)**: all
     of their end times are listed out individually, not just the soonest
     one - so the user can see the full picture of what's changing and when.
+
+36. **Notifications tab before permission is granted**: shows a "Grant
+    notification access" prompt/button that deep-links straight to the
+    system Settings screen for it (Settings -> Special app access ->
+    Notification access), rather than staying empty/hidden and leaving the
+    user to discover the setting on their own.
