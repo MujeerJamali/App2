@@ -94,14 +94,73 @@ decisions survive even if the conversation gets summarized/compacted.
     permanently always-blocked. No change needed here at all - existing
     behavior is kept as-is.
 
+12. **Force immediate entry**: reconfirmed - yes, the moment Lock Schedule
+    becomes locked, forcibly jump into the Kiosk lockdown screen, even
+    mid-use of another app.
+
+13. **Lock-task feature set** - decided per-flag:
+    - `SYSTEM_INFO`: on (status bar clock/battery - no risk, baseline).
+    - `HOME`: **off**. Would require designating one of our own apps as an
+      actual Home/launcher activity; if that's ever even slightly
+      misconfigured, pressing Home could land on the REAL system launcher
+      instead of our screen - full escape. Not worth the risk.
+    - `OVERVIEW`/Recents: **off** (Android requires HOME to be on before
+      this can be anyway). Recents is a system UI surface with its own
+      OEM-added gestures (split-screen, clear-all, etc.) that's hard to
+      fully audit on ColorOS.
+    - `NOTIFICATIONS` (the real system shade): **off**. Pulling down the
+      real shade on ColorOS exposes whatever Quick Settings tiles are
+      bundled in there, including Super Power Saving Mode (the one that
+      caused the white-screen freeze bug earlier this session). Building
+      a custom in-app alternative instead (see #14 below).
+    - `GLOBAL_ACTIONS` (long-press power button menu - power off/restart/
+      emergency call): **on**.
+    - `KEYGUARD` (require the real PIN/pattern on wake before returning to
+      the pinned kiosk screen): **on**. Security-only, doesn't loosen or
+      tighten the kiosk itself either way.
+
+14. **Custom in-app alternatives to the risky OS features**, instead of
+    enabling them:
+    - **In-app "Recent" list**: track "most recently launched" ourselves
+      among the kiosk's allowed apps, show that in our own screen. No
+      special permission needed - this is just our own bookkeeping.
+    - **In-app "Notifications" screen**: render notifications ourselves
+      using Android's Notification Listener API, instead of exposing the
+      real system shade. Requires a ONE-TIME manual grant (Settings →
+      Special app access → Notification access) - not something Device
+      Owner can silently grant, needs doing once while unlocked, persists
+      after that. **Scope: only show notifications from apps that are
+      actually reachable in the kiosk** (the whitelist - Business ERP,
+      Dialer, SMS, Self-Control, Always Allowed list) - not notifications
+      from blocked apps, since seeing "you got a message" with no way to
+      act on it would just be pointless FOMO-bait.
+
+## Known issue to resolve (not yet decided how)
+
+- **Bluetooth toggle doesn't actually work**, even though the WiFi toggle
+  in the existing (pre-redesign) Kiosk quick-toggles does. Root cause is
+  almost certainly a real Android platform restriction, not a simple bug:
+  - `WifiManager.setWifiEnabled()` has a DOCUMENTED special carve-out for
+    Device Owner/Profile Owner apps - it keeps working for us specifically
+    because we're Device Owner, even though Android deprecated it for
+    regular apps.
+  - `BluetoothAdapter.enable()`/`.disable()` never got an equivalent
+    Device-Owner carve-out. Since Android 13 (API 33) these are documented
+    to fail (return false, or throw `SecurityException`) for any app that
+    isn't holding `BLUETOOTH_PRIVILEGED` - a signature/system-only
+    permission a Device Owner app cannot be granted the normal way. Our
+    existing try/catch just swallows this and shows the "toggle failed"
+    toast, which matches exactly what was observed.
+  - Options once we get to this: (a) drop the Bluetooth toggle entirely
+    since silent toggling isn't realistically possible on this Android
+    version, (b) fall back to launching `Settings.Panel.ACTION_BLUETOOTH`
+    (a narrow system panel scoped to just Bluetooth, not the full
+    notification shade with other tiles - a smaller exposure than
+    `NOTIFICATIONS` would be, but still real system UI), or (c) leave the
+    button as a known non-functional no-op. Not decided yet.
+
 ## Not yet discussed
 
-- Exact mechanics of forcing the phone into the Kiosk lockdown screen
-  immediately the moment Lock Schedule becomes locked (even mid-use of
-  another app) - this was "yes, force it immediately" in the previous
-  (abandoned) round; needs reconfirming.
-- Lock-task feature set (whether Recents/Home are enabled in lock task
-  mode) - previous round kept `LOCK_TASK_FEATURE_SYSTEM_INFO` only.
 - Migration handling for existing Blocks (blocklist data can't be safely
   reinterpreted as whitelist data - needs a one-time migration, as
   designed in the previous abandoned round).
