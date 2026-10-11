@@ -180,3 +180,20 @@ decisions survive even if the conversation gets summarized/compacted.
       **Explicitly accepted gap**: if barcodes are ever lost or the camera
       breaks while an Alarm is ringing, there will be no way out except
       a successful barcode scan. Confirmed anyway, deliberately.
+
+17. **Blocks remain fully independent of Lock Schedule** - two separate
+    layers, not one:
+    - Blocks run 24/7 on their own schedule, independent of Lock Schedule's
+      locked/unlocked state. A Block suspends non-whitelisted apps whenever
+      *that Block* is active, per its own configured schedule, regardless of
+      whether Lock Schedule happens to be locked or unlocked at that moment.
+    - Lock Schedule going locked is a separate, additional trigger: it pins
+      the device into the Kiosk lockdown screen. While pinned, the allow-list
+      is (active Block's whitelist, if any) union Tier-1 (#5) union Tier-2/
+      Always Allowed Apps (#4).
+    - Lock Schedule unlocked means no Kiosk pinning at all, regardless of
+      Block state - but an independently-active Block still suspends its
+      non-whitelisted apps as normal, since Blocks don't care about Lock
+      Schedule. This refines/confirms #3: #3 only described the locked case;
+      this makes explicit that Blocks and Lock Schedule are two independent
+      layers that merely combine their effects while Lock Schedule is locked.
