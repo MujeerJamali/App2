@@ -300,12 +300,16 @@ decisions survive even if the conversation gets summarized/compacted.
     Tier-1 slot. Ensures those two Tier-1 slots stay filled instead of
     quietly going missing.
 
-33. **When the default-picker prompt (#32) can fire**: any time, including
-    while Kiosk is actively pinned - not gated to unlocked Lock Schedule
-    time. Picking a default Dialer/SMS app isn't a restriction-weakening
-    edit like the others (#6), it's just filling a Tier-1 slot that should
-    already exist, so there's no reason to delay it to the next unlocked
-    window.
+33. **When the default-picker prompt (#32) can fire**: ~~any time, including
+    while Kiosk is actively pinned~~ - **corrected by #37**: the picker
+    (`RoleManager`'s role-request intent / `ACTION_CHANGE_DEFAULT`) is a
+    system-level UI outside our own app, so the same lock-task restriction
+    that blocks the Settings deep-link in #37 blocks this too. Resolved the
+    same way: it only works while Lock Schedule is unlocked, with a note to
+    come back once unlocked if tapped while pinned. The original reasoning
+    (not a restriction-weakening edit, just filling an existing Tier-1 slot)
+    still holds - this correction is purely about an OS-level constraint,
+    not a change of intent.
 
 34. **Kiosk screen timing display**: shows a countdown to when Lock
     Schedule will next unlock, AND, if a Block is currently active, when
