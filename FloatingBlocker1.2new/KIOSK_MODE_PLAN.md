@@ -281,3 +281,10 @@ decisions survive even if the conversation gets summarized/compacted.
     stacking more active Blocks can only ever narrow access, never widen
     it. Falls back to Tier-1 union Tier-2 only if the overlapping Blocks
     share nothing in common - same floor as the "no Block active" case (#3).
+
+30. **Overlapping Block schedules at edit time**: allowed freely, no
+    warning/validation when saving a Block whose schedule overlaps
+    another's - the standard approach for this kind of record (same as
+    Holiday Breaks/Alarms/Confirmations: independent entries, no
+    cross-record validation). No need to prevent it either, since #29
+    already defines exactly what happens when schedules do overlap.
