@@ -311,29 +311,6 @@ decisions survive even if the conversation gets summarized/compacted.
     still holds - this correction is purely about an OS-level constraint,
     not a change of intent.
 
-38. **Allow-list refresh while Kiosk is pinned**: both - event-driven via
-    the existing `BlockAlarmReceiver` (Block start/end alarms) as the
-    primary mechanism, plus a lightweight periodic recheck (e.g. every
-    minute) that only runs while the Kiosk screen is actually on-screen and
-    pinned. The periodic check costs nothing extra (no background wakeup,
-    only ticks while already visible) and catches a delayed/missed alarm -
-    which matters more here than elsewhere, since a stale allow-list while
-    physically pinned can't be worked around by switching apps.
-
-39. **Always Allowed Apps screen entry point**: its own button on the main
-    screen, under the existing "Manage" section - same pattern as Blocks,
-    Websites, Alarms, Confirmations, Holiday Breaks etc. (each already gets
-    its own top-level button there). Not a sub-screen reached from inside
-    Lock Schedule's screen, to stay consistent with how every other list/
-    management screen is organized.
-
-40. **WiFi quick-toggle in the new Kiosk screen**: carried over from the
-    existing `KioskSessionActivity` (Bluetooth already dropped per the
-    known-issue resolution above) - placed as a small control on the
-    "Apps" tab itself (e.g. a header toggle above the grid), not its own
-    tab. A single toggle doesn't justify a dedicated tab, and the point of
-    a "quick" toggle is minimal navigation to reach it.
-
 34. **Kiosk screen timing display**: shows a countdown to when Lock
     Schedule will next unlock, AND, if a Block is currently active, when
     that Block's own schedule ends (so the user can see when the allowed-
@@ -359,3 +336,31 @@ decisions survive even if the conversation gets summarized/compacted.
     OS-level exception to #36/#33's general "doesn't need to wait" stance:
     lock task mode won't let the app launch the system Settings app at all
     while pinned, regardless of intent.
+
+38. **Allow-list refresh while Kiosk is pinned**: both - event-driven via
+    the existing `BlockAlarmReceiver` (Block start/end alarms) as the
+    primary mechanism, plus a lightweight periodic recheck (e.g. every
+    minute) that only runs while the Kiosk screen is actually on-screen and
+    pinned. The periodic check costs nothing extra (no background wakeup,
+    only ticks while already visible) and catches a delayed/missed alarm -
+    which matters more here than elsewhere, since a stale allow-list while
+    physically pinned can't be worked around by switching apps.
+
+39. **Always Allowed Apps screen entry point**: its own button on the main
+    screen, under the existing "Manage" section - same pattern as Blocks,
+    Websites, Alarms, Confirmations, Holiday Breaks etc. (each already gets
+    its own top-level button there). Not a sub-screen reached from inside
+    Lock Schedule's screen, to stay consistent with how every other list/
+    management screen is organized.
+
+40. **WiFi quick-toggle in the new Kiosk screen**: carried over from the
+    existing `KioskSessionActivity` (Bluetooth already dropped per the
+    known-issue resolution above) - placed as a small control on the
+    "Apps" tab itself (e.g. a header toggle above the grid), not its own
+    tab. A single toggle doesn't justify a dedicated tab, and the point of
+    a "quick" toggle is minimal navigation to reach it.
+
+41. **Websites blocking feature scope**: out of scope for this round -
+    `WebsitesListActivity` stays exactly as it is, untouched, still
+    blocklist semantics. Not converted to whitelist alongside app Blocks
+    (#1). May be revisited in a future round, but not part of this one.
