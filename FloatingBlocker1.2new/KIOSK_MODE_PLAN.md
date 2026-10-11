@@ -311,3 +311,7 @@ decisions survive even if the conversation gets summarized/compacted.
     Schedule will next unlock, AND, if a Block is currently active, when
     that Block's own schedule ends (so the user can see when the allowed-
     apps grid is about to change, not just when Kiosk itself will release).
+
+35. **Timing display with multiple overlapping active Blocks (#29)**: all
+    of their end times are listed out individually, not just the soonest
+    one - so the user can see the full picture of what's changing and when.
