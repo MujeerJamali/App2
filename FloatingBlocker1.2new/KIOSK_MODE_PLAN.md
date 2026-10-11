@@ -265,3 +265,8 @@ decisions survive even if the conversation gets summarized/compacted.
     version-code check. Fires exactly once, ever, on the first run after
     this update. A future update that needs its own reset would need its
     own separate flag, not a reuse of this one.
+
+28. **Allowed-apps grid ordering**: Tier-1 (#5, the hardcoded always-on
+    apps) are pinned first, in a fixed position - everything else (Tier-2
+    Always Allowed Apps + the active Block's whitelist, if any) is sorted
+    alphabetically after them. No usage-based/dynamic reordering.
