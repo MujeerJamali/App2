@@ -156,10 +156,11 @@ decisions survive even if the conversation gets summarized/compacted.
     permission a Device Owner app can't hold. The WiFi toggle stays (it
     keeps working fine via the documented Device-Owner carve-out).
 
+15. **"Always Allowed Apps" picker scope**: shows all installed apps, no
+    filtering/restriction.
+
 ## Not yet discussed
 
 - Migration handling for existing Blocks (blocklist data can't be safely
   reinterpreted as whitelist data - needs a one-time migration, as
   designed in the previous abandoned round).
-- Whether the "Always Allowed Apps" screen allows adding *any* installed
-  app, or something more constrained.
