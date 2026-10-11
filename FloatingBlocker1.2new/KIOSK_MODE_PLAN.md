@@ -212,3 +212,13 @@ decisions survive even if the conversation gets summarized/compacted.
     exposure is identical either way; what differs is tap-count during an
     actual malfunction, so the main screen (fewest taps) wins as the safety
     net it's meant to be.
+
+20. **Kiosk Safety toggle gating**: none - it works unconditionally at any
+    time, including while Lock Schedule is locked and Kiosk is actively
+    pinning, mirroring how the old Master Safety toggle had no gating
+    either (unlike the Pause buttons, which do block while locked). This is
+    deliberate: it's a safety net for a real malfunction, and a malfunction
+    is exactly as likely to happen during locked time as any other time.
+    Once the feature is built and tested as reliable, the existing
+    one-way "delete this safety forever" button (#9) is used to remove the
+    escape hatch permanently.
