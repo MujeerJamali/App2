@@ -151,13 +151,10 @@ decisions survive even if the conversation gets summarized/compacted.
     permission a Device Owner app cannot be granted the normal way. Our
     existing try/catch just swallows this and shows the "toggle failed"
     toast, which matches exactly what was observed.
-  - Options once we get to this: (a) drop the Bluetooth toggle entirely
-    since silent toggling isn't realistically possible on this Android
-    version, (b) fall back to launching `Settings.Panel.ACTION_BLUETOOTH`
-    (a narrow system panel scoped to just Bluetooth, not the full
-    notification shade with other tiles - a smaller exposure than
-    `NOTIFICATIONS` would be, but still real system UI), or (c) leave the
-    button as a known non-functional no-op. Not decided yet.
+  - **Decided: drop the Bluetooth toggle entirely.** Silent toggling isn't
+    realistically possible on this Android version without a system-level
+    permission a Device Owner app can't hold. The WiFi toggle stays (it
+    keeps working fine via the documented Device-Owner carve-out).
 
 ## Not yet discussed
 
