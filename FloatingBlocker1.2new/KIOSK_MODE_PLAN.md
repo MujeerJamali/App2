@@ -204,3 +204,11 @@ decisions survive even if the conversation gets summarized/compacted.
     navigated to from a home screen. Keeps one source of truth for "which
     apps are allowed" feeding all three tabs, and avoids Activity-transition
     edge cases on the pinned screen.
+
+19. **Kiosk Safety toggle placement (#9)**: lives on the main screen's
+    existing Safety section, alongside Battery Exemption etc. - not on a
+    dedicated sub-screen. Since Self-Control itself is Tier-1 (reachable
+    24/7, even while a Kiosk lockdown is actively pinning the device),
+    exposure is identical either way; what differs is tap-count during an
+    actual malfunction, so the main screen (fewest taps) wins as the safety
+    net it's meant to be.
