@@ -259,3 +259,9 @@ decisions survive even if the conversation gets summarized/compacted.
     trigger for both directions. The Kiosk Safety toggle (#19/#20) already
     covers the "something's wrong, let me out" case, so no separate manual
     exit button is needed on the Kiosk screen itself.
+
+27. **Fresh-start reset trigger (#16) mechanics**: a permanent "migration
+    done" flag, set once the wipe has run and never cleared - not a
+    version-code check. Fires exactly once, ever, on the first run after
+    this update. A future update that needs its own reset would need its
+    own separate flag, not a reuse of this one.
