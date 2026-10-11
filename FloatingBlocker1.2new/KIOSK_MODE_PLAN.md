@@ -320,6 +320,13 @@ decisions survive even if the conversation gets summarized/compacted.
     which matters more here than elsewhere, since a stale allow-list while
     physically pinned can't be worked around by switching apps.
 
+39. **Always Allowed Apps screen entry point**: its own button on the main
+    screen, under the existing "Manage" section - same pattern as Blocks,
+    Websites, Alarms, Confirmations, Holiday Breaks etc. (each already gets
+    its own top-level button there). Not a sub-screen reached from inside
+    Lock Schedule's screen, to stay consistent with how every other list/
+    management screen is organized.
+
 34. **Kiosk screen timing display**: shows a countdown to when Lock
     Schedule will next unlock, AND, if a Block is currently active, when
     that Block's own schedule ends (so the user can see when the allowed-
