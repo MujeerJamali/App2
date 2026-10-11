@@ -270,3 +270,14 @@ decisions survive even if the conversation gets summarized/compacted.
     apps) are pinned first, in a fixed position - everything else (Tier-2
     Always Allowed Apps + the active Block's whitelist, if any) is sorted
     alphabetically after them. No usage-based/dynamic reordering.
+
+29. **Multiple overlapping active Blocks**: when more than one Block is
+    active at the same time, only apps that appear on *every* currently-
+    active Block's whitelist stay allowed - not the combined/union of all
+    of them. Example: Block A (9am-5pm) allows Camera + Calculator; Block
+    B (1pm-6pm) allows Maps + Calculator; during the 1pm-5pm overlap, only
+    Calculator is allowed from either Block (plus Tier-1/Tier-2 as always).
+    This keeps the same invariant the old blocklist Blocks already had:
+    stacking more active Blocks can only ever narrow access, never widen
+    it. Falls back to Tier-1 union Tier-2 only if the overlapping Blocks
+    share nothing in common - same floor as the "no Block active" case (#3).
