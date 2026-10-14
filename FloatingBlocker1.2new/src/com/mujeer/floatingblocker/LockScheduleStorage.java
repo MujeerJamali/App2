@@ -78,14 +78,28 @@ public class LockScheduleStorage {
         return c.get(Calendar.DAY_OF_WEEK);
     }
 
+    /** Hardcoded daily safety carve-out: 2:00 AM - 2:10 AM is unconditionally
+     * treated as unlocked, no matter what ranges are configured - applies
+     * everywhere isCurrentlyLocked() is checked (every editing gate, the
+     * debugging/bootstrap-tools/time-change locks, and the Kiosk trigger
+     * itself), since all of those call through here rather than reading
+     * the saved ranges directly. Not configurable via the normal Lock
+     * Schedule screen - this is a fixed guarantee, not a user setting. */
+    private static boolean isInDailySafetyWindow(int nowMinutes) {
+        return nowMinutes >= 120 && nowMinutes < 130;
+    }
+
     /** True if we are currently inside one of the saved ranges (i.e. things are locked). */
     public boolean isCurrentlyLocked() {
+        int nowMinutes = currentMinutesOfDay();
+        if (isInDailySafetyWindow(nowMinutes)) {
+            return false;
+        }
         List<TimeRange> ranges = loadRanges();
         if (ranges.isEmpty()) {
             // Never configured yet - stay open so setup is possible at all.
             return false;
         }
-        int nowMinutes = currentMinutesOfDay();
         int nowDay = currentDayOfWeek();
         for (TimeRange r : ranges) {
             if (r.contains(nowMinutes, nowDay)) {

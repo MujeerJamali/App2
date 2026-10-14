@@ -105,6 +105,13 @@
             android:text="@string/home_location_button" />
 
         <Button
+            android:id="@+id/btnAlwaysAllowedApps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/always_allowed_apps_button" />
+
+        <Button
             android:id="@+id/btnViewPunishments"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -131,60 +138,18 @@
             android:text="@string/safety_delete_forever_button" />
 
         <Button
-            android:id="@+id/btnClearPunishment"
+            android:id="@+id/btnKioskSafety"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/clear_punishment_button" />
+            android:text="@string/kiosk_safety_engage_button" />
 
         <Button
-            android:id="@+id/btnClearPunishment2"
+            android:id="@+id/btnDeleteKioskSafetyForever"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/clear_punishment_button_2" />
-
-        <Button
-            android:id="@+id/btnClearPunishment3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/clear_punishment_button_3" />
-
-        <Button
-            android:id="@+id/btnClearPunishment4"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/clear_punishment_button_4" />
-
-        <Button
-            android:id="@+id/btnStopAllRinging"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/stop_all_ringing_button" />
-
-        <Button
-            android:id="@+id/btnPauseAllOneHour"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/pause_all_button_activate" />
-
-        <Button
-            android:id="@+id/btnPauseUntil11pm"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:text="@string/pause_until_11pm_button_activate" />
+            android:text="@string/kiosk_safety_delete_forever_button" />
 
         <EditText
             android:id="@+id/editCustomPauseMinutes"
@@ -227,18 +192,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/battery_exempt_off" />
-
-        <TextView
-            style="@style/SectionHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/section_kiosk" />
-
-        <Button
-            android:id="@+id/btnKioskMode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/kiosk_mode_button" />
 
         <TextView
             style="@style/SectionHeader"

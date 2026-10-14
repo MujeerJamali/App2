@@ -65,7 +65,7 @@ public class BlocksListActivity extends Activity {
             Button btnDelete = (Button) row.findViewById(R.id.btnDeleteBlock);
 
             txtName.setText(b.name);
-            txtSubtitle.setText(getString(R.string.block_subtitle_format, b.ranges.size(), b.blockedPackages.size()));
+            txtSubtitle.setText(getString(R.string.block_subtitle_format, b.ranges.size(), b.allowedPackages.size()));
             btnDelete.setEnabled(editingAllowed);
 
             row.setOnClickListener(new View.OnClickListener() {

@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
     private LockScheduleStorage lockScheduleStorage;
     private BlocksPauseStorage blocksPauseStorage;
     private MasterSafetyStorage masterSafetyStorage;
+    private KioskSafetyStorage kioskSafetyStorage;
     private DevicePolicyManager devicePolicyManager;
     private ComponentName adminComponent;
 
@@ -35,20 +36,14 @@ public class MainActivity extends Activity {
     private Button btnBlocksPause;
     private Button btnMasterSafety;
     private Button btnDeleteSafetyForever;
+    private Button btnKioskSafety;
+    private Button btnDeleteKioskSafetyForever;
     private Button btnBatteryExemption;
     private Button btnScanRingingAlarm;
-    private Button btnClearPunishment;
-    private Button btnClearPunishment2;
-    private Button btnClearPunishment3;
-    private Button btnClearPunishment4;
-    private Button btnStopAllRinging;
-    private Button btnPauseAllOneHour;
-    private Button btnPauseUntil11pm;
     private EditText editCustomPauseMinutes;
     private Button btnCustomPause;
     private Button btnDeleteCustomPauseForever;
     private Button btnExcludeBusinessErp;
-    private BlockPunishmentStorage punishmentStorage;
     private PermanentAppExclusionStorage permanentExclusionStorage;
 
     private static final String BUSINESS_ERP_PACKAGE = "com.mujeer.businesserp";
@@ -58,8 +53,6 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             refreshRingingAlarmButton();
-            refreshPauseAllButton();
-            refreshPauseUntil11pmButton();
             refreshCustomPauseButton();
             ringingAlarmHandler.postDelayed(this, 1000);
         }
@@ -82,7 +75,7 @@ public class MainActivity extends Activity {
         lockScheduleStorage = new LockScheduleStorage(this);
         blocksPauseStorage = new BlocksPauseStorage(this);
         masterSafetyStorage = new MasterSafetyStorage(this);
-        punishmentStorage = new BlockPunishmentStorage(this);
+        kioskSafetyStorage = new KioskSafetyStorage(this);
         permanentExclusionStorage = new PermanentAppExclusionStorage(this);
         devicePolicyManager = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, FloatingBlockerDeviceAdminReceiver.class);
@@ -91,20 +84,16 @@ public class MainActivity extends Activity {
         btnBlocksPause = (Button) findViewById(R.id.btnBlocksPause);
         btnMasterSafety = (Button) findViewById(R.id.btnMasterSafety);
         btnDeleteSafetyForever = (Button) findViewById(R.id.btnDeleteSafetyForever);
+        btnKioskSafety = (Button) findViewById(R.id.btnKioskSafety);
+        btnDeleteKioskSafetyForever = (Button) findViewById(R.id.btnDeleteKioskSafetyForever);
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
-        btnClearPunishment = (Button) findViewById(R.id.btnClearPunishment);
-        btnClearPunishment2 = (Button) findViewById(R.id.btnClearPunishment2);
-        btnClearPunishment3 = (Button) findViewById(R.id.btnClearPunishment3);
-        btnClearPunishment4 = (Button) findViewById(R.id.btnClearPunishment4);
-        btnStopAllRinging = (Button) findViewById(R.id.btnStopAllRinging);
-        btnPauseAllOneHour = (Button) findViewById(R.id.btnPauseAllOneHour);
-        btnPauseUntil11pm = (Button) findViewById(R.id.btnPauseUntil11pm);
         editCustomPauseMinutes = (EditText) findViewById(R.id.editCustomPauseMinutes);
         btnCustomPause = (Button) findViewById(R.id.btnCustomPause);
         btnDeleteCustomPauseForever = (Button) findViewById(R.id.btnDeleteCustomPauseForever);
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
+        btnDeleteKioskSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
         Button btnBlocks = (Button) findViewById(R.id.btnBlocks);
@@ -115,10 +104,10 @@ public class MainActivity extends Activity {
         Button btnConfirmations = (Button) findViewById(R.id.btnConfirmations);
         Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
         Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
+        Button btnAlwaysAllowedApps = (Button) findViewById(R.id.btnAlwaysAllowedApps);
         Button btnViewPunishments = (Button) findViewById(R.id.btnViewPunishments);
         Button btnExportBackup = (Button) findViewById(R.id.btnExportBackup);
         Button btnImportBackup = (Button) findViewById(R.id.btnImportBackup);
-        Button btnKioskMode = (Button) findViewById(R.id.btnKioskMode);
 
         btnBatteryExemption.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
@@ -148,59 +137,24 @@ public class MainActivity extends Activity {
             }
         });
 
+        btnKioskSafety.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onKioskSafetyClicked();
+            }
+        });
+
+        btnDeleteKioskSafetyForever.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onDeleteKioskSafetyForeverClicked();
+            }
+        });
+
         btnScanRingingAlarm.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
                 onScanRingingAlarmClicked();
-            }
-        });
-
-        btnClearPunishment.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onClearPunishmentClicked();
-            }
-        });
-
-        btnClearPunishment2.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onClearPunishment2Clicked();
-            }
-        });
-
-        btnClearPunishment3.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onClearPunishment3Clicked();
-            }
-        });
-
-        btnClearPunishment4.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onClearPunishment4Clicked();
-            }
-        });
-
-        btnStopAllRinging.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onStopAllRingingClicked();
-            }
-        });
-
-        btnPauseAllOneHour.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onPauseAllOneHourClicked();
-            }
-        });
-
-        btnPauseUntil11pm.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onPauseUntil11pmClicked();
             }
         });
 
@@ -281,6 +235,13 @@ public class MainActivity extends Activity {
             }
         });
 
+        btnAlwaysAllowedApps.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                startActivity(new Intent(MainActivity.this, AlwaysAllowedAppsListActivity.class));
+            }
+        });
+
         btnViewPunishments.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
             public void onClick(android.view.View v) {
@@ -292,13 +253,6 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onExportBackupClicked();
-            }
-        });
-
-        btnKioskMode.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                startActivity(new Intent(MainActivity.this, KioskSetupActivity.class));
             }
         });
 
@@ -457,19 +411,21 @@ public class MainActivity extends Activity {
         btnBatteryExemption.setText(batteryExempt ? R.string.battery_exempt_on : R.string.battery_exempt_off);
         btnBatteryExemption.setEnabled(!batteryExempt);
 
-        btnClearPunishment.setVisibility(punishmentStorage.hasUsedOneTimeClear()
-                ? android.view.View.GONE : android.view.View.VISIBLE);
-        btnClearPunishment2.setVisibility(punishmentStorage.hasUsedOneTimeClear2()
-                ? android.view.View.GONE : android.view.View.VISIBLE);
-        btnClearPunishment3.setVisibility(punishmentStorage.hasUsedOneTimeClear3()
-                ? android.view.View.GONE : android.view.View.VISIBLE);
-        btnClearPunishment4.setVisibility(punishmentStorage.hasUsedOneTimeClear4()
-                ? android.view.View.GONE : android.view.View.VISIBLE);
-        btnStopAllRinging.setVisibility(new AlarmRuntimeStorage(this).hasUsedOneTimeStopAllRinging()
-                ? android.view.View.GONE : android.view.View.VISIBLE);
+        boolean kioskSafetyEngaged = kioskSafetyStorage.isEngaged();
+        boolean kioskSafetyDeleted = kioskSafetyStorage.isDeletedForever();
+        if (kioskSafetyDeleted) {
+            btnKioskSafety.setText(R.string.kiosk_safety_deleted_button);
+            btnKioskSafety.setEnabled(false);
+            btnKioskSafety.setBackgroundTintList(null);
+            btnDeleteKioskSafetyForever.setEnabled(false);
+        } else {
+            btnKioskSafety.setText(kioskSafetyEngaged ? R.string.kiosk_safety_disengage_button : R.string.kiosk_safety_engage_button);
+            btnKioskSafety.setEnabled(true);
+            btnKioskSafety.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    kioskSafetyEngaged ? getColor(R.color.color_danger) : getColor(R.color.primary)));
+            btnDeleteKioskSafetyForever.setEnabled(true);
+        }
 
-        refreshPauseAllButton();
-        refreshPauseUntil11pmButton();
         refreshCustomPauseButton();
 
         btnExcludeBusinessErp.setVisibility(permanentExclusionStorage.isExcluded(BUSINESS_ERP_PACKAGE)
@@ -479,270 +435,8 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * A one-time-only escape hatch for Alarm-miss punishment (Block
-     * widening) that wasn't actually deserved - e.g. a bug fabricating
-     * missed occurrences that never really happened. Deliberately NOT
-     * gated on Lock Schedule's unlocked state like every other
-     * weakening action in this app: being usable exactly once, ever,
-     * already prevents it from becoming a repeatable loophole, and
-     * gating it to unlocked-only could make it unusable exactly when
-     * it's needed (right after the punishment was wrongly applied,
-     * while still locked). Once used, the button is gone forever.
-     */
-    private void onClearPunishmentClicked() {
-        if (punishmentStorage.hasUsedOneTimeClear()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_clear_punishment_title)
-                .setMessage(R.string.confirm_clear_punishment_message)
-                .setPositiveButton(R.string.confirm_clear_punishment_yes, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        punishmentStorage.clearAll();
-                        punishmentStorage.markOneTimeClearUsed();
-                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared, Toast.LENGTH_LONG).show();
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    /**
-     * A second, independent one-time-only escape hatch for Alarm-miss
-     * punishment, tracked under its own used-flag (see
-     * BlockPunishmentStorage.hasUsedOneTimeClear2) so it stays available
-     * even after the first Clear Current Punishment button has already
-     * been spent - added specifically for a false punishment caused by the
-     * early-alarm-delivery bug fixed in 4.74, discovered while the phone
-     * was too locked down to install that fix right away. Same reasoning
-     * as the first one: not gated on Lock Schedule's unlocked state, and
-     * gone forever once used.
-     */
-    private void onClearPunishment2Clicked() {
-        if (punishmentStorage.hasUsedOneTimeClear2()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_clear_punishment_title_2)
-                .setMessage(R.string.confirm_clear_punishment_message_2)
-                .setPositiveButton(R.string.confirm_clear_punishment_yes_2, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        punishmentStorage.clearAll();
-                        punishmentStorage.markOneTimeClearUsed2();
-                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_2, Toast.LENGTH_LONG).show();
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    /**
-     * A third, independent one-time-only escape hatch for Alarm-miss
-     * punishment, tracked under its own used-flag (see
-     * BlockPunishmentStorage.hasUsedOneTimeClear3) so it stays available
-     * even after the first two Clear Current Punishment buttons have
-     * already been spent. Same reasoning as the earlier two: not gated on
-     * Lock Schedule's unlocked state, and gone forever once used.
-     */
-    private void onClearPunishment3Clicked() {
-        if (punishmentStorage.hasUsedOneTimeClear3()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_clear_punishment_title_3)
-                .setMessage(R.string.confirm_clear_punishment_message_3)
-                .setPositiveButton(R.string.confirm_clear_punishment_yes_3, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        punishmentStorage.clearAll();
-                        punishmentStorage.markOneTimeClearUsed3();
-                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_3, Toast.LENGTH_LONG).show();
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    /**
-     * A fourth, independent one-time-only escape hatch for punishment
-     * caused by a missed Alarm OR a missed Confirmation - both widen a
-     * Block's occurrence the exact same way (see BlockPunishmentStorage),
-     * so this one clear covers either source. Tracked under its own
-     * used-flag (hasUsedOneTimeClear4) so it stays available even after
-     * the first three Clear Current Punishment buttons have already been
-     * spent. Same reasoning as the earlier three: not gated on Lock
-     * Schedule's unlocked state, and gone forever once used.
-     */
-    private void onClearPunishment4Clicked() {
-        if (punishmentStorage.hasUsedOneTimeClear4()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_clear_punishment_title_4)
-                .setMessage(R.string.confirm_clear_punishment_message_4)
-                .setPositiveButton(R.string.confirm_clear_punishment_yes_4, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        punishmentStorage.clearAll();
-                        punishmentStorage.markOneTimeClearUsed4();
-                        Toast.makeText(MainActivity.this, R.string.msg_punishment_cleared_4, Toast.LENGTH_LONG).show();
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    /**
-     * A one-time-only escape hatch for an Alarm ring that's genuinely stuck
-     * with no other way to dismiss it (e.g. lost barcodes, a broken
-     * camera) - force-stops every currently-ringing Alarm without a scan.
-     * Resolved as dismissed, not missed (see AlarmPunisher.stopAllRinging),
-     * so nothing gets punished by using it. Not gated on Lock Schedule's
-     * unlocked state, same reasoning as the other one-time safety valves,
-     * and gone forever once used.
-     */
-    private void onStopAllRingingClicked() {
-        final AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(this);
-        if (runtime.hasUsedOneTimeStopAllRinging()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_stop_all_ringing_title)
-                .setMessage(R.string.confirm_stop_all_ringing_message)
-                .setPositiveButton(R.string.confirm_stop_all_ringing_yes, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        int stopped = AlarmPunisher.stopAllRinging(MainActivity.this);
-                        runtime.markOneTimeStopAllRingingUsed();
-                        String message = stopped > 0
-                                ? String.format(getString(R.string.msg_stopped_ringing_alarms), stopped)
-                                : getString(R.string.msg_no_ringing_alarms);
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    /**
-     * A one-time-only emergency unsuspend for every currently-blocked app,
-     * for exactly 1 hour, then Blocks resume automatically on their own -
-     * meant for a situation where Blocks enforcement is itself getting in
-     * the way of fixing a real problem (e.g. needing AIDE/other tools to
-     * debug this app while a Lock Schedule sleep window is about to
-     * suspend them). Not gated on Lock Schedule's unlocked state, same
-     * reasoning as Clear Current Punishment above - usable exactly once,
-     * ever, already prevents it being a repeatable loophole, and it needs
-     * to actually work while locked to be useful at all. Auto-expiring
-     * (via BlocksPauseStorage's temporary-override window) rather than a
-     * plain pause specifically so it can't get stuck "paused forever"
-     * behind a locked schedule with no way to manually resume it.
-     */
-    private void onPauseAllOneHourClicked() {
-        if (blocksPauseStorage.hasUsedOneTimePause()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_pause_all_title)
-                .setMessage(R.string.confirm_pause_all_message)
-                .setPositiveButton(R.string.confirm_pause_all_yes, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        blocksPauseStorage.setTemporaryOverrideUntilMillis(
-                                System.currentTimeMillis() + (60L * 60L * 1000L));
-                        blocksPauseStorage.markOneTimePauseUsed();
-                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    /**
-     * Visible and clickable before first use; visible-but-informational
-     * with a live countdown while the 1-hour window is active; gone for
-     * good once that window has passed - it can never be triggered again.
-     */
-    private void refreshPauseAllButton() {
-        if (!blocksPauseStorage.hasUsedOneTimePause()) {
-            btnPauseAllOneHour.setVisibility(android.view.View.VISIBLE);
-            btnPauseAllOneHour.setEnabled(true);
-            btnPauseAllOneHour.setText(R.string.pause_all_button_activate);
-            return;
-        }
-        long remainingMillis = blocksPauseStorage.getTemporaryOverrideUntilMillis() - System.currentTimeMillis();
-        if (remainingMillis <= 0) {
-            btnPauseAllOneHour.setVisibility(android.view.View.GONE);
-            return;
-        }
-        btnPauseAllOneHour.setVisibility(android.view.View.VISIBLE);
-        btnPauseAllOneHour.setEnabled(false);
-        btnPauseAllOneHour.setText(getString(R.string.pause_all_button_active_format, formatRemaining(remainingMillis)));
-    }
-
-    /**
-     * A second, independent one-time emergency unsuspend - same mechanism
-     * as Pause All Blocks for 1 Hour (the shared temporary-override window
-     * in BlocksPauseStorage, which only ever extends, never shortens), but
-     * targeting a fixed clock time (11 PM) rather than a fixed duration.
-     * If it's already past 11 PM when this is used, targets 11 PM
-     * tomorrow instead, so "until 11 PM" always means something.
-     */
-    private void onPauseUntil11pmClicked() {
-        if (blocksPauseStorage.hasUsedOneTimePauseUntil11pm()) {
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_pause_until_11pm_title)
-                .setMessage(R.string.confirm_pause_until_11pm_message)
-                .setPositiveButton(R.string.confirm_pause_until_11pm_yes, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        java.util.Calendar cal = java.util.Calendar.getInstance();
-                        cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
-                        cal.set(java.util.Calendar.MINUTE, 0);
-                        cal.set(java.util.Calendar.SECOND, 0);
-                        cal.set(java.util.Calendar.MILLISECOND, 0);
-                        if (cal.getTimeInMillis() <= System.currentTimeMillis()) {
-                            cal.add(java.util.Calendar.DAY_OF_YEAR, 1);
-                        }
-                        blocksPauseStorage.setTemporaryOverrideUntilMillis(cal.getTimeInMillis());
-                        blocksPauseStorage.markOneTimePauseUntil11pmUsed();
-                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
-    }
-
-    private void refreshPauseUntil11pmButton() {
-        if (!blocksPauseStorage.hasUsedOneTimePauseUntil11pm()) {
-            btnPauseUntil11pm.setVisibility(android.view.View.VISIBLE);
-            btnPauseUntil11pm.setEnabled(true);
-            btnPauseUntil11pm.setText(R.string.pause_until_11pm_button_activate);
-            return;
-        }
-        long remainingMillis = blocksPauseStorage.getTemporaryOverrideUntilMillis() - System.currentTimeMillis();
-        if (remainingMillis <= 0) {
-            btnPauseUntil11pm.setVisibility(android.view.View.GONE);
-            return;
-        }
-        btnPauseUntil11pm.setVisibility(android.view.View.VISIBLE);
-        btnPauseUntil11pm.setEnabled(false);
-        btnPauseUntil11pm.setText(getString(R.string.pause_until_11pm_button_active_format, formatRemaining(remainingMillis)));
-    }
-
-    /**
-     * Unlike the two one-time pauses above, this one never uses itself up -
+     * Unlike the old one-time pauses (deleted - see KIOSK_MODE_PLAN.md
+     * decision #16), this one never uses itself up -
      * it can be triggered again and again, for whatever duration is typed
      * in each time, extending the same shared temporary-override window
      * (BlocksPauseStorage.setTemporaryOverrideUntilMillis - extend-only, so
@@ -858,18 +552,16 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    /**
+     * Legacy no-op under whitelist semantics: this used to remove
+     * packageName from every Block's blocklist so it could never be
+     * blocked. Now that Business ERP is unconditionally Tier-1 (see
+     * KioskAllowList), it's never suspended regardless of any Block's
+     * allow-list, so there's nothing left for this to meaningfully do -
+     * kept only so the existing one-time button's call site still
+     * compiles, not because it still matters.
+     */
     private void removePackageFromAllBlocks(String packageName) {
-        BlocksStorage blocksStorage = new BlocksStorage(this);
-        List<Block> blocks = blocksStorage.loadBlocks();
-        boolean changed = false;
-        for (Block b : blocks) {
-            if (b.blockedPackages.remove(packageName)) {
-                changed = true;
-            }
-        }
-        if (changed) {
-            blocksStorage.saveBlocks(blocks);
-        }
     }
 
     /**
@@ -1039,6 +731,47 @@ public class MainActivity extends Activity {
                     public void onClick(DialogInterface dialog, int which) {
                         masterSafetyStorage.deleteForever();
                         Toast.makeText(MainActivity.this, R.string.msg_safety_deleted, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.confirm_delete_safety_cancel, null)
+                .show();
+    }
+
+    /**
+     * Decisions #9/#19/#20: a separate safety valve specifically for the
+     * automatic Kiosk lockdown - disables ONLY that, nothing else in this
+     * app. Deliberately no gating at all (unlike the Blocks Pause
+     * buttons) - it's a reliable escape hatch for a genuine malfunction,
+     * which is just as likely to happen during locked time as any other.
+     */
+    private void onKioskSafetyClicked() {
+        boolean currentlyEngaged = kioskSafetyStorage.isEngaged();
+        boolean ok = kioskSafetyStorage.setEngaged(!currentlyEngaged);
+        if (!ok) {
+            Toast.makeText(this, R.string.msg_kiosk_safety_already_deleted, Toast.LENGTH_LONG).show();
+        }
+        BlockEnforcer.reapplyAndReschedule(this);
+        refreshUi();
+    }
+
+    private void onDeleteKioskSafetyForeverClicked() {
+        if (kioskSafetyStorage.isDeletedForever()) {
+            Toast.makeText(this, R.string.msg_kiosk_safety_already_deleted, Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (kioskSafetyStorage.isEngaged()) {
+            Toast.makeText(this, R.string.msg_kiosk_safety_delete_blocked_engaged, Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_delete_kiosk_safety_title)
+                .setMessage(R.string.confirm_delete_kiosk_safety_message)
+                .setPositiveButton(R.string.confirm_delete_kiosk_safety_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        kioskSafetyStorage.deleteForever();
+                        Toast.makeText(MainActivity.this, R.string.msg_kiosk_safety_deleted, Toast.LENGTH_LONG).show();
                         refreshUi();
                     }
                 })

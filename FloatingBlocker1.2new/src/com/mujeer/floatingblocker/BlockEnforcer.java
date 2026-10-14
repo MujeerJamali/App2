@@ -22,23 +22,28 @@ import java.util.Set;
  * The whole enforcement engine, in one place. No more continuous polling -
  * apps are suspended directly at the OS level via Device Owner, and this
  * only needs to run at the exact moments something should change (a
- * Block's schedule starting/ending), woken up by AlarmManager, or right
- * after the user edits something in the app.
+ * Block's schedule starting/ending, Lock Schedule locking/unlocking),
+ * woken up by AlarmManager, or right after the user edits something in
+ * the app.
  *
- * Suspended apps literally cannot be opened at all while suspended -
+ * Blocks are whitelist-based (decision #1): while active, ONLY the apps
+ * on KioskAllowList's computed allow-list (Tier-1 + that Block's own
+ * allowedPackages, intersected across every simultaneously-active Block -
+ * decision #29) stay usable; everything else installed gets suspended
+ * for the duration. Suspended apps literally cannot be opened at all -
  * Android shows its own "not available right now" message. There is no
  * detection, no back-pressing, no window to catch - the app just never
- * launches in the first place.
+ * launches in the first place. A newly installed app needs no special
+ * detection either: it simply isn't on any allow-list, so it's suspended
+ * automatically the very next cycle, same as everything else not listed.
  *
  * Holiday Breaks (one-time, non-recurring date+time windows that pause
  * specific Blocks) are factored in here too - a Block on an active
  * Holiday Break is treated as inactive regardless of its own schedule.
  *
- * Newly installed apps are detected here too (see
- * checkForNewlyInstalledApps) via comparing installed-package snapshots
- * over time, NOT via a PACKAGE_ADDED broadcast - that broadcast cannot
- * reliably reach a manifest-registered receiver on this targetSdkVersion,
- * confirmed against Android's own documentation.
+ * Lock Schedule's own locked state independently drives the automatic
+ * Kiosk lockdown (lock task pinning) - see applyKioskLockdown and
+ * KioskAllowList's class doc for exactly how the two layers combine.
  */
 public class BlockEnforcer {
 
@@ -72,8 +77,6 @@ public class BlockEnforcer {
         Log.d(TAG, "applyNow: after applyTimeChangeLock");
         applyBootstrapToolsLock(context, dpm, admin);
         Log.d(TAG, "applyNow: after applyBootstrapToolsLock");
-        checkForNewlyInstalledApps(context, ownPackage);
-        Log.d(TAG, "applyNow: after checkForNewlyInstalledApps");
         cleanUpExpiredBreaks(context, new HolidayBreaksStorage(context));
         Log.d(TAG, "applyNow: after cleanUpExpiredBreaks");
         checkForMissedAlarms(context);
@@ -81,33 +84,29 @@ public class BlockEnforcer {
         checkForMissedConfirmations(context);
         Log.d(TAG, "applyNow: after checkForMissedConfirmations");
 
-        List<Block> blocks = new BlocksStorage(context).loadBlocks();
-        Set<String> allManaged = new HashSet<String>();
-        for (Block b : blocks) {
-            allManaged.addAll(b.blockedPackages);
-        }
-        allManaged.remove(ownPackage);
-
         Set<String> permanentlyExcluded = new PermanentAppExclusionStorage(context).loadExcludedPackages();
+        KioskAllowList.Result allowListResult = KioskAllowList.computeCurrentAllowList(context);
+        Set<String> allLaunchable = getInstalledLaunchablePackages(context, ownPackage);
+        String launcherPackage = KioskAllowList.getCurrentLauncherPackage(context);
 
-        Set<String> desiredSuspended = computeActiveBlockedPackages(context);
+        Set<String> desiredSuspended = new HashSet<String>();
+        if (allowListResult.anyRestrictionActive()) {
+            for (String pkg : allLaunchable) {
+                if (!allowListResult.allow.contains(pkg) && !pkg.equals(launcherPackage)) {
+                    desiredSuspended.add(pkg);
+                }
+            }
+        }
         desiredSuspended.remove(ownPackage);
         // Permanently-excluded packages are never suspended, regardless of
-        // whether some Block still nominally lists one.
+        // whether they'd otherwise fall outside the current allow-list.
         desiredSuspended.removeAll(permanentlyExcluded);
 
-        Set<String> toUnsuspend = new HashSet<String>(allManaged);
+        Set<String> toUnsuspend = new HashSet<String>(allLaunchable);
         toUnsuspend.removeAll(desiredSuspended);
         // Explicitly unsuspend every permanently-excluded package on every
-        // pass, regardless of whether it's still tracked in allManaged
-        // (i.e. whether some Block still lists it) - relying only on the
-        // set-difference above silently stops working the moment a
-        // package is no longer tracked by any Block at all (e.g. right
-        // after the one-time exclusion action cleans it out of every
-        // Block's list), since it then can never appear in allManaged to
-        // begin with, so it would never actually get an unsuspend call.
-        // This also means an excluded package self-heals if it's ever
-        // re-suspended by any other path in the future (a reinstall, etc.).
+        // pass, regardless of the allow-list, so one self-heals if it's
+        // ever suspended by any other path in the future (a reinstall, etc.).
         toUnsuspend.addAll(permanentlyExcluded);
 
         if (!desiredSuspended.isEmpty()) {
@@ -127,6 +126,9 @@ public class BlockEnforcer {
         }
         Log.d(TAG, "applyNow: after suspend/unsuspend calls");
 
+        applyKioskLockdown(context, dpm, admin, allowListResult);
+        Log.d(TAG, "applyNow: after applyKioskLockdown");
+
         // Runs last, deliberately - if a user ever put one of these browser
         // packages into a Block of their own, the Block-schedule-based
         // unsuspend right above this could otherwise win the race and
@@ -136,51 +138,52 @@ public class BlockEnforcer {
     }
 
     /**
-     * The set of packages that SHOULD be blocked right now, per the exact
-     * same rules applyNow() uses to decide what to suspend: union of
-     * currently-active Blocks' package lists, skipping any Block currently
-     * on a Holiday Break, and empty entirely if Master Safety or Blocks
-     * Pause is currently overriding everything. Exposed publicly so other
-     * enforcement layers can check "is this package currently supposed to
-     * be blocked" using the exact same logic, instead of a second,
-     * possibly-inconsistent copy.
+     * Engages/releases the automatic Kiosk lockdown (lock task pinning) -
+     * decisions #2/#9/#12/#17/#20/#21/#26. Tied purely to Lock Schedule's
+     * own locked state (via allowListResult.kioskLayerActive, which
+     * already accounts for Master Safety and the Kiosk Safety toggle) -
+     * NOT to whether a Block happens to be active, matching decision #2.
+     * Edge-triggered: only forces entry on the unlocked-to-locked
+     * transition itself (see KioskRuntimeStorage), not on every
+     * enforcement cycle while already pinned - and clears the lock task
+     * allowlist (forcing the system out of lock task mode even without an
+     * explicit stopLockTask() call from inside the pinned Activity) the
+     * moment it's no longer supposed to be engaged, same backstop pattern
+     * KioskTimeoutReceiver used to use for the old manual flow.
      */
-    public static Set<String> computeActiveBlockedPackages(Context context) {
-        List<Block> blocks = new BlocksStorage(context).loadBlocks();
-        HolidayBreaksStorage holidayBreaksStorage = new HolidayBreaksStorage(context);
-        List<HolidayBreak> holidayBreaks = holidayBreaksStorage.loadBreaks();
-        MasterSafetyStorage safetyStorage = new MasterSafetyStorage(context);
-        BlocksPauseStorage pauseStorage = new BlocksPauseStorage(context);
+    private static void applyKioskLockdown(Context context, DevicePolicyManager dpm, ComponentName admin,
+                                            KioskAllowList.Result allowListResult) {
+        KioskRuntimeStorage runtime = new KioskRuntimeStorage(context);
+        boolean shouldBePinned = allowListResult.kioskLayerActive;
+        boolean wasPinned = runtime.wasPinnedLastCheck();
 
-        long now = System.currentTimeMillis();
-        Set<String> desiredSuspended = new HashSet<String>();
-        boolean overridden = safetyStorage.isEngaged() || pauseStorage.isPaused()
-                || pauseStorage.isTemporaryOverrideActive(now)
-                || HomeLocationChecker.isFarFromHome(context);
-        if (overridden) {
-            return desiredSuspended;
-        }
-        Set<String> blockIdsOnBreak = new HashSet<String>();
-        for (HolidayBreak h : holidayBreaks) {
-            if (h.isActiveNow(now)) {
-                blockIdsOnBreak.addAll(h.affectedBlockIds);
+        if (shouldBePinned) {
+            Set<String> lockTaskPackages = new HashSet<String>(allowListResult.allow);
+            lockTaskPackages.add(context.getPackageName());
+            try {
+                dpm.setLockTaskPackages(admin, lockTaskPackages.toArray(new String[0]));
+                // See KIOSK_MODE_PLAN.md decision #13 for the per-flag
+                // reasoning behind exactly this set - HOME/OVERVIEW/
+                // NOTIFICATIONS deliberately left off.
+                dpm.setLockTaskFeatures(admin,
+                        DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO
+                                | DevicePolicyManager.LOCK_TASK_FEATURE_GLOBAL_ACTIONS
+                                | DevicePolicyManager.LOCK_TASK_FEATURE_KEYGUARD);
+            } catch (Exception e) {
+                // Best effort - if this fails, forced entry below would just
+                // open an unpinned screen instead, not worth aborting over.
+            }
+            if (!wasPinned) {
+                KioskForceEntry.forceEntry(context);
+            }
+        } else if (wasPinned) {
+            try {
+                dpm.setLockTaskPackages(admin, new String[0]);
+            } catch (Exception e) {
+                // Non-fatal - KioskSessionActivity's own check also exits on its next tick.
             }
         }
-
-        BlockPunishmentStorage punishmentStorage = new BlockPunishmentStorage(context);
-        int nowMinutes = LockScheduleStorage.currentMinutesOfDay();
-        int nowDay = LockScheduleStorage.currentDayOfWeek();
-        for (Block b : blocks) {
-            if (blockIdsOnBreak.contains(b.id)) {
-                continue; // this Block is on a Holiday Break right now - skip it
-            }
-            // A missed Alarm can widen this Block's current/next occurrence by
-            // an hour on each side, one time only - see BlockPunishmentStorage.
-            if (b.isActiveNow(nowMinutes, nowDay) || punishmentStorage.isWidenedActive(b.id, now)) {
-                desiredSuspended.addAll(b.blockedPackages);
-            }
-        }
-        return desiredSuspended;
+        runtime.setPinnedLastCheck(shouldBePinned);
     }
 
     /**
@@ -553,78 +556,14 @@ public class BlockEnforcer {
     }
 
     /**
-     * Reliable new-install detection - NOT broadcast-based. A manifest-registered
-     * receiver for PACKAGE_ADDED cannot work here: Android's own official docs
-     * confirm this specific broadcast is not exempted from the API 26+
-     * background-execution restrictions, and our targetSdkVersion is 29. A
-     * dynamically-registered receiver would only work while some part of the
-     * app happens to be open, which is not reliable either since we don't run
-     * a persistent background service.
-     *
-     * Instead, this compares "what's installed now" against "what was
-     * installed last time this ran" every time the app wakes up anyway (every
-     * Block/Break transition, and at minimum every ~1 minute via the
-     * periodic safety net in scheduleNextAlarm, automatically throttled back
-     * during genuine idle periods by Android's own Doze system). Anything new gets added to
-     * every existing Block's block-list immediately.
+     * All currently-installed launchable packages except our own - the
+     * universe this app manages suspension over. Under whitelist
+     * semantics (decision #1) there's no separate "new install
+     * detection" needed any more: a newly installed app simply appears
+     * here and, not being on any allow-list, gets suspended on the very
+     * next cycle automatically - nothing has to explicitly add it
+     * anywhere first, unlike the old blocklist model this replaced.
      */
-    // A real new-install event realistically adds one app, maybe two or
-    // three in a burst - never dozens at once. If the diff against the
-    // stored snapshot claims more than this many apps just "appeared", the
-    // snapshot itself is far more likely stale or corrupted (a bad/empty
-    // read at the wrong moment, JSON corruption, etc.) than that many apps
-    // were genuinely installed simultaneously. This exists specifically
-    // because of a real bug: right after updating this app itself, this
-    // check could occasionally see a spuriously empty "previously
-    // installed" snapshot, making literally every app on the phone look
-    // newly installed at once - and every one of them got silently added
-    // to every Block. Treating an implausibly large diff as a corrupted
-    // snapshot (re-baseline silently, block nothing) instead of trusting
-    // it outright closes that off regardless of what exactly corrupted it.
-    private static final int MAX_PLAUSIBLE_NEW_INSTALLS_PER_CHECK = 5;
-
-    private static void checkForNewlyInstalledApps(Context context, String ownPackage) {
-        InstalledPackagesSnapshotStorage snapshotStorage = new InstalledPackagesSnapshotStorage(context);
-        Set<String> currentlyInstalled = getInstalledLaunchablePackages(context, ownPackage);
-
-        if (!snapshotStorage.hasEverSnapshotted()) {
-            // First run ever - just record the baseline. Don't treat every
-            // already-installed app as "newly installed".
-            snapshotStorage.saveSnapshot(currentlyInstalled);
-            return;
-        }
-
-        Set<String> previouslyInstalled = snapshotStorage.loadSnapshot();
-        Set<String> newlyInstalled = new HashSet<String>(currentlyInstalled);
-        newlyInstalled.removeAll(previouslyInstalled);
-
-        if (newlyInstalled.size() > MAX_PLAUSIBLE_NEW_INSTALLS_PER_CHECK) {
-            // Implausible - see the comment above. Treat this exactly like a
-            // first run: re-baseline against what's actually installed right
-            // now, but don't touch any Block's app list.
-            snapshotStorage.saveSnapshot(currentlyInstalled);
-            return;
-        }
-
-        if (!newlyInstalled.isEmpty()) {
-            BlocksStorage blocksStorage = new BlocksStorage(context);
-            List<Block> blocks = blocksStorage.loadBlocks();
-            boolean changed = false;
-            for (Block b : blocks) {
-                for (String pkg : newlyInstalled) {
-                    if (b.blockedPackages.add(pkg)) {
-                        changed = true;
-                    }
-                }
-            }
-            if (changed) {
-                blocksStorage.saveBlocks(blocks);
-            }
-        }
-
-        snapshotStorage.saveSnapshot(currentlyInstalled);
-    }
-
     private static Set<String> getInstalledLaunchablePackages(Context context, String ownPackage) {
         Set<String> result = new HashSet<String>();
         PackageManager pm = context.getPackageManager();
@@ -674,7 +613,7 @@ public class BlockEnforcer {
         return stillValid;
     }
 
-    /** Schedules exactly one future wake-up, at the next moment any Block's schedule changes. */
+    /** Schedules exactly one future wake-up, at the next moment any Block's schedule, or Lock Schedule itself, changes. */
     public static void scheduleNextAlarm(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
@@ -688,10 +627,10 @@ public class BlockEnforcer {
 
         List<Block> blocks = new BlocksStorage(context).loadBlocks();
         List<HolidayBreak> holidayBreaks = new HolidayBreaksStorage(context).loadBreaks();
-        long nextTransition = computeNextTransitionMillis(blocks, holidayBreaks);
+        List<TimeRange> lockScheduleRanges = new LockScheduleStorage(context).loadRanges();
+        long nextTransition = computeNextTransitionMillis(blocks, holidayBreaks, lockScheduleRanges);
 
-        // Guarantee a check at minimum every ~1 minute - for new-install
-        // detection when there's at least one Block, and unconditionally
+        // Guarantee a check at minimum every ~1 minute - unconditionally,
         // for the permanent, not-tied-to-any-Block protections (Device
         // Owner restrictions, Chrome content policy, other-browser lock)
         // so those stay self-healing even for a user with zero Blocks
@@ -717,8 +656,16 @@ public class BlockEnforcer {
         scheduleNextAlarm(context);
     }
 
-    /** Finds the soonest upcoming Block-schedule or Holiday-Break boundary. Returns -1 if there's nothing scheduled at all. */
-    private static long computeNextTransitionMillis(List<Block> blocks, List<HolidayBreak> holidayBreaks) {
+    /**
+     * Finds the soonest upcoming Block-schedule, Lock-Schedule, or
+     * Holiday-Break boundary - including the fixed daily 2:00/2:10 AM
+     * safety-carve-out boundaries (decision #10), so the Kiosk
+     * lockdown's engage/release (decisions #2/#12/#26) fires right on
+     * time instead of waiting for the ~1 minute periodic safety net
+     * below. Returns -1 if there's nothing scheduled at all.
+     */
+    private static long computeNextTransitionMillis(List<Block> blocks, List<HolidayBreak> holidayBreaks,
+                                                      List<TimeRange> lockScheduleRanges) {
         long now = System.currentTimeMillis();
         long best = -1;
 
@@ -733,31 +680,55 @@ public class BlockEnforcer {
 
         for (Block b : blocks) {
             for (TimeRange r : b.ranges) {
-                for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
-                    Calendar dayCal = Calendar.getInstance();
-                    dayCal.add(Calendar.DAY_OF_YEAR, dayOffset);
-                    int dow = dayCal.get(Calendar.DAY_OF_WEEK);
-                    if (!r.days.contains(dow)) {
-                        continue;
-                    }
+                best = earliestBoundaryAfter(r, now, best);
+            }
+        }
+        for (TimeRange r : lockScheduleRanges) {
+            best = earliestBoundaryAfter(r, now, best);
+        }
+        // The hardcoded daily safety window itself (120/130 minutes past
+        // midnight) - not part of any saved TimeRange, so it needs its
+        // own boundary check independent of the loops above.
+        for (int dayOffset = 0; dayOffset <= 1; dayOffset++) {
+            Calendar dayCal = Calendar.getInstance();
+            dayCal.add(Calendar.DAY_OF_YEAR, dayOffset);
+            long startMillis = atMinuteOfDay(dayCal, 120);
+            long endMillis = atMinuteOfDay(dayCal, 130);
+            if (startMillis > now && (best == -1 || startMillis < best)) {
+                best = startMillis;
+            }
+            if (endMillis > now && (best == -1 || endMillis < best)) {
+                best = endMillis;
+            }
+        }
+        return best;
+    }
 
-                    boolean overnight = r.startMinute >= r.endMinute;
+    /** Earliest start/end boundary of TimeRange r strictly after now, folded into the running best-so-far. */
+    private static long earliestBoundaryAfter(TimeRange r, long now, long best) {
+        for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
+            Calendar dayCal = Calendar.getInstance();
+            dayCal.add(Calendar.DAY_OF_YEAR, dayOffset);
+            int dow = dayCal.get(Calendar.DAY_OF_WEEK);
+            if (!r.days.contains(dow)) {
+                continue;
+            }
 
-                    long startMillis = atMinuteOfDay(dayCal, r.startMinute);
-                    if (startMillis > now && (best == -1 || startMillis < best)) {
-                        best = startMillis;
-                    }
+            boolean overnight = r.startMinute >= r.endMinute;
 
-                    Calendar endDayCal = dayCal;
-                    if (overnight) {
-                        endDayCal = (Calendar) dayCal.clone();
-                        endDayCal.add(Calendar.DAY_OF_YEAR, 1);
-                    }
-                    long endMillis = atMinuteOfDay(endDayCal, r.endMinute);
-                    if (endMillis > now && (best == -1 || endMillis < best)) {
-                        best = endMillis;
-                    }
-                }
+            long startMillis = atMinuteOfDay(dayCal, r.startMinute);
+            if (startMillis > now && (best == -1 || startMillis < best)) {
+                best = startMillis;
+            }
+
+            Calendar endDayCal = dayCal;
+            if (overnight) {
+                endDayCal = (Calendar) dayCal.clone();
+                endDayCal.add(Calendar.DAY_OF_YEAR, 1);
+            }
+            long endMillis = atMinuteOfDay(endDayCal, r.endMinute);
+            if (endMillis > now && (best == -1 || endMillis < best)) {
+                best = endMillis;
             }
         }
         return best;

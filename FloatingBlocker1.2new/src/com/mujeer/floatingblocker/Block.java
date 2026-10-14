@@ -12,16 +12,20 @@ import java.util.Set;
 
 /**
  * A "Block": a named set of recurring time ranges, plus a list of app
- * package names that are BLOCKED. While ANY of its time ranges is active
- * (right day+time), those specific apps get closed - everything else on
- * the phone is left alone.
+ * package names that are ALLOWED - whitelist semantics. While ANY of its
+ * time ranges is active (right day+time), ONLY those apps (plus the
+ * hardcoded Tier-1 set and, if Lock Schedule is locked, the Always
+ * Allowed Apps list - see KioskAllowList) stay usable; every other
+ * installed app gets suspended for the duration. Outside this Block's
+ * active window, it imposes no restriction at all - Blocks run fully
+ * independent of Lock Schedule's own locked/unlocked state.
  */
 public class Block {
 
     public String id;
     public String name;
     public List<TimeRange> ranges = new ArrayList<TimeRange>();
-    public Set<String> blockedPackages = new LinkedHashSet<String>();
+    public Set<String> allowedPackages = new LinkedHashSet<String>();
 
     public boolean isActiveNow(int nowMinutes, int nowDay) {
         for (TimeRange r : ranges) {
@@ -99,7 +103,7 @@ public class Block {
         for (TimeRange r : ranges) rangeArr.put(r.toJson());
         o.put("ranges", rangeArr);
         JSONArray appArr = new JSONArray();
-        for (String pkg : blockedPackages) appArr.put(pkg);
+        for (String pkg : allowedPackages) appArr.put(pkg);
         o.put("apps", appArr);
         return o;
     }
@@ -117,7 +121,7 @@ public class Block {
         JSONArray appArr = o.optJSONArray("apps");
         if (appArr != null) {
             for (int i = 0; i < appArr.length(); i++) {
-                b.blockedPackages.add(appArr.getString(i));
+                b.allowedPackages.add(appArr.getString(i));
             }
         }
         return b;

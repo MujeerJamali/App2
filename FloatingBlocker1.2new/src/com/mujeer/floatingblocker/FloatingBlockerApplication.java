@@ -22,6 +22,15 @@ public class FloatingBlockerApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
+        // Checked on every process start (cheap - a single boolean read
+        // once already run) - see KioskMigration/KioskMigrationStorage
+        // for exactly what this does and why it only ever runs once.
+        try {
+            KioskMigration.runIfNeeded(this);
+        } catch (Exception e) {
+            // Best effort - never let a migration problem block the app from starting at all.
+        }
+
         final Thread.UncaughtExceptionHandler previousHandler = Thread.getDefaultUncaughtExceptionHandler();
         final Application context = this;
 

@@ -25,18 +25,19 @@ import java.util.Set;
  * Exports/imports everything meaningful a user has configured - Blocks,
  * Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes,
  * Alarms (with their barcode pairs), Confirmations, the Blocks-paused
- * toggle, and the Home Location override - to/from a plain JSON file the
- * user picks a location for (Downloads, Google Drive, wherever), via the standard
+ * toggle, the Always Allowed Apps list (Tier-2 of KioskAllowList), and
+ * the Home Location override - to/from a plain JSON file the user picks
+ * a location for (Downloads, Google Drive, wherever), via the standard
  * Android file picker (Storage Access Framework) so no storage permission
  * is needed and the file survives this app being uninstalled.
  *
  * Deliberately NOT included:
- * - Emergency Safety's engaged/deleted-forever state - restoring
- *   "deleted forever" back to "not deleted" from an old backup would
- *   undermine the entire point of that being a one-way, irreversible
- *   choice.
+ * - Emergency Safety's and Kiosk Safety's engaged/deleted-forever state -
+ *   restoring "deleted forever" back to "not deleted" from an old backup
+ *   would undermine the entire point of that being a one-way,
+ *   irreversible choice.
  * - Runtime/operational bookkeeping (AlarmRuntimeStorage,
- *   BlockPunishmentStorage, InstalledPackagesSnapshotStorage,
+ *   BlockPunishmentStorage, KioskRuntimeStorage, KioskMigrationStorage,
  *   CrashLogStorage, the Location Override's own revert snapshot) -
  *   none of that makes sense replayed from an earlier point in time;
  *   it all rebuilds itself naturally as the app runs.
@@ -93,6 +94,12 @@ public class BackupManager {
         root.put("confirmations", confirmationsArr);
 
         root.put("blocksPaused", new BlocksPauseStorage(context).isPaused());
+
+        JSONArray alwaysAllowedArr = new JSONArray();
+        for (String pkg : new AlwaysAllowedAppsStorage(context).loadApps()) {
+            alwaysAllowedArr.put(pkg);
+        }
+        root.put("alwaysAllowedApps", alwaysAllowedArr);
 
         HomeLocationStorage homeLocationStorage = new HomeLocationStorage(context);
         root.put("homeLocationEnabled", homeLocationStorage.isEnabled());
@@ -202,6 +209,15 @@ public class BackupManager {
         new ConfirmationsStorage(context).saveConfirmations(confirmations);
 
         new BlocksPauseStorage(context).setPaused(root.optBoolean("blocksPaused", false));
+
+        Set<String> alwaysAllowedApps = new HashSet<String>();
+        JSONArray alwaysAllowedArr = root.optJSONArray("alwaysAllowedApps");
+        if (alwaysAllowedArr != null) {
+            for (int i = 0; i < alwaysAllowedArr.length(); i++) {
+                alwaysAllowedApps.add(alwaysAllowedArr.getString(i));
+            }
+        }
+        new AlwaysAllowedAppsStorage(context).saveApps(alwaysAllowedApps);
 
         HomeLocationStorage homeLocationStorage = new HomeLocationStorage(context);
         homeLocationStorage.setEnabled(root.optBoolean("homeLocationEnabled", false));

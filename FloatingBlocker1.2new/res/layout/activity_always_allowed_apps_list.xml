@@ -13,21 +13,15 @@
             style="@style/ScreenDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/kiosk_setup_desc" />
+            android:text="@string/always_allowed_apps_desc" />
 
         <TextView
-            style="@style/SectionHeader"
+            android:id="@+id/txtLockedMessage"
+            style="@style/LockedMessageBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/kiosk_allowed_apps_label" />
-
-        <LinearLayout
-            android:id="@+id/appsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="4dp"
-            android:paddingBottom="8dp" />
+            android:text="@string/msg_always_allowed_apps_add_locked"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnAddApp"
@@ -35,25 +29,24 @@
             android:layout_height="wrap_content"
             android:text="@string/add_app_button" />
 
+        <LinearLayout
+            android:id="@+id/appsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="8dp" />
+
         <TextView
             style="@style/SectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/kiosk_duration_label" />
+            android:text="@string/always_allowed_tier1_label" />
 
-        <EditText
-            android:id="@+id/editDurationMinutes"
+        <LinearLayout
+            android:id="@+id/tier1Container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/kiosk_duration_hint"
-            android:inputType="number" />
-
-        <Button
-            android:id="@+id/btnStartKiosk"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/kiosk_start_button" />
+            android:orientation="vertical" />
 
     </LinearLayout>
 </ScrollView>

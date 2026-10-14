@@ -15,7 +15,7 @@
     <string name="msg_backup_import_failed">Could not import that backup: %1$s</string>
     <string name="msg_backup_import_locked">Importing a backup can only be done during an unlocked time - check your Lock Schedule. (It can replace your current Blocks/Lock Schedule/etc. entirely, so it\'s gated the same as anything else that could weaken protection.)</string>
     <string name="confirm_import_backup_title">Import this backup?</string>
-    <string name="confirm_import_backup_message">This replaces ALL of your current Blocks, Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms, and Location Override settings with whatever is in this backup file. This cannot be undone.</string>
+    <string name="confirm_import_backup_message">This replaces ALL of your current Blocks, Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms, Confirmations, Always Allowed Apps, and Location Override settings with whatever is in this backup file. This cannot be undone.</string>
     <string name="confirm_import_backup_yes">Import and replace everything</string>
     <string name="device_owner_active">Device Owner: ACTIVE (full protection on)</string>
     <string name="device_owner_not_active">Device Owner: NOT ACTIVE — protection is off</string>
@@ -36,41 +36,20 @@
     <string name="confirm_delete_safety_yes">Yes, delete forever</string>
     <string name="confirm_delete_safety_cancel">Cancel</string>
 
-    <!-- Clear Current Punishment - one-time only -->
-    <string name="clear_punishment_button">🧹 Clear Current Punishment (One-Time Use)</string>
-    <string name="confirm_clear_punishment_title">Clear all current punishment?</string>
-    <string name="confirm_clear_punishment_message">This clears any Blocks currently widened by a missed Alarm. It can only ever be used once - after this, it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
-    <string name="confirm_clear_punishment_yes">Yes, clear it (uses this up forever)</string>
-    <string name="msg_punishment_cleared">Cleared. This one-time action has now been used.</string>
-
-    <!-- Clear Current Punishment #2 - a second, independent one-time use, for after the first one is already spent -->
-    <string name="clear_punishment_button_2">🧹 Clear Current Punishment #2 (One-Time Use)</string>
-    <string name="confirm_clear_punishment_title_2">Clear all current punishment?</string>
-    <string name="confirm_clear_punishment_message_2">This clears any Blocks currently widened by a missed Alarm. This is a second, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
-    <string name="confirm_clear_punishment_yes_2">Yes, clear it (uses this up forever)</string>
-    <string name="msg_punishment_cleared_2">Cleared. This one-time action has now been used.</string>
-
-    <!-- Clear Current Punishment #3 - a third, independent one-time use, for after the first two are already spent -->
-    <string name="clear_punishment_button_3">🧹 Clear Current Punishment #3 (One-Time Use)</string>
-    <string name="confirm_clear_punishment_title_3">Clear all current punishment?</string>
-    <string name="confirm_clear_punishment_message_3">This clears any Blocks currently widened by a missed Alarm. This is a third, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
-    <string name="confirm_clear_punishment_yes_3">Yes, clear it (uses this up forever)</string>
-    <string name="msg_punishment_cleared_3">Cleared. This one-time action has now been used.</string>
-
-    <!-- Clear Current Punishment #4 - a fourth, independent one-time use, covering punishment from both Alarms and Confirmations -->
-    <string name="clear_punishment_button_4">🧹 Clear Current Punishment #4 - Alarms &amp; Confirmations (One-Time Use)</string>
-    <string name="confirm_clear_punishment_title_4">Clear all current punishment?</string>
-    <string name="confirm_clear_punishment_message_4">This clears any Blocks currently widened by a missed Alarm OR a missed Confirmation - both work the same way under the hood, so one clear covers both. This is a fourth, separate one-time use - it can only ever be used once, after this it\'s gone for good, so only use it if this punishment genuinely wasn\'t deserved.</string>
-    <string name="confirm_clear_punishment_yes_4">Yes, clear it (uses this up forever)</string>
-    <string name="msg_punishment_cleared_4">Cleared. This one-time action has now been used.</string>
-
-    <!-- Stop All Ringing Alarms - one-time only -->
-    <string name="stop_all_ringing_button">🔕 Stop All Ringing Alarms (One-Time Use)</string>
-    <string name="confirm_stop_all_ringing_title">Stop every ringing Alarm right now?</string>
-    <string name="confirm_stop_all_ringing_message">This force-stops any Alarm currently ringing - sound, vibration, and the ring screen - WITHOUT scanning a barcode. It counts as dismissed, not missed, so nothing gets punished. It can only ever be used once - after this it\'s gone for good, so only use it if a ring is genuinely stuck with no other way to dismiss it.</string>
-    <string name="confirm_stop_all_ringing_yes">Yes, stop it (uses this up forever)</string>
-    <string name="msg_stopped_ringing_alarms">Stopped %1$d ringing Alarm(s). This one-time action has now been used.</string>
-    <string name="msg_no_ringing_alarms">Nothing is currently ringing. This one-time action has now been used.</string>
+    <!-- Kiosk Safety - a separate safety valve specifically for the
+         automatic Kiosk lockdown (decisions #9/#19/#20), independent of
+         Emergency Safety above. No gating - works any time, including
+         while Kiosk is actively pinning the device. -->
+    <string name="kiosk_safety_engage_button">🖥️ Kiosk Safety: OFF (tap to disable the automatic Kiosk lockdown)</string>
+    <string name="kiosk_safety_disengage_button">🖥️ Kiosk Safety: ON (tap to turn the Kiosk lockdown back on)</string>
+    <string name="kiosk_safety_deleted_button">🖥️ Kiosk Safety: permanently removed</string>
+    <string name="kiosk_safety_delete_forever_button">🗑️ Delete Kiosk Safety Forever</string>
+    <string name="msg_kiosk_safety_deleted">Kiosk Safety has been permanently removed. It cannot be used again.</string>
+    <string name="msg_kiosk_safety_delete_blocked_engaged">Turn Kiosk Safety back ON first, then you can delete it forever.</string>
+    <string name="msg_kiosk_safety_already_deleted">Kiosk Safety was already removed forever.</string>
+    <string name="confirm_delete_kiosk_safety_title">Delete Kiosk Safety Forever?</string>
+    <string name="confirm_delete_kiosk_safety_message">This cannot be undone. You will never be able to use Kiosk Safety again, ever.</string>
+    <string name="confirm_delete_kiosk_safety_yes">Yes, delete forever</string>
 
     <!-- Active Punishments status screen -->
     <string name="view_punishments_button">View Active Punishments</string>
@@ -88,19 +67,6 @@
     <string name="confirm_exclude_business_erp_yes">Yes, exclude it permanently</string>
     <string name="msg_business_erp_excluded">com.mujeer.businesserp is now permanently excluded from all Blocks.</string>
 
-    <!-- Pause All Blocks for 1 Hour - one-time only -->
-    <string name="pause_all_button_activate">⏸️ Pause All Blocks for 1 Hour (One-Time Use)</string>
-    <string name="pause_all_button_active_format">⏸️ Blocks Paused (One-Time) - %1$s Remaining</string>
-    <string name="confirm_pause_all_title">Pause all Blocks for 1 hour?</string>
-    <string name="confirm_pause_all_message">This immediately unsuspends every currently-blocked app for exactly 1 hour, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
-    <string name="confirm_pause_all_yes">Yes, pause for 1 hour (uses this up forever)</string>
-
-    <string name="pause_until_11pm_button_activate">⏸️ Disable All Blocks Until 11 PM (One-Time)</string>
-    <string name="pause_until_11pm_button_active_format">⏸️ Blocks Disabled (One-Time) - %1$s Remaining</string>
-    <string name="confirm_pause_until_11pm_title">Disable all Blocks until 11 PM?</string>
-    <string name="confirm_pause_until_11pm_message">This immediately unsuspends every currently-blocked app until 11:00 PM, then Blocks resume automatically on their own - no further action needed. This can only ever be used once, so only use it if you genuinely need it.</string>
-    <string name="confirm_pause_until_11pm_yes">Yes, disable until 11 PM (uses this up forever)</string>
-
     <!-- Custom-duration Pause - freely reusable until deleted forever -->
     <string name="custom_pause_minutes_hint">Minutes to pause for</string>
     <string name="custom_pause_button">⏸️ Pause Lock Schedule for Selected Time</string>
@@ -108,11 +74,11 @@
     <string name="custom_pause_deleted_button">Pause (Deleted Forever)</string>
     <string name="msg_enter_custom_pause_minutes">Enter how many minutes to pause for.</string>
     <string name="confirm_custom_pause_title">Pause Lock Schedule?</string>
-    <string name="confirm_custom_pause_message">This immediately unsuspends every currently-blocked app for %1$d minute(s), then Blocks resume automatically on their own. Unlike the one-time pause buttons above, this one can be used again - only the Delete This Button Forever button below ever turns it off for good.</string>
+    <string name="confirm_custom_pause_message">This immediately unsuspends every currently-blocked app for %1$d minute(s), then Blocks resume automatically on their own - only the Delete This Button Forever button below ever turns this off for good.</string>
     <string name="confirm_custom_pause_yes">Yes, pause for %1$d minute(s)</string>
     <string name="delete_custom_pause_forever_button">🗑️ Delete This Pause Button Forever</string>
     <string name="confirm_delete_custom_pause_title">Permanently delete this Pause button?</string>
-    <string name="confirm_delete_custom_pause_message">This cannot be undone. The custom-duration Pause button above will disappear forever - you\'ll be left with only the one-time Pause buttons (if not already used) and no way to pause Lock Schedule for a custom amount of time ever again.</string>
+    <string name="confirm_delete_custom_pause_message">This cannot be undone. The custom-duration Pause button above will disappear forever, with no way to pause Lock Schedule for a custom amount of time ever again.</string>
     <string name="confirm_delete_custom_pause_yes">Yes, delete it forever</string>
     <string name="msg_custom_pause_deleted">Deleted. This button is now gone forever.</string>
 
@@ -143,18 +109,18 @@
     <string name="blocks_screen_title">Blocks</string>
     <string name="add_block_button">+ Add Block</string>
     <string name="msg_blocks_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
-    <string name="block_subtitle_format">%1$d time range(s), %2$d app(s) blocked</string>
+    <string name="block_subtitle_format">%1$d time range(s), %2$d app(s) allowed</string>
     <string name="delete_button">Delete</string>
 
     <!-- Block edit screen -->
     <string name="block_edit_screen_title">Edit Block</string>
     <string name="block_name_hint">Block name (e.g. Work Hours)</string>
     <string name="block_ranges_label">Time ranges (when this Block is active)</string>
-    <string name="block_apps_label">Apps blocked during this Block</string>
+    <string name="block_apps_label">Apps allowed during this Block (only these are usable while it\'s active)</string>
     <string name="add_app_button">+ Add App</string>
     <string name="msg_enter_block_name">Enter a name for this Block.</string>
     <string name="delete_block_button">Delete This Block</string>
-    <string name="own_app_always_allowed_note">Floating Blocker itself can never be added to a block list.</string>
+    <string name="own_app_always_allowed_note">Self-Control itself, Business ERP, and your default Dialer/SMS app are always allowed, with or without being added here.</string>
     <string name="msg_some_removals_skipped">Some app removals were not applied - that can only be done during an unlocked time. New apps you added were still saved.</string>
 
     <!-- Holiday Breaks -->
@@ -315,28 +281,38 @@
     <string name="ringing_alarm_button_many_format">⏰ %1$d Alarms Ringing - Tap to Choose (%2$s left)</string>
     <string name="pick_ringing_alarm_title">Which alarm?</string>
 
-    <!-- Kiosk Mode (Beta) -->
-    <string name="section_kiosk">Kiosk Mode (Beta)</string>
-    <string name="kiosk_mode_button">🖥️  Kiosk Mode (Beta)</string>
-    <string name="kiosk_setup_screen_title">Kiosk Mode (Beta)</string>
-    <string name="kiosk_setup_desc">Pick which apps stay usable, set a time limit, and start. While a session is running, the device is pinned so nothing outside the list (or this screen) can be opened - not even by leaving the app. This is an experimental beta feature, kept separate from Blocks.</string>
-    <string name="kiosk_allowed_apps_label">Allowed apps</string>
-    <string name="kiosk_duration_label">Duration (minutes)</string>
-    <string name="kiosk_duration_hint">e.g. 30</string>
-    <string name="kiosk_start_button">Start Kiosk Session</string>
-    <string name="msg_kiosk_needs_device_owner">Kiosk Mode needs Device Owner to be active.</string>
-    <string name="msg_kiosk_select_at_least_one_app">Select at least one app to allow.</string>
-    <string name="msg_kiosk_enter_duration">Enter a duration in minutes (greater than 0).</string>
-    <string name="msg_kiosk_start_failed">Could not start Kiosk Mode: %1$s</string>
-    <string name="kiosk_session_title">Kiosk Session Active</string>
-    <string name="kiosk_time_remaining_format">Time remaining: %1$s</string>
+    <!-- Always Allowed Apps (Tier-2 of the Kiosk allow-list) -->
+    <string name="always_allowed_apps_button">✅  Always Allowed Apps</string>
+    <string name="always_allowed_apps_screen_title">Always Allowed Apps</string>
+    <string name="always_allowed_apps_desc">Apps added here stay usable whenever Lock Schedule is locked, combined with whatever Block (if any) is currently active. Adding an app weakens restriction, so it can only be done during an unlocked time - removing one is always allowed. Shows every installed app, no filtering.</string>
+    <string name="msg_always_allowed_apps_add_locked">Adding an app here can only be done during an unlocked time. Check your Lock Schedule.</string>
+    <string name="always_allowed_tier1_label">Always allowed, unconditionally (not editable here)</string>
+
+    <!-- Automatic Kiosk lockdown - pinned screen, forced the instant Lock
+         Schedule locks. Replaces the old manual pick-apps/duration/start
+         flow entirely (decision #8). -->
+    <string name="kiosk_session_title">Kiosk</string>
     <string name="kiosk_open_app_format">Open %1$s</string>
-    <string name="kiosk_end_session_button">End Session Now</string>
-    <string name="section_quick_toggles">Quick Toggles</string>
+    <string name="msg_kiosk_start_failed">Could not start the Kiosk lockdown: %1$s</string>
+    <string name="kiosk_tab_apps">Apps</string>
+    <string name="kiosk_tab_recent">Recent</string>
+    <string name="kiosk_tab_notifications">Notifications</string>
+    <string name="kiosk_unlocks_in_format">Lock Schedule unlocks in %1$s</string>
+    <string name="kiosk_unlock_time_unknown">Lock Schedule\'s next unlock time is unknown</string>
+    <string name="kiosk_block_ends_in_format">%1$s ends in %2$s</string>
+    <string name="kiosk_recent_empty">Nothing launched from this screen yet.</string>
+    <string name="kiosk_notifications_empty">No notifications right now.</string>
+    <string name="kiosk_fix_default_dialer_button">⚠️ No default Dialer app set - tap to pick one</string>
+    <string name="kiosk_fix_default_sms_button">⚠️ No default SMS app set - tap to pick one</string>
+    <string name="kiosk_grant_notification_access_button">Grant notification access</string>
+    <string name="kiosk_open_notification_app_button">Open</string>
+    <string name="msg_kiosk_system_ui_needs_unlocked">This needs an unlocked Lock Schedule time - lock task mode won\'t let this screen open system settings while pinned. Come back once unlocked.</string>
+    <string name="kiosk_notification_channel_name">Kiosk lockdown</string>
+    <string name="kiosk_notification_title">Lock Schedule is locked</string>
+    <string name="kiosk_notification_text">Tap to open the Kiosk screen</string>
+
+    <!-- Quick toggle inside the Kiosk Apps tab -->
     <string name="wifi_toggle_on">📶 WiFi: ON (tap to turn off)</string>
     <string name="wifi_toggle_off">📶 WiFi: OFF (tap to turn on)</string>
-    <string name="bluetooth_toggle_on">🔵 Bluetooth: ON (tap to turn off)</string>
-    <string name="bluetooth_toggle_off">🔵 Bluetooth: OFF (tap to turn on)</string>
     <string name="msg_wifi_toggle_failed">Could not toggle WiFi on this device.</string>
-    <string name="msg_bluetooth_toggle_failed">Could not toggle Bluetooth on this device.</string>
 </resources>

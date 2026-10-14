@@ -119,15 +119,12 @@ public class BlockPunishmentStorage {
     }
 
     /**
-     * Clears every Block's currently-stored widen window - meant ONLY as a
-     * one-time recovery action (see hasUsedOneTimeClear/markOneTimeClearUsed
-     * below, and MainActivity's Clear Current Punishment button), not a
-     * repeatable way to escape a deserved punishment - that would undermine
-     * the entire point of the widening in the first place. Only removes the
-     * start_/end_ keys, so the one-time-used flag itself (stored in this
-     * same prefs file) survives this call.
+     * Clears every Block's currently-stored widen window. Used ONLY by
+     * the one-time fresh-start reset (decision #16/#27) - not exposed as
+     * a repeatable user-facing escape hatch (those buttons were
+     * deliberately deleted, see KIOSK_MODE_PLAN.md).
      */
-    public void clearAll() {
+    void clearEverything() {
         SharedPreferences.Editor editor = prefs.edit();
         for (String key : prefs.getAll().keySet()) {
             if (key.startsWith("start_") || key.startsWith("end_")) {
@@ -135,63 +132,5 @@ public class BlockPunishmentStorage {
             }
         }
         editor.apply();
-    }
-
-    /** Whether the one-time Clear Current Punishment action has already been used - it can only ever be used once. */
-    public boolean hasUsedOneTimeClear() {
-        return prefs.getBoolean("one_time_clear_used", false);
-    }
-
-    public void markOneTimeClearUsed() {
-        prefs.edit().putBoolean("one_time_clear_used", true).apply();
-    }
-
-    /**
-     * A second, independent one-time Clear Current Punishment action, for
-     * when the first one has already been spent but a NEW false punishment
-     * shows up later (e.g. from the early-alarm-delivery bug fixed in
-     * 4.74) before the fix could actually be installed. Same one-time-only
-     * reasoning as hasUsedOneTimeClear/markOneTimeClearUsed above, just
-     * tracked under its own flag so using the first one doesn't also use
-     * this one up.
-     */
-    public boolean hasUsedOneTimeClear2() {
-        return prefs.getBoolean("one_time_clear_used_2", false);
-    }
-
-    public void markOneTimeClearUsed2() {
-        prefs.edit().putBoolean("one_time_clear_used_2", true).apply();
-    }
-
-    /**
-     * A third, independent one-time Clear Current Punishment action, for
-     * when the first two have already been spent. Same reasoning as
-     * hasUsedOneTimeClear2/markOneTimeClearUsed2 above, tracked under its
-     * own flag so using either of the earlier two doesn't use this one up.
-     */
-    public boolean hasUsedOneTimeClear3() {
-        return prefs.getBoolean("one_time_clear_used_3", false);
-    }
-
-    public void markOneTimeClearUsed3() {
-        prefs.edit().putBoolean("one_time_clear_used_3", true).apply();
-    }
-
-    /**
-     * A fourth, independent one-time Clear Current Punishment action, for
-     * when the first three have already been spent - added once
-     * Confirmations could also apply this same widen punishment (see
-     * ConfirmationPunisher.resolveMissed), alongside Alarms. clearAll()
-     * already wipes every Block's widen window regardless of which of the
-     * two caused it, since punishment is tracked per-Block, not per-source
-     * - this is just a fresh one-time use of that same clear, tracked under
-     * its own flag so using any of the earlier three doesn't use this one up.
-     */
-    public boolean hasUsedOneTimeClear4() {
-        return prefs.getBoolean("one_time_clear_used_4", false);
-    }
-
-    public void markOneTimeClearUsed4() {
-        prefs.edit().putBoolean("one_time_clear_used_4", true).apply();
     }
 }

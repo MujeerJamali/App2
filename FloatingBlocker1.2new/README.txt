@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.85 (Kiosk Mode rebuilt: Blocks are now whitelist-based, Lock Schedule locking automatically pins a tabbed Kiosk screen, new Always Allowed Apps list and Kiosk Safety toggle, old manual Kiosk flow and several one-time safety-valve buttons removed - see KIOSK_MODE_PLAN.md)
+===================================================================================
+
 Floating Blocker - version 4.37 (real root cause found: barcode decoding was scanning a sideways image)
 ===================================================================================
 

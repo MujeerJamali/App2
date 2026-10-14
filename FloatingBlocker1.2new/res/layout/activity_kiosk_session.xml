@@ -9,61 +9,146 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/kiosk_session_title"
-        android:textSize="22sp"
+        android:textSize="20sp"
         android:textStyle="bold"
         android:gravity="center"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="6dp" />
 
     <TextView
         android:id="@+id/txtKioskCountdown"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:gravity="center"
-        android:textColor="@color/text_secondary"
-        android:paddingBottom="20dp" />
+        android:textColor="@color/text_secondary" />
 
-    <TextView
-        style="@style/SectionHeader"
+    <LinearLayout
+        android:id="@+id/blockEndTimesContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/section_quick_toggles" />
+        android:orientation="vertical"
+        android:paddingBottom="8dp" />
 
-    <Button
-        android:id="@+id/btnToggleWifi"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <Button
-        android:id="@+id/btnToggleBluetooth"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp" />
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
-    <TextView
-        style="@style/SectionHeader"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/kiosk_allowed_apps_label" />
+        <Button
+            android:id="@+id/btnTabApps"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="13sp"
+            android:text="@string/kiosk_tab_apps" />
 
-    <ScrollView
+        <Button
+            android:id="@+id/btnTabRecent"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:textSize="13sp"
+            android:text="@string/kiosk_tab_recent" />
+
+        <Button
+            android:id="@+id/btnTabNotifications"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:textSize="13sp"
+            android:text="@string/kiosk_tab_notifications" />
+    </LinearLayout>
+
+    <!-- Apps tab -->
+    <LinearLayout
+        android:id="@+id/tabContentApps"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/kioskAppsContainer"
+        <Button
+            android:id="@+id/btnToggleWifi"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="4dp" />
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnFixDefaultDialer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            android:text="@string/kiosk_fix_default_dialer_button" />
+
+        <Button
+            android:id="@+id/btnFixDefaultSms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            android:text="@string/kiosk_fix_default_sms_button" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/kioskAppsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- Recent tab -->
+    <ScrollView
+        android:id="@+id/tabContentRecent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/recentAppsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
     </ScrollView>
 
-    <Button
-        android:id="@+id/btnEndKioskSession"
+    <!-- Notifications tab -->
+    <LinearLayout
+        android:id="@+id/tabContentNotifications"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/kiosk_end_session_button" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btnGrantNotificationAccess"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            android:text="@string/kiosk_grant_notification_access_button" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/notificationsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+    </LinearLayout>
 
 </LinearLayout>
