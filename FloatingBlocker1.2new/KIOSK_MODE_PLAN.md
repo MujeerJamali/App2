@@ -364,3 +364,58 @@ decisions survive even if the conversation gets summarized/compacted.
     `WebsitesListActivity` stays exactly as it is, untouched, still
     blocklist semantics. Not converted to whitelist alongside app Blocks
     (#1). May be revisited in a future round, but not part of this one.
+
+## Revision after real-device testing: Blocks revert to blocklist authoring
+
+Decisions #42-47 below REVERSE decision #1 and everything downstream of
+it that depended on Blocks being user-authored as whitelists (Tier-2/
+Tier-3 as originally specified, decision #29's intersection rule). Kept
+from the original design unchanged: Tier-1, the Lock-Schedule-driven
+Kiosk trigger itself (#2), the tabbed Kiosk screen, the safety-net
+toggle, the migration wipe, and everything else not explicitly revised
+here.
+
+42. **Blocks go back to blocklist authoring**: a Block's app list means
+    "these are blocked" while active again, not "only these are
+    allowed" - reverses #1. Picking a handful of distracting apps to
+    block is far less tedious than listing every app you want to keep
+    using, which is what real testing surfaced as the problem with
+    whitelist authoring.
+
+43. **Suspension reverts to direct blocklist semantics**: while a Block
+    is active, suspend exactly the union of every currently-active
+    Block's blocked-package list - the original, pre-redesign
+    `BlockEnforcer` mechanism. No more "suspend everything not on an
+    allow-list" sweep.
+
+44. **Kiosk pinning's allow-list is now derived, not authored**:
+    Android's lock-task API (`setLockTaskPackages`) only accepts a
+    positive list - there's no OS-level "pin to everything except
+    these" mode, so this requirement doesn't go away just because
+    Blocks are blocklists again. The pin-list is computed live as
+    Tier-1 union (every installed launchable app NOT in the union of
+    currently-active Blocks' blocklists) - never stored, never shown
+    as its own editable list.
+
+45. **No Block active (Lock Schedule still locked)**: the derived
+    pin-list is literally every installed launchable app - the same
+    universe shown in the Add App picker. Kiosk still pins (no real
+    home screen/recents reachable) but every app is reachable from the
+    grid itself. Replaces the old Tier-1+Tier-2 floor from #3/#17 - there
+    is no separate floor list anymore.
+
+46. **Multiple simultaneously-active Blocks combine via union**, not
+    intersection - an app blocked by ANY active Block stays blocked.
+    Reverses #29. This is the original pre-redesign behavior, and it
+    preserves the same invariant #29 was protecting for free: the
+    derived pin-list is the complement of that union, so stacking more
+    active Blocks can only ever shrink it, never grow it.
+
+47. **Tier-2 ("Always Allowed Apps") is removed entirely** - redundant
+    under blocklist semantics (not-blocked already means allowed by
+    default), and contradictory if an app were both blocklisted by an
+    active Block and also sitting in an unconditional override list.
+    Only Tier-1 (Self-Control itself, Business ERP, live default
+    Dialer/SMS) remains as the hardcoded, unconditional set. Implies
+    removing `AlwaysAllowedAppsStorage`/`AlwaysAllowedAppsListActivity`
+    and their main-screen entry point once this is implemented.
