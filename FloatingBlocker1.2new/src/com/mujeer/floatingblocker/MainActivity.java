@@ -104,7 +104,6 @@ public class MainActivity extends Activity {
         Button btnConfirmations = (Button) findViewById(R.id.btnConfirmations);
         Button btnBarcodes = (Button) findViewById(R.id.btnBarcodes);
         Button btnHomeLocation = (Button) findViewById(R.id.btnHomeLocation);
-        Button btnAlwaysAllowedApps = (Button) findViewById(R.id.btnAlwaysAllowedApps);
         Button btnViewPunishments = (Button) findViewById(R.id.btnViewPunishments);
         Button btnExportBackup = (Button) findViewById(R.id.btnExportBackup);
         Button btnImportBackup = (Button) findViewById(R.id.btnImportBackup);
@@ -232,13 +231,6 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 startActivity(new Intent(MainActivity.this, HomeLocationActivity.class));
-            }
-        });
-
-        btnAlwaysAllowedApps.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                startActivity(new Intent(MainActivity.this, AlwaysAllowedAppsListActivity.class));
             }
         });
 
@@ -553,13 +545,13 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Legacy no-op under whitelist semantics: this used to remove
-     * packageName from every Block's blocklist so it could never be
-     * blocked. Now that Business ERP is unconditionally Tier-1 (see
-     * KioskAllowList), it's never suspended regardless of any Block's
-     * allow-list, so there's nothing left for this to meaningfully do -
-     * kept only so the existing one-time button's call site still
-     * compiles, not because it still matters.
+     * No-op: this used to remove packageName from every Block's
+     * blockedPackages so it could never be blocked. Now that Business ERP
+     * is unconditionally Tier-1 (see KioskAllowList), it's never suspended
+     * regardless of what any Block's blockedPackages says, so there's
+     * nothing left for this to meaningfully do - kept only so the existing
+     * one-time button's call site still compiles, not because it still
+     * matters.
      */
     private void removePackageFromAllBlocks(String packageName) {
     }

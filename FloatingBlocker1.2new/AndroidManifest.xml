@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mujeer.floatingblocker"
-    android:versionCode="85"
-    android:versionName="4.85">
+    android:versionCode="86"
+    android:versionName="4.86">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -75,10 +75,6 @@
         <activity
             android:name=".HomeLocationActivity"
             android:label="@string/home_location_screen_title" />
-
-        <activity
-            android:name=".AlwaysAllowedAppsListActivity"
-            android:label="@string/always_allowed_apps_screen_title" />
 
         <activity
             android:name=".AlarmsListActivity"

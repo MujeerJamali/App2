@@ -287,7 +287,7 @@ public class KioskSessionActivity extends Activity {
         List<String> tier1Sorted = new ArrayList<String>(tier1);
         Collections.sort(tier1Sorted, labelComparator());
 
-        List<String> restSorted = new ArrayList<String>(result.allow);
+        List<String> restSorted = new ArrayList<String>(result.pinList);
         restSorted.removeAll(tier1);
         Collections.sort(restSorted, labelComparator());
 
@@ -426,7 +426,7 @@ public class KioskSessionActivity extends Activity {
         recentAppsContainer.removeAllViews();
         List<String> recent = new RecentAppsStorage(this).loadRecentPackages();
         for (final String pkg : recent) {
-            if (!result.allow.contains(pkg)) {
+            if (!result.pinList.contains(pkg)) {
                 continue; // no longer reachable - hidden, not shown greyed-out (decision #23)
             }
             Button button = new Button(this);
@@ -479,7 +479,7 @@ public class KioskSessionActivity extends Activity {
         btnGrantNotificationAccess.setVisibility(View.GONE);
 
         notificationsContainer.removeAllViews();
-        List<KioskNotificationListenerService.Entry> entries = KioskNotificationListenerService.getCurrentEntries(result.allow);
+        List<KioskNotificationListenerService.Entry> entries = KioskNotificationListenerService.getCurrentEntries(result.pinList);
         for (final KioskNotificationListenerService.Entry entry : entries) {
             View row = LayoutInflater.from(this).inflate(R.layout.list_item_notification, notificationsContainer, false);
             TextView txtTitle = (TextView) row.findViewById(R.id.txtNotificationTitle);

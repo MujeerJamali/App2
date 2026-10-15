@@ -54,7 +54,7 @@ public class BlockEditActivity extends Activity {
 
     private String blockId; // null if creating a new Block
     private final List<TimeRange> ranges = new ArrayList<TimeRange>();
-    private final Set<String> allowedPackages = new LinkedHashSet<String>();
+    private final Set<String> blockedPackages = new LinkedHashSet<String>();
     private int pickedStart = -1;
     private int pickedEnd = -1;
     private boolean editingAllowed;
@@ -120,7 +120,7 @@ public class BlockEditActivity extends Activity {
             if (b.id.equals(blockId)) {
                 editBlockName.setText(b.name);
                 ranges.addAll(b.ranges);
-                allowedPackages.addAll(b.allowedPackages);
+                blockedPackages.addAll(b.blockedPackages);
                 return;
             }
         }
@@ -214,11 +214,11 @@ public class BlockEditActivity extends Activity {
         final String[] labels = new String[apps.size()];
         final String[] packageNames = new String[apps.size()];
         final boolean[] checked = new boolean[apps.size()];
-        final Set<String> preExisting = new HashSet<String>(allowedPackages);
+        final Set<String> preExisting = new HashSet<String>(blockedPackages);
         for (int i = 0; i < apps.size(); i++) {
             labels[i] = apps.get(i).label;
             packageNames[i] = apps.get(i).packageName;
-            checked[i] = allowedPackages.contains(packageNames[i]);
+            checked[i] = blockedPackages.contains(packageNames[i]);
         }
 
         new AlertDialog.Builder(this)
@@ -237,10 +237,10 @@ public class BlockEditActivity extends Activity {
                         for (int i = 0; i < checked.length; i++) {
                             String pkg = packageNames[i];
                             if (checked[i]) {
-                                allowedPackages.add(pkg); // adding is always allowed
+                                blockedPackages.add(pkg); // adding is always allowed
                             } else if (preExisting.contains(pkg)) {
                                 if (editAllowedNow) {
-                                    allowedPackages.remove(pkg);
+                                    blockedPackages.remove(pkg);
                                 } else {
                                     anySkipped = true; // removal not allowed right now - keep it
                                 }
@@ -259,7 +259,7 @@ public class BlockEditActivity extends Activity {
     private void renderApps() {
         appsContainer.removeAllViews();
         PackageManager pm = getPackageManager();
-        for (final String pkg : allowedPackages) {
+        for (final String pkg : blockedPackages) {
             View row = LayoutInflater.from(this).inflate(R.layout.list_item_app, appsContainer, false);
             TextView txtAppName = (TextView) row.findViewById(R.id.txtAppName);
             Button btnRemove = (Button) row.findViewById(R.id.btnRemoveApp);
@@ -272,7 +272,7 @@ public class BlockEditActivity extends Activity {
                         Toast.makeText(BlockEditActivity.this, R.string.msg_blocks_locked, Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    allowedPackages.remove(pkg);
+                    blockedPackages.remove(pkg);
                     renderApps();
                 }
             });
@@ -313,8 +313,8 @@ public class BlockEditActivity extends Activity {
         target.name = name;
         target.ranges.clear();
         target.ranges.addAll(ranges);
-        target.allowedPackages.clear();
-        target.allowedPackages.addAll(allowedPackages);
+        target.blockedPackages.clear();
+        target.blockedPackages.addAll(blockedPackages);
 
         blocksStorage.saveBlocks(blocks);
 

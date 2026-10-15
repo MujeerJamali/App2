@@ -26,24 +26,26 @@ import java.util.Set;
  * woken up by AlarmManager, or right after the user edits something in
  * the app.
  *
- * Blocks are whitelist-based (decision #1): while active, ONLY the apps
- * on KioskAllowList's computed allow-list (Tier-1 + that Block's own
- * allowedPackages, intersected across every simultaneously-active Block -
- * decision #29) stay usable; everything else installed gets suspended
- * for the duration. Suspended apps literally cannot be opened at all -
- * Android shows its own "not available right now" message. There is no
+ * Blocks are blocklist-based (decision #42): while active, the apps on
+ * that Block's own blockedPackages get suspended - unioned across every
+ * simultaneously-active Block (decision #46) - and everything else is
+ * left alone. Suspended apps literally cannot be opened at all - Android
+ * shows its own "not available right now" message. There is no
  * detection, no back-pressing, no window to catch - the app just never
- * launches in the first place. A newly installed app needs no special
- * detection either: it simply isn't on any allow-list, so it's suspended
- * automatically the very next cycle, same as everything else not listed.
+ * launches in the first place. Tier-1 and the live-detected default
+ * launcher (see KioskAllowList) are never suspended regardless of any
+ * Block's list.
  *
  * Holiday Breaks (one-time, non-recurring date+time windows that pause
  * specific Blocks) are factored in here too - a Block on an active
  * Holiday Break is treated as inactive regardless of its own schedule.
  *
  * Lock Schedule's own locked state independently drives the automatic
- * Kiosk lockdown (lock task pinning) - see applyKioskLockdown and
- * KioskAllowList's class doc for exactly how the two layers combine.
+ * Kiosk lockdown (lock task pinning) - that still needs its own positive
+ * allow-list regardless of Blocks being blocklists (Android's lock-task
+ * API has no "pin to everything except these" mode), derived live by
+ * KioskAllowList as the complement of whatever's currently blocked. See
+ * applyKioskLockdown and KioskAllowList's class doc for the details.
  */
 public class BlockEnforcer {
 
@@ -84,29 +86,43 @@ public class BlockEnforcer {
         checkForMissedConfirmations(context);
         Log.d(TAG, "applyNow: after checkForMissedConfirmations");
 
+        List<Block> allBlocks = new BlocksStorage(context).loadBlocks();
+        Set<String> allManaged = new HashSet<String>();
+        for (Block b : allBlocks) {
+            allManaged.addAll(b.blockedPackages);
+        }
+        allManaged.remove(ownPackage);
+
         Set<String> permanentlyExcluded = new PermanentAppExclusionStorage(context).loadExcludedPackages();
-        KioskAllowList.Result allowListResult = KioskAllowList.computeCurrentAllowList(context);
-        Set<String> allLaunchable = getInstalledLaunchablePackages(context, ownPackage);
+        Set<String> tier1 = KioskAllowList.computeTier1(context);
         String launcherPackage = KioskAllowList.getCurrentLauncherPackage(context);
+        KioskAllowList.Result allowListResult = KioskAllowList.computeCurrentAllowList(context);
 
         Set<String> desiredSuspended = new HashSet<String>();
-        if (allowListResult.anyRestrictionActive()) {
-            for (String pkg : allLaunchable) {
-                if (!allowListResult.allow.contains(pkg) && !pkg.equals(launcherPackage)) {
-                    desiredSuspended.add(pkg);
-                }
-            }
+        if (allowListResult.blockLayerActive) {
+            desiredSuspended.addAll(allowListResult.activeBlockedPackages);
         }
         desiredSuspended.remove(ownPackage);
+        // Tier-1 and the live-detected launcher are never suspended,
+        // regardless of what any Block's blocklist says (decision #46's
+        // "nothing can block them" + the launcher safety guard).
+        desiredSuspended.removeAll(tier1);
+        if (launcherPackage != null) {
+            desiredSuspended.remove(launcherPackage);
+        }
         // Permanently-excluded packages are never suspended, regardless of
-        // whether they'd otherwise fall outside the current allow-list.
+        // whether some Block still nominally lists one.
         desiredSuspended.removeAll(permanentlyExcluded);
 
-        Set<String> toUnsuspend = new HashSet<String>(allLaunchable);
+        Set<String> toUnsuspend = new HashSet<String>(allManaged);
         toUnsuspend.removeAll(desiredSuspended);
         // Explicitly unsuspend every permanently-excluded package on every
-        // pass, regardless of the allow-list, so one self-heals if it's
-        // ever suspended by any other path in the future (a reinstall, etc.).
+        // pass, regardless of whether it's still tracked in allManaged -
+        // relying only on the set-difference above silently stops working
+        // the moment a package is no longer tracked by any Block at all,
+        // since it then can never appear in allManaged to begin with. This
+        // also means an excluded package self-heals if it's ever
+        // re-suspended by any other path in the future (a reinstall, etc.).
         toUnsuspend.addAll(permanentlyExcluded);
 
         if (!desiredSuspended.isEmpty()) {
@@ -158,7 +174,7 @@ public class BlockEnforcer {
         boolean wasPinned = runtime.wasPinnedLastCheck();
 
         if (shouldBePinned) {
-            Set<String> lockTaskPackages = new HashSet<String>(allowListResult.allow);
+            Set<String> lockTaskPackages = new HashSet<String>(allowListResult.pinList);
             lockTaskPackages.add(context.getPackageName());
             try {
                 dpm.setLockTaskPackages(admin, lockTaskPackages.toArray(new String[0]));
@@ -553,30 +569,6 @@ public class BlockEnforcer {
         } catch (Exception e) {
             // Best effort - if this specific restriction can't be applied, everything else still runs.
         }
-    }
-
-    /**
-     * All currently-installed launchable packages except our own - the
-     * universe this app manages suspension over. Under whitelist
-     * semantics (decision #1) there's no separate "new install
-     * detection" needed any more: a newly installed app simply appears
-     * here and, not being on any allow-list, gets suspended on the very
-     * next cycle automatically - nothing has to explicitly add it
-     * anywhere first, unlike the old blocklist model this replaced.
-     */
-    private static Set<String> getInstalledLaunchablePackages(Context context, String ownPackage) {
-        Set<String> result = new HashSet<String>();
-        PackageManager pm = context.getPackageManager();
-        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
-        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> resolveInfos = pm.queryIntentActivities(mainIntent, 0);
-        for (ResolveInfo info : resolveInfos) {
-            String pkg = info.activityInfo.packageName;
-            if (!pkg.equals(ownPackage)) {
-                result.add(pkg);
-            }
-        }
-        return result;
     }
 
     /**

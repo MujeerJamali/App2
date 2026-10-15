@@ -13,53 +13,44 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Single source of truth for "what's allowed right now" under the
- * redesigned, whitelist-based Kiosk Mode - used by BOTH BlockEnforcer
- * (deciding what to suspend at the OS level) and KioskSessionActivity
- * (deciding what to show/launch in the pinned grid, and whether to pin
- * at all), so the two can never disagree about what's actually
- * reachable. See KIOSK_MODE_PLAN.md for the full design discussion.
+ * Single source of truth for Tier-1 and for the two independent things
+ * driven by Blocks/Lock Schedule under blocklist semantics (decisions
+ * #42-47, reversing an earlier whitelist attempt - see
+ * KIOSK_MODE_PLAN.md for the full history):
  *
- * Two independent layers feed the final allow-list, each suppressible by
- * different, pre-existing overrides:
- *  - The BLOCK layer (Tier 3): the intersection of every currently-active
- *    Block's own allowedPackages (decision #29) - active only while >=1
- *    Block is active, and suppressed by whatever already suppresses
- *    "Blocks enforcement" generally (Master Safety, the Blocks Pause
- *    override, being far enough from home) - those are explicitly scoped
- *    to Blocks already, so a Block counts as "active" for Kiosk's
- *    purposes only when it would also actually be restricting anything.
- *  - The KIOSK layer (Tier 2, "Always Allowed Apps"): active only while
- *    Lock Schedule is currently locked, and suppressed by Master Safety
- *    or the separate Kiosk Safety toggle - NOT by the Blocks Pause
- *    override or far-from-home, which are explicitly scoped to Blocks
- *    only, not to Lock Schedule's own locked state.
+ *  - SUSPENSION (BlockEnforcer): direct blocklist - suspend exactly the
+ *    union of every currently-active Block's blockedPackages (decision
+ *    #46: union, not intersection). Tier-1 and the live-detected default
+ *    launcher are never suspended, regardless of any Block's list.
+ *  - KIOSK PINNING (KioskSessionActivity, lock task mode): Android's
+ *    lock-task API has no "pin to everything except these" mode, so this
+ *    still needs a positive allow-list (decision #44) - computed live as
+ *    Tier-1 union (every installed launchable app NOT in that same
+ *    active-blocked union). With no Block active, that's simply every
+ *    installed app (decision #45) - Kiosk still pins, but nothing is
+ *    actually restricted.
  *
- * Tier 1 (hardcoded, unconditional - this app, Business ERP, live default
- * Dialer/SMS) is always part of the result regardless of either layer.
- *
- * Package suspension (BlockEnforcer) fires whenever EITHER layer is
- * active. Kiosk pinning (KioskSessionActivity) fires only off the KIOSK
- * layer specifically - pinning is tied to Lock Schedule's own state
- * (decision #2), not to "is a Block active".
+ * Both read from the same computeActiveBlocks()/computeActiveBlockedUnion()
+ * so suspension and the pinned grid can never disagree about what's
+ * currently blocked.
  */
 public class KioskAllowList {
 
     public static final String BUSINESS_ERP_PACKAGE = "com.mujeer.businesserp";
 
     public static class Result {
-        public final Set<String> allow;
+        /** Union of every currently-active Block's blockedPackages - empty if blockLayerActive is false. */
+        public final Set<String> activeBlockedPackages;
+        /** Tier-1 union (everything not currently blocked) - only meaningful if kioskLayerActive is true. */
+        public final Set<String> pinList;
         public final boolean blockLayerActive;
         public final boolean kioskLayerActive;
 
-        Result(Set<String> allow, boolean blockLayerActive, boolean kioskLayerActive) {
-            this.allow = allow;
+        Result(Set<String> activeBlockedPackages, Set<String> pinList, boolean blockLayerActive, boolean kioskLayerActive) {
+            this.activeBlockedPackages = activeBlockedPackages;
+            this.pinList = pinList;
             this.blockLayerActive = blockLayerActive;
             this.kioskLayerActive = kioskLayerActive;
-        }
-
-        public boolean anyRestrictionActive() {
-            return blockLayerActive || kioskLayerActive;
         }
     }
 
@@ -108,14 +99,11 @@ public class KioskAllowList {
 
     /**
      * The device's current default Home/launcher package - never
-     * suspended, regardless of any allow-list. This is a pure safety
-     * guard, not one of the decided tiers: under whitelist semantics,
-     * suspending every non-allowed launchable app could otherwise sweep
-     * up the launcher itself if it's not explicitly listed anywhere,
-     * leaving no way back to a home screen at all while a Block is
-     * active. Live-detected the same way Tier-1's Dialer/SMS are, so it
-     * tracks whatever launcher is actually in use rather than a fixed
-     * package name.
+     * suspended, regardless of any Block's blocklist. A pure safety
+     * guard, not one of the decided tiers: blocklisting the launcher
+     * itself (deliberately or by mistake) would otherwise strand the
+     * user with no way back to a home screen while that Block is
+     * active. Live-detected the same way Tier-1's Dialer/SMS are.
      */
     public static String getCurrentLauncherPackage(Context context) {
         try {
@@ -127,6 +115,27 @@ public class KioskAllowList {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Every installed, launchable app except our own - the same
+     * universe shown in the Add App picker, and what BlockEnforcer
+     * enumerates to compute the Kiosk pin-list's complement.
+     */
+    public static Set<String> getAllInstalledLaunchablePackages(Context context) {
+        Set<String> result = new HashSet<String>();
+        PackageManager pm = context.getPackageManager();
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> resolveInfos = pm.queryIntentActivities(mainIntent, 0);
+        String ownPackage = context.getPackageName();
+        for (ResolveInfo info : resolveInfos) {
+            String pkg = info.activityInfo.packageName;
+            if (!pkg.equals(ownPackage)) {
+                result.add(pkg);
+            }
+        }
+        return result;
     }
 
     /**
@@ -164,25 +173,13 @@ public class KioskAllowList {
         return result;
     }
 
-    /**
-     * Intersection of every currently-active Block's allowedPackages
-     * (decision #29) - null if activeBlocks is empty (distinct from an
-     * empty set, which would mean "every active Block agrees on nothing
-     * in common").
-     */
-    public static Set<String> computeActiveBlockIntersection(List<Block> activeBlocks) {
-        if (activeBlocks.isEmpty()) {
-            return null;
-        }
-        Set<String> intersection = null;
+    /** Union of every currently-active Block's blockedPackages (decision #46) - empty if activeBlocks is empty. */
+    public static Set<String> computeActiveBlockedUnion(List<Block> activeBlocks) {
+        Set<String> union = new HashSet<String>();
         for (Block b : activeBlocks) {
-            if (intersection == null) {
-                intersection = new HashSet<String>(b.allowedPackages);
-            } else {
-                intersection.retainAll(b.allowedPackages);
-            }
+            union.addAll(b.blockedPackages);
         }
-        return intersection;
+        return union;
     }
 
     /**
@@ -201,38 +198,41 @@ public class KioskAllowList {
     }
 
     /**
-     * True if the KIOSK layer (Tier-2 + the Kiosk-pinning trigger itself)
-     * is suppressed entirely right now - Master Safety, or the separate
-     * Kiosk Safety toggle (decision #9/#20, deliberately NOT suppressed
-     * by Pause or far-from-home, which are Blocks-scoped only).
+     * True if the KIOSK layer (the pinning trigger itself) is suppressed
+     * entirely right now - Master Safety, or the separate Kiosk Safety
+     * toggle (decision #9/#20, deliberately NOT suppressed by Pause or
+     * far-from-home, which are Blocks-scoped only).
      */
     public static boolean isKioskLayerSuppressed(Context context) {
         return new MasterSafetyStorage(context).isEngaged()
                 || new KioskSafetyStorage(context).isEngaged();
     }
 
-    /** The full allow-list in effect right now, plus which layer(s) are actually contributing to it. */
+    /**
+     * The full picture right now: which packages are actively blocked
+     * (for suspension), and the derived Kiosk pin-list (for lock task
+     * mode), plus which layer(s) are actually active.
+     */
     public static Result computeCurrentAllowList(Context context) {
-        Set<String> allow = new HashSet<String>(computeTier1(context));
+        List<Block> activeBlocks = computeActiveBlocks(context);
+        boolean blockLayerActive = !activeBlocks.isEmpty() && !isBlockLayerSuppressed(context);
+        Set<String> activeBlockedPackages = blockLayerActive
+                ? computeActiveBlockedUnion(activeBlocks)
+                : new HashSet<String>();
 
-        boolean blockLayerActive = false;
-        if (!isBlockLayerSuppressed(context)) {
-            List<Block> activeBlocks = computeActiveBlocks(context);
-            if (!activeBlocks.isEmpty()) {
-                blockLayerActive = true;
-                Set<String> intersection = computeActiveBlockIntersection(activeBlocks);
-                if (intersection != null) {
-                    allow.addAll(intersection);
+        boolean kioskLayerActive = !isKioskLayerSuppressed(context)
+                && new LockScheduleStorage(context).isCurrentlyLocked();
+
+        Set<String> pinList = new HashSet<String>();
+        if (kioskLayerActive) {
+            pinList.addAll(computeTier1(context));
+            for (String pkg : getAllInstalledLaunchablePackages(context)) {
+                if (!activeBlockedPackages.contains(pkg)) {
+                    pinList.add(pkg);
                 }
             }
         }
 
-        boolean kioskLayerActive = false;
-        if (!isKioskLayerSuppressed(context) && new LockScheduleStorage(context).isCurrentlyLocked()) {
-            kioskLayerActive = true;
-            allow.addAll(new AlwaysAllowedAppsStorage(context).loadApps());
-        }
-
-        return new Result(allow, blockLayerActive, kioskLayerActive);
+        return new Result(activeBlockedPackages, pinList, blockLayerActive, kioskLayerActive);
     }
 }

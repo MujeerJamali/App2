@@ -15,7 +15,7 @@
     <string name="msg_backup_import_failed">Could not import that backup: %1$s</string>
     <string name="msg_backup_import_locked">Importing a backup can only be done during an unlocked time - check your Lock Schedule. (It can replace your current Blocks/Lock Schedule/etc. entirely, so it\'s gated the same as anything else that could weaken protection.)</string>
     <string name="confirm_import_backup_title">Import this backup?</string>
-    <string name="confirm_import_backup_message">This replaces ALL of your current Blocks, Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms, Confirmations, Always Allowed Apps, and Location Override settings with whatever is in this backup file. This cannot be undone.</string>
+    <string name="confirm_import_backup_message">This replaces ALL of your current Blocks, Lock Schedule, Holiday Breaks, Blocked Websites, Registered Barcodes, Alarms, Confirmations, and Location Override settings with whatever is in this backup file. This cannot be undone.</string>
     <string name="confirm_import_backup_yes">Import and replace everything</string>
     <string name="device_owner_active">Device Owner: ACTIVE (full protection on)</string>
     <string name="device_owner_not_active">Device Owner: NOT ACTIVE — protection is off</string>
@@ -109,18 +109,18 @@
     <string name="blocks_screen_title">Blocks</string>
     <string name="add_block_button">+ Add Block</string>
     <string name="msg_blocks_locked">This can only be removed during an unlocked time. Check your Lock Schedule.</string>
-    <string name="block_subtitle_format">%1$d time range(s), %2$d app(s) allowed</string>
+    <string name="block_subtitle_format">%1$d time range(s), %2$d app(s) blocked</string>
     <string name="delete_button">Delete</string>
 
     <!-- Block edit screen -->
     <string name="block_edit_screen_title">Edit Block</string>
     <string name="block_name_hint">Block name (e.g. Work Hours)</string>
     <string name="block_ranges_label">Time ranges (when this Block is active)</string>
-    <string name="block_apps_label">Apps allowed during this Block (only these are usable while it\'s active)</string>
+    <string name="block_apps_label">Apps blocked during this Block (these become unusable while it\'s active)</string>
     <string name="add_app_button">+ Add App</string>
     <string name="msg_enter_block_name">Enter a name for this Block.</string>
     <string name="delete_block_button">Delete This Block</string>
-    <string name="own_app_always_allowed_note">Self-Control itself, Business ERP, and your default Dialer/SMS app are always allowed, with or without being added here.</string>
+    <string name="own_app_always_allowed_note">Self-Control itself, Business ERP, and your default Dialer/SMS app can never be blocked, even if added here.</string>
     <string name="msg_some_removals_skipped">Some app removals were not applied - that can only be done during an unlocked time. New apps you added were still saved.</string>
 
     <!-- Holiday Breaks -->
@@ -280,13 +280,6 @@
     <string name="ringing_alarm_button_one_format">⏰ Scan to Dismiss: %1$s (%2$s left)</string>
     <string name="ringing_alarm_button_many_format">⏰ %1$d Alarms Ringing - Tap to Choose (%2$s left)</string>
     <string name="pick_ringing_alarm_title">Which alarm?</string>
-
-    <!-- Always Allowed Apps (Tier-2 of the Kiosk allow-list) -->
-    <string name="always_allowed_apps_button">✅  Always Allowed Apps</string>
-    <string name="always_allowed_apps_screen_title">Always Allowed Apps</string>
-    <string name="always_allowed_apps_desc">Apps added here stay usable whenever Lock Schedule is locked, combined with whatever Block (if any) is currently active. Adding an app weakens restriction, so it can only be done during an unlocked time - removing one is always allowed. Shows every installed app, no filtering.</string>
-    <string name="msg_always_allowed_apps_add_locked">Adding an app here can only be done during an unlocked time. Check your Lock Schedule.</string>
-    <string name="always_allowed_tier1_label">Always allowed, unconditionally (not editable here)</string>
 
     <!-- Automatic Kiosk lockdown - pinned screen, forced the instant Lock
          Schedule locks. Replaces the old manual pick-apps/duration/start
