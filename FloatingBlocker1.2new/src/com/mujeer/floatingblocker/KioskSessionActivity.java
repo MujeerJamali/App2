@@ -310,6 +310,24 @@ public class KioskSessionActivity extends Activity {
     }
 
     private void launchApp(String pkg) {
+        if (pkg.equals(getPackageName())) {
+            // Our own app needs a plain same-task start, not
+            // getLaunchIntentForPackage()'s FLAG_ACTIVITY_NEW_TASK |
+            // FLAG_ACTIVITY_RESET_TASK_IF_NEEDED (the same flags Android
+            // uses for tapping a home-screen icon). This pinned screen is
+            // itself singleTask and already the root of a task with this
+            // same package's affinity, so those flags collide with it -
+            // observed as the tap doing nothing and the back stack ending
+            // up unable to return here. Every other app, in its own
+            // distinct task affinity, never hits this. A plain
+            // same-task push doesn't need those flags at all (we're
+            // already inside an Activity/task context), and leaves a
+            // normal back stack - pressing Back from MainActivity
+            // correctly returns to this screen.
+            new RecentAppsStorage(this).recordLaunch(pkg);
+            startActivity(new Intent(this, MainActivity.class));
+            return;
+        }
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(pkg);
         if (launchIntent != null) {
             new RecentAppsStorage(this).recordLaunch(pkg);
