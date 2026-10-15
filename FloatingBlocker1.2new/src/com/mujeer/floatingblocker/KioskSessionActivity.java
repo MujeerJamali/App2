@@ -147,6 +147,23 @@ public class KioskSessionActivity extends Activity {
         handler.removeCallbacks(tickRunnable);
     }
 
+    @Override
+    public void onBackPressed() {
+        // This screen must never finish on its own - it's the root of its
+        // own pinned task, and the default Activity.onBackPressed() calls
+        // finish(). Since lock task mode won't let Android fall through to
+        // the real home screen once this finishes, the observed fallback
+        // was relaunching MainActivity (this app's own declared launcher
+        // Activity) with nothing behind it - the "Back takes me to
+        // Self-Control with no way back" bug. Deliberately NOT calling
+        // super.onBackPressed(): Back just moves to the Apps tab if not
+        // already there, otherwise does nothing. Exiting this screen only
+        // ever happens automatically (see exitKiosk()/tick()), never via Back.
+        if (currentTab != TAB_APPS) {
+            selectTab(TAB_APPS);
+        }
+    }
+
     private void tick() {
         KioskAllowList.Result result = KioskAllowList.computeCurrentAllowList(this);
         if (!result.kioskLayerActive) {
