@@ -419,3 +419,67 @@ here.
     Dialer/SMS) remains as the hardcoded, unconditional set. Implies
     removing `AlwaysAllowedAppsStorage`/`AlwaysAllowedAppsListActivity`
     and their main-screen entry point once this is implemented.
+
+## Reboot-resilience: HomeGatekeeperActivity
+
+Real-device testing found that Kiosk doesn't reliably survive a reboot.
+Root cause: `BlockEnforcer.applyKioskLockdown()`'s edge-trigger
+(`KioskRuntimeStorage.wasPinnedLastCheck()`) is stored in reboot-surviving
+device-protected prefs, so after a reboot during an already-locked
+window it still reads `true` from before the reboot and concludes
+"nothing changed, already pinned" - so it never calls
+`KioskForceEntry.forceEntry()`. Worse, this is really one instance of a
+bigger class of problem: the same stale-flag failure happens whenever
+`KioskSessionActivity`'s process dies for ANY reason while it should stay
+pinned - an OEM killing it under memory pressure, a user force-stopping
+the app, or (worst case) an aggressive OEM "super battery saver" mode
+that kills the app and blocks it from ever autostarting again until
+manually reopened. In that last case, Blocks/Kiosk enforcement is
+completely dark until the user manually reopens the app - a real,
+exploitable gap for a self-control app, since the same person being
+restricted is also the Device Owner admin with full access to their own
+OEM's battery settings.
+
+48. **HomeGatekeeperActivity is registered as the forced,
+    user-unchangeable answer to Android's `CATEGORY_HOME` resolution**,
+    via Device Owner's `addPersistentPreferredActivity` (see
+    `BlockEnforcer.applyHomeGatekeeperProtection`, called every cycle
+    from the existing permanent-protections block). This is a
+    fundamentally different trigger than `BOOT_COMPLETED`/`AlarmManager`:
+    a phone cannot have NO home screen, so this is the one thing an
+    OEM's "kill this app, block its autostart" mode can't suppress
+    without a much bigger, OEM-visible failure than just one app not
+    running. Every boot and every Home press now re-checks Lock
+    Schedule inline, with no dependency on anything backgroundable, and
+    (belt-and-suspenders) calls `BlockEnforcer.reapplyAndReschedule()`
+    itself first so suspension/lock-task state can never be stale by
+    the time it decides anything. Does not replace the existing
+    `KioskForceEntry`/`AlarmManager`-driven path - purely additive
+    defense in depth.
+
+49. **RealLauncherStorage captures the device's actual original
+    launcher exactly once**, read live via `resolveActivity()` on the
+    very first run of #48 (before this app has ever registered itself
+    as the `CATEGORY_HOME` answer, so that query still correctly finds
+    the real one). `HomeGatekeeperActivity` forwards to it whenever
+    nothing should be restricted, so normal unlocked use is otherwise
+    unaffected - the user never sees this app's own Home resolution,
+    only a near-instant pass-through. `KioskAllowList.getCurrentLauncherPackage`
+    (the existing "never suspend the launcher" safety guard) now reads
+    from this storage first too, since a live query after #48 is
+    registered would just answer with our own gatekeeper. Falls back to
+    a plain, unrestricted list of every installed app if the stored
+    launcher ever stops resolving (uninstalled/disabled) - a safety net,
+    not expected to be hit in practice.
+
+50. **Still not airtight, and can't be**: this closes the specific gap
+    of "the app isn't running to re-engage Kiosk," but nothing in
+    software can fully defend a Device-Owner-based restriction app
+    against the same person who holds admin rights over the OS
+    underneath it (the classic Ulysses-pact problem - see discussion in
+    this session's transcript). A hardware force-reset (holding power
+    10-20+ seconds) is baked into every phone's firmware and cannot be
+    blocked by any app. The only fully airtight answer discussed was
+    moving the binding into the physical world (a time-locked box for
+    the phone itself) - out of scope for this change, noted here as a
+    deliberate, acknowledged limit rather than an oversight.

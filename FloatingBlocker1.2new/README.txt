@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.87 (Kiosk reboot-resilience: HomeGatekeeperActivity is now registered via Device Owner's addPersistentPreferredActivity as the forced, unchangeable answer to Android's CATEGORY_HOME resolution - every boot and every Home press now re-checks Lock Schedule and re-engages Kiosk inline, independent of whether BOOT_COMPLETED/AlarmManager ever got a chance to run, closing the gap where an aggressive OEM battery-saver mode that kills this app and blocks its autostart would otherwise leave the phone unrestricted until manually reopened; forwards to the device's real launcher - captured once into RealLauncherStorage before this app ever took over Home - whenever nothing should be restricted)
+===================================================================================
+
 Floating Blocker - version 4.86 (Blocks reverted back to blocklist semantics after real-device testing: a Block's app list is again "these apps are blocked while it's active", unioned across simultaneously-active Blocks, instead of 4.85's whitelist attempt; the Tier-2 Always Allowed Apps list is removed entirely as redundant under blocklist semantics; Kiosk pinning still computes its own positive allow-list live, as Tier-1 plus everything not currently blocked - see KIOSK_MODE_PLAN.md decisions #42-47)
 ===================================================================================
 

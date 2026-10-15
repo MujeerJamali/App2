@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
@@ -356,6 +357,51 @@ public class BlockEnforcer {
         try {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER);
         } catch (Exception e) { /* best effort */ }
+        applyHomeGatekeeperProtection(context, dpm, admin);
+    }
+
+    /**
+     * Registers HomeGatekeeperActivity as the forced, user-unchangeable
+     * answer to Android's CATEGORY_HOME resolution - every boot, every
+     * Home press, independent of whether BOOT_COMPLETED/AlarmManager ever
+     * get a chance to run (the one thing an aggressive OEM "kill this app,
+     * block its autostart" battery mode can't take away without the phone
+     * having no home screen at all - see KIOSK_MODE_PLAN.md).
+     *
+     * The very first time this runs, before HomeGatekeeperActivity has
+     * ever been registered, the live CATEGORY_HOME query below still
+     * correctly finds the device's REAL launcher - captured once into
+     * RealLauncherStorage so HomeGatekeeperActivity can still hand off to
+     * it later, once this app itself is what that same query would answer
+     * with. Idempotent and self-healing like every other permanent
+     * protection in this method.
+     */
+    private static void applyHomeGatekeeperProtection(Context context, DevicePolicyManager dpm, ComponentName admin) {
+        RealLauncherStorage realLauncherStorage = new RealLauncherStorage(context);
+        if (!realLauncherStorage.hasCapturedRealLauncher()) {
+            try {
+                PackageManager pm = context.getPackageManager();
+                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                homeIntent.addCategory(Intent.CATEGORY_HOME);
+                ResolveInfo info = pm.resolveActivity(homeIntent, 0);
+                if (info != null && info.activityInfo != null && !info.activityInfo.packageName.equals(context.getPackageName())) {
+                    realLauncherStorage.saveRealLauncher(
+                            new ComponentName(info.activityInfo.packageName, info.activityInfo.name));
+                }
+            } catch (Exception e) {
+                // Best effort - if this fails, HomeGatekeeperActivity's own fallback
+                // app list covers it below instead of crashing or leaving a blank screen.
+            }
+        }
+        try {
+            IntentFilter filter = new IntentFilter(Intent.ACTION_MAIN);
+            filter.addCategory(Intent.CATEGORY_HOME);
+            filter.addCategory(Intent.CATEGORY_DEFAULT);
+            dpm.addPersistentPreferredActivity(admin, filter, new ComponentName(context, HomeGatekeeperActivity.class));
+        } catch (Exception e) {
+            // Best effort - KioskForceEntry's existing AlarmManager-driven path still
+            // covers normal transitions even if this registration ever fails.
+        }
     }
 
     /**

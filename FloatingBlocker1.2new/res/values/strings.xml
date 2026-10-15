@@ -301,6 +301,7 @@
     <string name="kiosk_open_notification_app_button">Open</string>
     <string name="msg_kiosk_system_ui_needs_unlocked">This needs an unlocked Lock Schedule time - lock task mode won\'t let this screen open system settings while pinned. Come back once unlocked.</string>
     <string name="kiosk_notification_channel_name">Kiosk lockdown</string>
+    <string name="home_gatekeeper_fallback_title">Your usual home screen could not be opened. Pick an app below:</string>
     <string name="kiosk_notification_title">Lock Schedule is locked</string>
     <string name="kiosk_notification_text">Tap to open the Kiosk screen</string>
 
