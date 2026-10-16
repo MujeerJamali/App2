@@ -93,11 +93,9 @@ public class LockScheduleStorage {
      * The start of the "app-day" containing momentMillis, where the day
      * boundary is 2:00 AM instead of midnight - so e.g. 1:30 AM still
      * belongs to the previous app-day, but 2:00 AM onward belongs to the
-     * new one. Shared by HolidayBreakEditActivity's "can create during a
-     * locked period if the start is a genuinely later day" gate and by
-     * LockScheduleBreakerStorage's "can only be enabled from tomorrow"
-     * gate - both need the exact same notion of "day" to stay consistent
-     * with each other and with the daily safety window above.
+     * new one. Used by HolidayBreakEditActivity's "can create during a
+     * locked period if the start is a genuinely later day" gate, kept
+     * consistent with the daily safety window above.
      */
     public static long appDayStartMillis(long momentMillis) {
         Calendar c = Calendar.getInstance();

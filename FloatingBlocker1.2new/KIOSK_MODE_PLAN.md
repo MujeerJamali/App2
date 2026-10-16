@@ -505,39 +505,44 @@ real bug plus a genuinely new feature:
     `clearWidenedFor()` loop.
 
 52. **New: Lock Schedule Breaker** (`LockScheduleBreakerStorage`) - a
-    single, one-time (non-recurring) full break of Lock Schedule itself,
-    asked only for a duration. Distinct from the existing Blocks-only
-    Pause (`BlocksPauseStorage`, which never touches Kiosk/editing
-    gates - see `isBlockLayerSuppressed` vs `isKioskLayerSuppressed`):
-    this one plugs directly into `LockScheduleStorage.isCurrentlyLocked()`,
-    so it uniformly loosens everything keyed off that single method -
+    full break of Lock Schedule itself, for a user-chosen duration.
+    Distinct from the existing Blocks-only Pause (`BlocksPauseStorage`,
+    which never touches Kiosk/editing gates - see
+    `isBlockLayerSuppressed` vs `isKioskLayerSuppressed`): this one
+    plugs directly into `LockScheduleStorage.isCurrentlyLocked()`, so
+    it uniformly loosens everything keyed off that single method -
     Kiosk pinning, every editing gate, the anti-tamper locks in
     `BlockEnforcer` that call it directly, and Alarm/Confirmation
     punishment suppression - while leaving Blocks' own independent
     suspension (decision #42) completely untouched, matching the
     feature's literal name.
 
-53. **Can only be armed to start on a later app-day than today**
-    (`LockScheduleStorage.appDayStartMillis` - the exact 2:00 AM
-    boundary HolidayBreakEditActivity's own "later app day" gate
-    already uses, now shared rather than duplicated) - never today,
-    regardless of what time "now" is when it's armed. This is what
-    makes arming it safe at ANY time, even while currently locked: it
-    can never weaken what's happening right now, only something that
-    hasn't started yet. Deliberate friction against impulsive use -
-    same precommitment-device philosophy as Holiday Breaks' own later-
-    day gate, just applied to the single most powerful lever in the
-    app instead of a Block-scoped one.
+53. **Revised to take effect immediately, not "starting tomorrow"**:
+    first built with a mandatory next-app-day delay (mirroring Holiday
+    Breaks' own "later app day" gate) as deliberate friction against
+    impulsive use, since this is the single most powerful lever in the
+    app. Explicitly reversed on request to take effect right away
+    instead. Rebuilt to mirror `BlocksPauseStorage`'s own temporary-
+    override shape exactly - extend-only, self-expiring, "not gated on
+    Lock Schedule's unlocked state, same reasoning as every other
+    safety valve in this app" (that class's own doc comment) - rather
+    than invent a second, differently-shaped escape valve. This is the
+    same immediate/ungated trade-off the app already accepts for
+    Blocks via Custom Pause, now extended to a second, more powerful
+    lever (Kiosk/Lock Schedule) at the user's explicit choice -
+    `LockScheduleStorage.appDayStartMillis` is no longer used by this
+    feature at all, only by HolidayBreakEditActivity's own gate.
 
-54. **One at a time, cancel always allowed**: arming while one is
-    already pending or active is refused (cancel first to replace it).
-    Cancelling - whether still pending or already in effect - is always
-    allowed, any time, with no gate at all, since cancelling only ever
-    restores restriction sooner, never weakens anything (same
-    add/remove asymmetry used everywhere else in this app). Its
-    start/end boundaries are folded into
+54. **One active window at a time, extend-only, cancel always
+    allowed**: using the button again while already active just
+    extends the same window further (never shortens it) rather than
+    refusing, same rule as `BlocksPauseStorage.setTemporaryOverrideUntilMillis`.
+    Cancelling is always allowed, any time, with no gate at all, since
+    cancelling only ever restores restriction sooner, never weakens
+    anything (same add/remove asymmetry used everywhere else in this
+    app). Its end boundary is folded into
     `BlockEnforcer.computeNextTransitionMillis` so the next
-    AlarmManager wake-up lands exactly on them, same as Holiday Break
+    AlarmManager wake-up lands exactly on it, same as Holiday Break
     boundaries already do. Deliberately excluded from BackupManager's
     export/import, same reasoning as the other runtime/operational
     storages already excluded (KioskRuntimeStorage, etc.) - this is

@@ -716,16 +716,9 @@ public class BlockEnforcer {
             }
         }
 
-        LockScheduleBreakerStorage breakerStorage = new LockScheduleBreakerStorage(context);
-        long breakerStart = breakerStorage.getStartMillis();
-        long breakerEnd = breakerStorage.getEndMillis();
-        if (breakerEnd > now) {
-            if (breakerStart > now && (best == -1 || breakerStart < best)) {
-                best = breakerStart;
-            }
-            if (best == -1 || breakerEnd < best) {
-                best = breakerEnd;
-            }
+        long breakerUnlockedUntil = new LockScheduleBreakerStorage(context).getUnlockedUntilMillis();
+        if (breakerUnlockedUntil > now && (best == -1 || breakerUnlockedUntil < best)) {
+            best = breakerUnlockedUntil;
         }
 
         for (Block b : blocks) {

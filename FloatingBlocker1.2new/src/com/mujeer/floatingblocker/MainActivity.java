@@ -528,16 +528,17 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * One button, three states, same toggle idiom as btnBlocksPause:
-     * nothing armed -> reads the minutes field and arms a new breaker
-     * (always allowed, any time, since it can never take effect before
-     * tomorrow - see LockScheduleBreakerStorage); pending or active ->
-     * tapping instead offers to cancel it (also always allowed, any
-     * time, since cancelling only ever restores restriction sooner).
+     * One button, two states, same toggle idiom as btnBlocksPause: not
+     * active -> reads the minutes field and extends the override to
+     * start unlocking immediately (always allowed, any time, same "not
+     * gated on Lock Schedule's state" reasoning BlocksPauseStorage's own
+     * custom pause already uses); active -> tapping instead offers to
+     * cancel it early (also always allowed, any time, since cancelling
+     * only ever restores restriction sooner).
      */
     private void onLockScheduleBreakerClicked() {
         long now = System.currentTimeMillis();
-        if (lockScheduleBreakerStorage.hasPendingOrActiveBreaker(now)) {
+        if (lockScheduleBreakerStorage.isBreakerActive(now)) {
             new AlertDialog.Builder(this)
                     .setTitle(R.string.confirm_cancel_lock_schedule_breaker_title)
                     .setMessage(R.string.confirm_cancel_lock_schedule_breaker_message)
@@ -569,15 +570,13 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.confirm_lock_schedule_breaker_title)
                 .setMessage(getString(R.string.confirm_lock_schedule_breaker_message, minutes))
-                .setPositiveButton(R.string.confirm_lock_schedule_breaker_yes, new DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.confirm_lock_schedule_breaker_yes, minutes), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        long nowMillis = System.currentTimeMillis();
-                        boolean armed = lockScheduleBreakerStorage.armStartingTomorrow(minutes * 60L * 1000L, nowMillis);
-                        if (armed) {
-                            BlockEnforcer.reapplyAndReschedule(MainActivity.this);
-                            Toast.makeText(MainActivity.this, R.string.msg_lock_schedule_breaker_armed, Toast.LENGTH_LONG).show();
-                        }
+                        lockScheduleBreakerStorage.extendUnlockedUntilMillis(
+                                System.currentTimeMillis() + (minutes * 60L * 1000L));
+                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                        Toast.makeText(MainActivity.this, R.string.msg_lock_schedule_breaker_armed, Toast.LENGTH_LONG).show();
                         refreshUi();
                     }
                 })
@@ -586,31 +585,14 @@ public class MainActivity extends Activity {
     }
 
     private void refreshLockScheduleBreakerButton() {
-        long now = System.currentTimeMillis();
-        long start = lockScheduleBreakerStorage.getStartMillis();
-        long end = lockScheduleBreakerStorage.getEndMillis();
-        java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.getDefault());
-        if (now < end && now >= start) {
+        long remainingMillis = lockScheduleBreakerStorage.getUnlockedUntilMillis() - System.currentTimeMillis();
+        if (remainingMillis > 0) {
             editLockScheduleBreakerMinutes.setVisibility(android.view.View.GONE);
-            btnLockScheduleBreaker.setText(getString(R.string.lock_schedule_breaker_button_active_format, fmt.format(new java.util.Date(end))));
-        } else if (now < end) {
-            editLockScheduleBreakerMinutes.setVisibility(android.view.View.GONE);
-            btnLockScheduleBreaker.setText(getString(R.string.lock_schedule_breaker_button_pending_format,
-                    fmt.format(new java.util.Date(start)), formatDuration(end - start)));
+            btnLockScheduleBreaker.setText(getString(R.string.lock_schedule_breaker_button_active_format, formatRemaining(remainingMillis)));
         } else {
             editLockScheduleBreakerMinutes.setVisibility(android.view.View.VISIBLE);
             btnLockScheduleBreaker.setText(R.string.lock_schedule_breaker_button);
         }
-    }
-
-    private String formatDuration(long millis) {
-        long totalMinutes = millis / (60L * 1000L);
-        long hours = totalMinutes / 60;
-        long minutes = totalMinutes % 60;
-        if (hours > 0) {
-            return hours + "h " + minutes + "m";
-        }
-        return minutes + "m";
     }
 
     /**

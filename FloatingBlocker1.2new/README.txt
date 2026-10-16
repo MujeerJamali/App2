@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.89 (Lock Schedule Breaker revised to take effect immediately instead of only starting the next day - same extend-only, ungated shape as the existing Blocks-only Custom Pause, now extended to Kiosk/Lock Schedule at the user's explicit request)
+===================================================================================
+
 Floating Blocker - version 4.88 (Fixed: cancelling a Holiday Break early now clears punishment-widen state for its affected Blocks, same as natural expiry already did - without this, a stale punishment predating the Break could resurface instantly on cancel. New: Lock Schedule Breaker - a one-time, duration-only full break of Lock Schedule itself (Kiosk, every editing gate, anti-tamper locks, Alarm/Confirmation punishment suppression), distinct from the existing Blocks-only Pause and leaving Blocks' own suspension untouched - can only be armed to start on a later app-day than today, never today, so arming it is always safe even while currently locked; cancelling it is always allowed, any time)
 ===================================================================================
 
