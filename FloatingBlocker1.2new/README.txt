@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.88 (Fixed: cancelling a Holiday Break early now clears punishment-widen state for its affected Blocks, same as natural expiry already did - without this, a stale punishment predating the Break could resurface instantly on cancel. New: Lock Schedule Breaker - a one-time, duration-only full break of Lock Schedule itself (Kiosk, every editing gate, anti-tamper locks, Alarm/Confirmation punishment suppression), distinct from the existing Blocks-only Pause and leaving Blocks' own suspension untouched - can only be armed to start on a later app-day than today, never today, so arming it is always safe even while currently locked; cancelling it is always allowed, any time)
+===================================================================================
+
 Floating Blocker - version 4.87 (Kiosk reboot-resilience: HomeGatekeeperActivity is now registered via Device Owner's addPersistentPreferredActivity as the forced, unchangeable answer to Android's CATEGORY_HOME resolution - every boot and every Home press now re-checks Lock Schedule and re-engages Kiosk inline, independent of whether BOOT_COMPLETED/AlarmManager ever got a chance to run, closing the gap where an aggressive OEM battery-saver mode that kills this app and blocks its autostart would otherwise leave the phone unrestricted until manually reopened; forwards to the device's real launcher - captured once into RealLauncherStorage before this app ever took over Home - whenever nothing should be restricted)
 ===================================================================================
 

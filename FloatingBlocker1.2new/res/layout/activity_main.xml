@@ -167,6 +167,26 @@
             android:layout_marginTop="8dp"
             android:text="@string/delete_custom_pause_forever_button" />
 
+        <TextView
+            style="@style/SectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_lock_schedule_breaker" />
+
+        <EditText
+            android:id="@+id/editLockScheduleBreakerMinutes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="@string/lock_schedule_breaker_minutes_hint" />
+
+        <Button
+            android:id="@+id/btnLockScheduleBreaker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/lock_schedule_breaker_button" />
+
         <Button
             android:id="@+id/btnExcludeBusinessErp"
             android:layout_width="match_parent"

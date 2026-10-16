@@ -483,3 +483,62 @@ OEM's battery settings.
     moving the binding into the physical world (a time-locked box for
     the phone itself) - out of scope for this change, noted here as a
     deliberate, acknowledged limit rather than an oversight.
+
+## Holiday Break fix + Lock Schedule Breaker (fresh real-device audit)
+
+A fresh correctness audit (prompted by finding the TimeRange
+overnight/single-day gotcha - see the separate conversation about a
+Thu-only 10:50pm-11:02am range, which is a UI/UX quirk of TimeRange
+itself rather than a code bug, and is not fixed here) turned up one
+real bug plus a genuinely new feature:
+
+51. **Fixed: cancelling a Holiday Break early never cleared its
+    affected Blocks' punishment-widen state**, unlike
+    `cleanUpExpiredBreaks()` on natural expiry, which already does via
+    `BlockPunishmentStorage.clearWidenedFor()`. Without this, a widen
+    window that predated the Break and was only being suppressed by it
+    (via `computeActiveBlocks()`'s on-a-Break skip) would resurface the
+    instant the Break was cancelled early, suspending that Block's apps
+    with no new offense - exactly the bug the expiry path's cleanup was
+    written to prevent, just missing on its sibling path.
+    `HolidayBreaksListActivity`'s cancel handler now runs the same
+    `clearWidenedFor()` loop.
+
+52. **New: Lock Schedule Breaker** (`LockScheduleBreakerStorage`) - a
+    single, one-time (non-recurring) full break of Lock Schedule itself,
+    asked only for a duration. Distinct from the existing Blocks-only
+    Pause (`BlocksPauseStorage`, which never touches Kiosk/editing
+    gates - see `isBlockLayerSuppressed` vs `isKioskLayerSuppressed`):
+    this one plugs directly into `LockScheduleStorage.isCurrentlyLocked()`,
+    so it uniformly loosens everything keyed off that single method -
+    Kiosk pinning, every editing gate, the anti-tamper locks in
+    `BlockEnforcer` that call it directly, and Alarm/Confirmation
+    punishment suppression - while leaving Blocks' own independent
+    suspension (decision #42) completely untouched, matching the
+    feature's literal name.
+
+53. **Can only be armed to start on a later app-day than today**
+    (`LockScheduleStorage.appDayStartMillis` - the exact 2:00 AM
+    boundary HolidayBreakEditActivity's own "later app day" gate
+    already uses, now shared rather than duplicated) - never today,
+    regardless of what time "now" is when it's armed. This is what
+    makes arming it safe at ANY time, even while currently locked: it
+    can never weaken what's happening right now, only something that
+    hasn't started yet. Deliberate friction against impulsive use -
+    same precommitment-device philosophy as Holiday Breaks' own later-
+    day gate, just applied to the single most powerful lever in the
+    app instead of a Block-scoped one.
+
+54. **One at a time, cancel always allowed**: arming while one is
+    already pending or active is refused (cancel first to replace it).
+    Cancelling - whether still pending or already in effect - is always
+    allowed, any time, with no gate at all, since cancelling only ever
+    restores restriction sooner, never weakens anything (same
+    add/remove asymmetry used everywhere else in this app). Its
+    start/end boundaries are folded into
+    `BlockEnforcer.computeNextTransitionMillis` so the next
+    AlarmManager wake-up lands exactly on them, same as Holiday Break
+    boundaries already do. Deliberately excluded from BackupManager's
+    export/import, same reasoning as the other runtime/operational
+    storages already excluded (KioskRuntimeStorage, etc.) - this is
+    self-expiring state, not durable user configuration.

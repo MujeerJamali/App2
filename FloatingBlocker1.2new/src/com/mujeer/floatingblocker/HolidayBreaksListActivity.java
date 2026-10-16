@@ -114,6 +114,15 @@ public class HolidayBreaksListActivity extends Activity {
                                         }
                                     }
                                     holidayBreaksStorage.saveBreaks(current);
+                                    // Same cleanup cleanUpExpiredBreaks() does for a Break that
+                                    // expires naturally (see BlockPunishmentStorage.clearWidenedFor) -
+                                    // without this, a punishment-widen window that predates this
+                                    // Break and was only being suppressed by it would otherwise
+                                    // resurface immediately, suspending apps with no new offense.
+                                    BlockPunishmentStorage punishmentStorage = new BlockPunishmentStorage(HolidayBreaksListActivity.this);
+                                    for (String blockId : h.affectedBlockIds) {
+                                        punishmentStorage.clearWidenedFor(blockId);
+                                    }
                                     BlockEnforcer.reapplyAndReschedule(HolidayBreaksListActivity.this);
                                     renderBreaks();
                                 }

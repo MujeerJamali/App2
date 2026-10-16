@@ -666,7 +666,7 @@ public class BlockEnforcer {
         List<Block> blocks = new BlocksStorage(context).loadBlocks();
         List<HolidayBreak> holidayBreaks = new HolidayBreaksStorage(context).loadBreaks();
         List<TimeRange> lockScheduleRanges = new LockScheduleStorage(context).loadRanges();
-        long nextTransition = computeNextTransitionMillis(blocks, holidayBreaks, lockScheduleRanges);
+        long nextTransition = computeNextTransitionMillis(context, blocks, holidayBreaks, lockScheduleRanges);
 
         // Guarantee a check at minimum every ~1 minute - unconditionally,
         // for the permanent, not-tied-to-any-Block protections (Device
@@ -695,14 +695,14 @@ public class BlockEnforcer {
     }
 
     /**
-     * Finds the soonest upcoming Block-schedule, Lock-Schedule, or
-     * Holiday-Break boundary - including the fixed daily 2:00/2:10 AM
-     * safety-carve-out boundaries (decision #10), so the Kiosk
-     * lockdown's engage/release (decisions #2/#12/#26) fires right on
-     * time instead of waiting for the ~1 minute periodic safety net
-     * below. Returns -1 if there's nothing scheduled at all.
+     * Finds the soonest upcoming Block-schedule, Lock-Schedule,
+     * Holiday-Break, or Lock-Schedule-Breaker boundary - including the
+     * fixed daily 2:00/2:10 AM safety-carve-out boundaries (decision
+     * #10), so the Kiosk lockdown's engage/release (decisions #2/#12/#26)
+     * fires right on time instead of waiting for the ~1 minute periodic
+     * safety net below. Returns -1 if there's nothing scheduled at all.
      */
-    private static long computeNextTransitionMillis(List<Block> blocks, List<HolidayBreak> holidayBreaks,
+    private static long computeNextTransitionMillis(Context context, List<Block> blocks, List<HolidayBreak> holidayBreaks,
                                                       List<TimeRange> lockScheduleRanges) {
         long now = System.currentTimeMillis();
         long best = -1;
@@ -713,6 +713,18 @@ public class BlockEnforcer {
             }
             if (h.endMillis > now && (best == -1 || h.endMillis < best)) {
                 best = h.endMillis;
+            }
+        }
+
+        LockScheduleBreakerStorage breakerStorage = new LockScheduleBreakerStorage(context);
+        long breakerStart = breakerStorage.getStartMillis();
+        long breakerEnd = breakerStorage.getEndMillis();
+        if (breakerEnd > now) {
+            if (breakerStart > now && (best == -1 || breakerStart < best)) {
+                best = breakerStart;
+            }
+            if (best == -1 || breakerEnd < best) {
+                best = breakerEnd;
             }
         }
 

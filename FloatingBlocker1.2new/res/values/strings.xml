@@ -82,6 +82,23 @@
     <string name="confirm_delete_custom_pause_yes">Yes, delete it forever</string>
     <string name="msg_custom_pause_deleted">Deleted. This button is now gone forever.</string>
 
+    <!-- Lock Schedule Breaker: one-time, full unlock of Lock Schedule itself
+         (Kiosk + every editing gate), never Blocks - can only start tomorrow -->
+    <string name="section_lock_schedule_breaker">Lock Schedule Breaker</string>
+    <string name="lock_schedule_breaker_minutes_hint">Minutes to stay unlocked for</string>
+    <string name="lock_schedule_breaker_button">🔓 Break Lock Schedule (starts tomorrow)</string>
+    <string name="lock_schedule_breaker_button_pending_format">🔓 Scheduled: unlocks %1$s, for %2$s - tap to cancel</string>
+    <string name="lock_schedule_breaker_button_active_format">🔓 Unlocked until %1$s - tap to cancel</string>
+    <string name="msg_enter_lock_schedule_breaker_minutes">Enter how many minutes to stay unlocked for.</string>
+    <string name="confirm_lock_schedule_breaker_title">Break Lock Schedule starting tomorrow?</string>
+    <string name="confirm_lock_schedule_breaker_message">This fully unlocks Lock Schedule - no Kiosk lockdown, every editing gate open - starting tomorrow at 2:00 AM, for %1$d minute(s). It can never start today, no matter when you confirm this. Only one can be scheduled at a time - cancel it any time before or during by tapping the button again.</string>
+    <string name="confirm_lock_schedule_breaker_yes">Yes, schedule it</string>
+    <string name="msg_lock_schedule_breaker_armed">Scheduled - Lock Schedule will unlock starting tomorrow.</string>
+    <string name="confirm_cancel_lock_schedule_breaker_title">Cancel this breaker?</string>
+    <string name="confirm_cancel_lock_schedule_breaker_message">This restores Lock Schedule to its normal rules, whether the breaker is still pending or already active.</string>
+    <string name="confirm_cancel_lock_schedule_breaker_yes">Yes, cancel it</string>
+    <string name="msg_lock_schedule_breaker_cancelled">Cancelled. Lock Schedule is back to its normal rules.</string>
+
     <!-- DNS Filter Lock -->
 
 

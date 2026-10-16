@@ -89,10 +89,35 @@ public class LockScheduleStorage {
         return nowMinutes >= 120 && nowMinutes < 130;
     }
 
+    /**
+     * The start of the "app-day" containing momentMillis, where the day
+     * boundary is 2:00 AM instead of midnight - so e.g. 1:30 AM still
+     * belongs to the previous app-day, but 2:00 AM onward belongs to the
+     * new one. Shared by HolidayBreakEditActivity's "can create during a
+     * locked period if the start is a genuinely later day" gate and by
+     * LockScheduleBreakerStorage's "can only be enabled from tomorrow"
+     * gate - both need the exact same notion of "day" to stay consistent
+     * with each other and with the daily safety window above.
+     */
+    public static long appDayStartMillis(long momentMillis) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(momentMillis);
+        c.add(Calendar.HOUR_OF_DAY, -2);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        c.add(Calendar.HOUR_OF_DAY, 2);
+        return c.getTimeInMillis();
+    }
+
     /** True if we are currently inside one of the saved ranges (i.e. things are locked). */
     public boolean isCurrentlyLocked() {
         int nowMinutes = currentMinutesOfDay();
         if (isInDailySafetyWindow(nowMinutes)) {
+            return false;
+        }
+        if (new LockScheduleBreakerStorage(context).isBreakerActive(System.currentTimeMillis())) {
             return false;
         }
         List<TimeRange> ranges = loadRanges();

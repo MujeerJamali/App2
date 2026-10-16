@@ -144,19 +144,7 @@ public class HolidayBreakEditActivity extends Activity {
      * until a genuinely later day - it can't weaken anything happening now.
      */
     private static boolean isOnLaterAppDay(long momentMillis, long referenceMillis) {
-        return appDayStartMillis(momentMillis) > appDayStartMillis(referenceMillis);
-    }
-
-    private static long appDayStartMillis(long momentMillis) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(momentMillis);
-        c.add(Calendar.HOUR_OF_DAY, -2);
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        c.add(Calendar.HOUR_OF_DAY, 2);
-        return c.getTimeInMillis();
+        return LockScheduleStorage.appDayStartMillis(momentMillis) > LockScheduleStorage.appDayStartMillis(referenceMillis);
     }
 
     private String formatDate(Calendar c) {

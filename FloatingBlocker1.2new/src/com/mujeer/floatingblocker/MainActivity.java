@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
 
     private LockScheduleStorage lockScheduleStorage;
     private BlocksPauseStorage blocksPauseStorage;
+    private LockScheduleBreakerStorage lockScheduleBreakerStorage;
     private MasterSafetyStorage masterSafetyStorage;
     private KioskSafetyStorage kioskSafetyStorage;
     private DevicePolicyManager devicePolicyManager;
@@ -43,6 +44,8 @@ public class MainActivity extends Activity {
     private EditText editCustomPauseMinutes;
     private Button btnCustomPause;
     private Button btnDeleteCustomPauseForever;
+    private EditText editLockScheduleBreakerMinutes;
+    private Button btnLockScheduleBreaker;
     private Button btnExcludeBusinessErp;
     private PermanentAppExclusionStorage permanentExclusionStorage;
 
@@ -54,6 +57,7 @@ public class MainActivity extends Activity {
         public void run() {
             refreshRingingAlarmButton();
             refreshCustomPauseButton();
+            refreshLockScheduleBreakerButton();
             ringingAlarmHandler.postDelayed(this, 1000);
         }
     };
@@ -74,6 +78,7 @@ public class MainActivity extends Activity {
 
         lockScheduleStorage = new LockScheduleStorage(this);
         blocksPauseStorage = new BlocksPauseStorage(this);
+        lockScheduleBreakerStorage = new LockScheduleBreakerStorage(this);
         masterSafetyStorage = new MasterSafetyStorage(this);
         kioskSafetyStorage = new KioskSafetyStorage(this);
         permanentExclusionStorage = new PermanentAppExclusionStorage(this);
@@ -91,6 +96,8 @@ public class MainActivity extends Activity {
         editCustomPauseMinutes = (EditText) findViewById(R.id.editCustomPauseMinutes);
         btnCustomPause = (Button) findViewById(R.id.btnCustomPause);
         btnDeleteCustomPauseForever = (Button) findViewById(R.id.btnDeleteCustomPauseForever);
+        editLockScheduleBreakerMinutes = (EditText) findViewById(R.id.editLockScheduleBreakerMinutes);
+        btnLockScheduleBreaker = (Button) findViewById(R.id.btnLockScheduleBreaker);
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnDeleteKioskSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
@@ -168,6 +175,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onDeleteCustomPauseForeverClicked();
+            }
+        });
+
+        btnLockScheduleBreaker.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onLockScheduleBreakerClicked();
             }
         });
 
@@ -419,6 +433,7 @@ public class MainActivity extends Activity {
         }
 
         refreshCustomPauseButton();
+        refreshLockScheduleBreakerButton();
 
         btnExcludeBusinessErp.setVisibility(permanentExclusionStorage.isExcluded(BUSINESS_ERP_PACKAGE)
                 ? android.view.View.GONE : android.view.View.VISIBLE);
@@ -510,6 +525,92 @@ public class MainActivity extends Activity {
         } else {
             btnCustomPause.setText(R.string.custom_pause_button);
         }
+    }
+
+    /**
+     * One button, three states, same toggle idiom as btnBlocksPause:
+     * nothing armed -> reads the minutes field and arms a new breaker
+     * (always allowed, any time, since it can never take effect before
+     * tomorrow - see LockScheduleBreakerStorage); pending or active ->
+     * tapping instead offers to cancel it (also always allowed, any
+     * time, since cancelling only ever restores restriction sooner).
+     */
+    private void onLockScheduleBreakerClicked() {
+        long now = System.currentTimeMillis();
+        if (lockScheduleBreakerStorage.hasPendingOrActiveBreaker(now)) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.confirm_cancel_lock_schedule_breaker_title)
+                    .setMessage(R.string.confirm_cancel_lock_schedule_breaker_message)
+                    .setPositiveButton(R.string.confirm_cancel_lock_schedule_breaker_yes, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            lockScheduleBreakerStorage.cancelBreaker();
+                            BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                            Toast.makeText(MainActivity.this, R.string.msg_lock_schedule_breaker_cancelled, Toast.LENGTH_LONG).show();
+                            refreshUi();
+                        }
+                    })
+                    .setNegativeButton(R.string.cancel_button, null)
+                    .show();
+            return;
+        }
+
+        final int minutes;
+        try {
+            minutes = Integer.parseInt(editLockScheduleBreakerMinutes.getText().toString().trim());
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, R.string.msg_enter_lock_schedule_breaker_minutes, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (minutes <= 0) {
+            Toast.makeText(this, R.string.msg_enter_lock_schedule_breaker_minutes, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_lock_schedule_breaker_title)
+                .setMessage(getString(R.string.confirm_lock_schedule_breaker_message, minutes))
+                .setPositiveButton(R.string.confirm_lock_schedule_breaker_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        long nowMillis = System.currentTimeMillis();
+                        boolean armed = lockScheduleBreakerStorage.armStartingTomorrow(minutes * 60L * 1000L, nowMillis);
+                        if (armed) {
+                            BlockEnforcer.reapplyAndReschedule(MainActivity.this);
+                            Toast.makeText(MainActivity.this, R.string.msg_lock_schedule_breaker_armed, Toast.LENGTH_LONG).show();
+                        }
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
+    }
+
+    private void refreshLockScheduleBreakerButton() {
+        long now = System.currentTimeMillis();
+        long start = lockScheduleBreakerStorage.getStartMillis();
+        long end = lockScheduleBreakerStorage.getEndMillis();
+        java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.getDefault());
+        if (now < end && now >= start) {
+            editLockScheduleBreakerMinutes.setVisibility(android.view.View.GONE);
+            btnLockScheduleBreaker.setText(getString(R.string.lock_schedule_breaker_button_active_format, fmt.format(new java.util.Date(end))));
+        } else if (now < end) {
+            editLockScheduleBreakerMinutes.setVisibility(android.view.View.GONE);
+            btnLockScheduleBreaker.setText(getString(R.string.lock_schedule_breaker_button_pending_format,
+                    fmt.format(new java.util.Date(start)), formatDuration(end - start)));
+        } else {
+            editLockScheduleBreakerMinutes.setVisibility(android.view.View.VISIBLE);
+            btnLockScheduleBreaker.setText(R.string.lock_schedule_breaker_button);
+        }
+    }
+
+    private String formatDuration(long millis) {
+        long totalMinutes = millis / (60L * 1000L);
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+        if (hours > 0) {
+            return hours + "h " + minutes + "m";
+        }
+        return minutes + "m";
     }
 
     /**
