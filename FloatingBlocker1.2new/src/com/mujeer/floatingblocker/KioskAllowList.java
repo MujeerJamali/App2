@@ -1,6 +1,5 @@
 package com.mujeer.floatingblocker;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -99,26 +98,14 @@ public class KioskAllowList {
     }
 
     /**
-     * The device's REAL default Home/launcher package - never suspended,
-     * regardless of any Block's blocklist. A pure safety guard, not one
-     * of the decided tiers: blocklisting the launcher itself
-     * (deliberately or by mistake) would otherwise strand the user with
-     * no way back to a home screen while that Block is active.
-     *
-     * Checks RealLauncherStorage first: once HomeGatekeeperActivity is
-     * registered as the forced CATEGORY_HOME answer (see
-     * BlockEnforcer.applyHomeGatekeeperProtection), a live resolveActivity
-     * query would just answer with our OWN gatekeeper, not the device's
-     * actual launcher - RealLauncherStorage is what still remembers who
-     * that really is. Falls back to the live query only if that capture
-     * hasn't happened yet (e.g. right after a fresh install, before the
-     * first enforcement cycle has run).
+     * The device's current default Home/launcher package - never
+     * suspended, regardless of any Block's blocklist. A pure safety
+     * guard, not one of the decided tiers: blocklisting the launcher
+     * itself (deliberately or by mistake) would otherwise strand the
+     * user with no way back to a home screen while that Block is
+     * active. Live-detected the same way Tier-1's Dialer/SMS are.
      */
     public static String getCurrentLauncherPackage(Context context) {
-        ComponentName stored = new RealLauncherStorage(context).loadRealLauncher();
-        if (stored != null) {
-            return stored.getPackageName();
-        }
         try {
             PackageManager pm = context.getPackageManager();
             Intent homeIntent = new Intent(Intent.ACTION_MAIN);

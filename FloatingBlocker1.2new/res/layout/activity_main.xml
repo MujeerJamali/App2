@@ -145,12 +145,6 @@
             android:layout_marginTop="10dp"
             android:text="@string/kiosk_safety_delete_forever_button" />
 
-        <Button
-            android:id="@+id/btnHomeGatekeeperToggle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/enable_home_gatekeeper_button" />
 
         <EditText
             android:id="@+id/editCustomPauseMinutes"

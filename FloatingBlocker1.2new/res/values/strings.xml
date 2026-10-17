@@ -51,15 +51,6 @@
     <string name="confirm_delete_kiosk_safety_message">This cannot be undone. You will never be able to use Kiosk Safety again, ever.</string>
     <string name="confirm_delete_kiosk_safety_yes">Yes, delete forever</string>
 
-    <!-- One-way opt-out of HomeGatekeeperActivity's forced Home takeover -->
-    <string name="enable_home_gatekeeper_button">🏠 Launcher Protection: OFF (tap to enable)</string>
-    <string name="disable_home_gatekeeper_button">🏠 Launcher Protection: ON (tap to disable)</string>
-    <string name="confirm_enable_home_gatekeeper_title">Enable Launcher Protection?</string>
-    <string name="confirm_enable_home_gatekeeper_message">This makes Kiosk re-engage automatically even if this app gets killed and blocked from autostarting (e.g. by an aggressive battery saver mode) before you unlock, by taking over your Home screen. Risk: on a device whose OEM also has its own restricted-home power saving mode, the two can conflict with no way back to Settings from either screen - this has happened on a real device. You can turn this back off any time by tapping the button again.</string>
-    <string name="confirm_enable_home_gatekeeper_yes">Yes, enable it</string>
-    <string name="msg_home_gatekeeper_enabled">Enabled. This app will now take over your Home screen as a Kiosk backup trigger.</string>
-    <string name="msg_home_gatekeeper_disabled">Disabled. This app no longer takes over your Home screen - Kiosk still works normally through its usual trigger.</string>
-
     <!-- Active Punishments status screen -->
     <string name="view_punishments_button">View Active Punishments</string>
     <string name="punishments_screen_title">Active Punishments</string>
@@ -326,7 +317,6 @@
     <string name="kiosk_open_notification_app_button">Open</string>
     <string name="msg_kiosk_system_ui_needs_unlocked">This needs an unlocked Lock Schedule time - lock task mode won\'t let this screen open system settings while pinned. Come back once unlocked.</string>
     <string name="kiosk_notification_channel_name">Kiosk lockdown</string>
-    <string name="home_gatekeeper_fallback_title">Your usual home screen could not be opened. Pick an app below:</string>
     <string name="kiosk_notification_title">Lock Schedule is locked</string>
     <string name="kiosk_notification_text">Tap to open the Kiosk screen</string>
 

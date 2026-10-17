@@ -357,69 +357,40 @@ public class BlockEnforcer {
         try {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER);
         } catch (Exception e) { /* best effort */ }
-        applyHomeGatekeeperProtection(context, dpm, admin);
+        clearStaleHomeGatekeeperRegistration(context, dpm, admin);
     }
 
     /**
-     * Registers HomeGatekeeperActivity as the forced, user-unchangeable
-     * answer to Android's CATEGORY_HOME resolution - every boot, every
-     * Home press, independent of whether BOOT_COMPLETED/AlarmManager ever
-     * get a chance to run (the one thing an aggressive OEM "kill this app,
-     * block its autostart" battery mode can't take away without the phone
-     * having no home screen at all - see KIOSK_MODE_PLAN.md).
+     * Decisions #48-50/#55-56 (HomeGatekeeperActivity, a forced
+     * CATEGORY_HOME takeover meant as a Kiosk reboot-resilience backup
+     * trigger) are REMOVED ENTIRELY as of this version - a real-device
+     * incident showed it's fundamentally broken on any device with no
+     * separate real launcher app installed: Android has no other
+     * CATEGORY_HOME candidate to fall back to, so even clearing the
+     * Device Owner "persistent preferred activity" registration (what
+     * decision #56's toggle did) doesn't help - the Activity's mere
+     * presence in the manifest is enough for Android to keep using it,
+     * since declaring the capability, not being preferred, is what
+     * makes an app a candidate at all. A SharedPreferences flag can
+     * never undo a manifest declaration. No in-app toggle can fix this -
+     * only removing the Activity (and its CATEGORY_HOME intent-filter)
+     * from the app entirely, which this version does.
      *
-     * Opt-in only (decision #56) - a real-device incident showed this can
-     * combine badly with an OEM's own restricted-home power saving mode,
-     * with no way back to Settings from either screen, on a device that
-     * never had a separate real launcher to fall back to in the first
-     * place. HomeGatekeeperStorage.isEnabledByUser() defaults to false,
-     * so this does nothing at all unless the user explicitly turns it on
-     * from MainActivity, and self-heals in BOTH directions: registers
-     * while enabled, actively clears any existing registration while
-     * not - so a device upgrading from an older version where this was
-     * forced on gets it undone automatically on the very next cycle,
-     * with no action needed from the user beyond installing the update.
-     *
-     * While enabled, the very first time this runs - before
-     * HomeGatekeeperActivity has ever been registered - the live
-     * CATEGORY_HOME query below still correctly finds the device's REAL
-     * launcher, captured once into RealLauncherStorage so
-     * HomeGatekeeperActivity can hand off to it later, once this app
-     * itself is what that same query would answer with.
+     * This one-time cleanup call remains, every cycle, ONLY so that a
+     * device upgrading from an older version that forced the
+     * registration on - including one stuck in exactly the failure
+     * mode above - gets it cleared automatically the instant this
+     * version's code runs, with no dependency on Home even working in
+     * the meantime (BootReceiver calls reapplyAndReschedule
+     * unconditionally on every boot). Safe to call even though
+     * HomeGatekeeperActivity no longer exists as a class - this just
+     * clears whatever ComponentName the OS has stored from before.
      */
-    private static void applyHomeGatekeeperProtection(Context context, DevicePolicyManager dpm, ComponentName admin) {
-        if (!new HomeGatekeeperStorage(context).isEnabledByUser()) {
-            try {
-                dpm.clearPackagePersistentPreferredActivities(admin, context.getPackageName());
-            } catch (Exception e) {
-                // Best effort - nothing more to do if this fails.
-            }
-            return;
-        }
-        RealLauncherStorage realLauncherStorage = new RealLauncherStorage(context);
-        if (!realLauncherStorage.hasCapturedRealLauncher()) {
-            try {
-                PackageManager pm = context.getPackageManager();
-                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-                homeIntent.addCategory(Intent.CATEGORY_HOME);
-                ResolveInfo info = pm.resolveActivity(homeIntent, 0);
-                if (info != null && info.activityInfo != null && !info.activityInfo.packageName.equals(context.getPackageName())) {
-                    realLauncherStorage.saveRealLauncher(
-                            new ComponentName(info.activityInfo.packageName, info.activityInfo.name));
-                }
-            } catch (Exception e) {
-                // Best effort - if this fails, HomeGatekeeperActivity's own fallback
-                // app list covers it below instead of crashing or leaving a blank screen.
-            }
-        }
+    private static void clearStaleHomeGatekeeperRegistration(Context context, DevicePolicyManager dpm, ComponentName admin) {
         try {
-            IntentFilter filter = new IntentFilter(Intent.ACTION_MAIN);
-            filter.addCategory(Intent.CATEGORY_HOME);
-            filter.addCategory(Intent.CATEGORY_DEFAULT);
-            dpm.addPersistentPreferredActivity(admin, filter, new ComponentName(context, HomeGatekeeperActivity.class));
+            dpm.clearPackagePersistentPreferredActivities(admin, context.getPackageName());
         } catch (Exception e) {
-            // Best effort - KioskForceEntry's existing AlarmManager-driven path still
-            // covers normal transitions even if this registration ever fails.
+            // Best effort - nothing more to do if this fails.
         }
     }
 

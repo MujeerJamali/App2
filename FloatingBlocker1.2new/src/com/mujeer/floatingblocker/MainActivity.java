@@ -46,8 +46,6 @@ public class MainActivity extends Activity {
     private Button btnDeleteCustomPauseForever;
     private EditText editLockScheduleBreakerMinutes;
     private Button btnLockScheduleBreaker;
-    private Button btnHomeGatekeeperToggle;
-    private HomeGatekeeperStorage homeGatekeeperStorage;
     private Button btnExcludeBusinessErp;
     private PermanentAppExclusionStorage permanentExclusionStorage;
 
@@ -81,7 +79,6 @@ public class MainActivity extends Activity {
         lockScheduleStorage = new LockScheduleStorage(this);
         blocksPauseStorage = new BlocksPauseStorage(this);
         lockScheduleBreakerStorage = new LockScheduleBreakerStorage(this);
-        homeGatekeeperStorage = new HomeGatekeeperStorage(this);
         masterSafetyStorage = new MasterSafetyStorage(this);
         kioskSafetyStorage = new KioskSafetyStorage(this);
         permanentExclusionStorage = new PermanentAppExclusionStorage(this);
@@ -94,7 +91,6 @@ public class MainActivity extends Activity {
         btnDeleteSafetyForever = (Button) findViewById(R.id.btnDeleteSafetyForever);
         btnKioskSafety = (Button) findViewById(R.id.btnKioskSafety);
         btnDeleteKioskSafetyForever = (Button) findViewById(R.id.btnDeleteKioskSafetyForever);
-        btnHomeGatekeeperToggle = (Button) findViewById(R.id.btnHomeGatekeeperToggle);
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         editCustomPauseMinutes = (EditText) findViewById(R.id.editCustomPauseMinutes);
@@ -158,13 +154,6 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onDeleteKioskSafetyForeverClicked();
-            }
-        });
-
-        btnHomeGatekeeperToggle.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                onHomeGatekeeperToggleClicked();
             }
         });
 
@@ -442,12 +431,6 @@ public class MainActivity extends Activity {
                     kioskSafetyEngaged ? getColor(R.color.color_danger) : getColor(R.color.primary)));
             btnDeleteKioskSafetyForever.setEnabled(true);
         }
-
-        boolean homeGatekeeperEnabled = homeGatekeeperStorage.isEnabledByUser();
-        btnHomeGatekeeperToggle.setText(homeGatekeeperEnabled
-                ? R.string.disable_home_gatekeeper_button : R.string.enable_home_gatekeeper_button);
-        btnHomeGatekeeperToggle.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                homeGatekeeperEnabled ? getColor(R.color.color_danger) : getColor(R.color.primary)));
 
         refreshCustomPauseButton();
         refreshLockScheduleBreakerButton();
@@ -868,43 +851,6 @@ public class MainActivity extends Activity {
                     }
                 })
                 .setNegativeButton(R.string.confirm_delete_safety_cancel, null)
-                .show();
-    }
-
-    /**
-     * Opt-in, reversible toggle (decision #56) for HomeGatekeeperActivity's
-     * forced CATEGORY_HOME registration (decisions #48-50) - defaults
-     * off after a real-device incident where it combined badly with an
-     * OEM's own restricted-home power saving mode, with no way back to
-     * Settings from either screen. Turning it ON warns about exactly
-     * that risk first. Turning it OFF needs no warning - that's always
-     * the safe direction. Either way, BlockEnforcer.applyHomeGatekeeperProtection
-     * reads HomeGatekeeperStorage.isEnabledByUser() on its very next
-     * cycle and registers or actively clears the registration to match,
-     * so this button only needs to flip the flag and reapply.
-     */
-    private void onHomeGatekeeperToggleClicked() {
-        final boolean currentlyEnabled = homeGatekeeperStorage.isEnabledByUser();
-        if (currentlyEnabled) {
-            homeGatekeeperStorage.setEnabledByUser(false);
-            BlockEnforcer.reapplyAndReschedule(this);
-            Toast.makeText(this, R.string.msg_home_gatekeeper_disabled, Toast.LENGTH_LONG).show();
-            refreshUi();
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.confirm_enable_home_gatekeeper_title)
-                .setMessage(R.string.confirm_enable_home_gatekeeper_message)
-                .setPositiveButton(R.string.confirm_enable_home_gatekeeper_yes, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        homeGatekeeperStorage.setEnabledByUser(true);
-                        BlockEnforcer.reapplyAndReschedule(MainActivity.this);
-                        Toast.makeText(MainActivity.this, R.string.msg_home_gatekeeper_enabled, Toast.LENGTH_LONG).show();
-                        refreshUi();
-                    }
-                })
-                .setNegativeButton(R.string.cancel_button, null)
                 .show();
     }
 

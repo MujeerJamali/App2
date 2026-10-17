@@ -589,3 +589,30 @@ real bug plus a genuinely new feature:
     normal trigger (Lock Schedule locking via `KioskForceEntry`) was
     never affected by any of this and keeps working exactly as before,
     with or without this toggle on.
+
+57. **Decision #56's toggle could never have actually fixed decision
+    #56's own incident, and HomeGatekeeperActivity (decisions
+    #48-50/#55-56) is now removed entirely.** The real device stayed
+    stuck even after installing the opt-in version and explicitly
+    toggling it off, because the toggle only controlled whether
+    `addPersistentPreferredActivity` was called - it did nothing about
+    the Activity's `CATEGORY_HOME` `<intent-filter>` still being
+    declared in the manifest. Declaring the capability, not being
+    *preferred*, is what makes Android consider an app a `CATEGORY_HOME`
+    candidate at all; being the Device Owner's preferred choice only
+    matters when there's more than one candidate to choose between. On
+    a device with no separate real launcher installed - exactly the
+    device that hit this - our app was the *only* candidate, so Android
+    kept using it regardless of any Device Owner preference setting. A
+    `SharedPreferences` flag can never undo a manifest declaration; only
+    removing the Activity (and its intent-filter) from the app can.
+    `BlockEnforcer` still calls `clearPackagePersistentPreferredActivities`
+    every cycle, unconditionally, with no flag gating it - purely so a
+    device upgrading from ANY earlier version (#48 through #56) has its
+    stale registration cleared automatically the moment this version's
+    code runs, with no dependency on Home resolution working in the
+    meantime (`BootReceiver` triggers this unconditionally on every
+    boot, before the user needs to reach any UI at all). Kiosk's normal
+    trigger (Lock Schedule locking via `KioskForceEntry`) was never
+    part of this feature and is completely unaffected - it never
+    depended on Home resolution to begin with.

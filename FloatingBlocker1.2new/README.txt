@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.92 (CRITICAL fix: HomeGatekeeperActivity - the entire Home-screen-takeover reboot-resilience mechanism from 4.87-4.91, including 4.91's opt-in toggle - is REMOVED ENTIRELY. Root cause of the real-device lockout: the Activity's CATEGORY_HOME capability is declared in the manifest, and on a device with no other app declaring CATEGORY_HOME, Android keeps using it as the only candidate regardless of any Device Owner "preferred activity" setting - a SharedPreferences flag can never undo a manifest declaration, so 4.91's toggle could never have actually fixed this on such a device. This version still actively clears any stale persistent-preferred-activity registration left by an older version on every enforcement cycle, so upgrading from any earlier version self-heals automatically. Kiosk's normal Lock-Schedule-driven trigger (KioskForceEntry) is completely unaffected and was never the problem)
+===================================================================================
+
 Floating Blocker - version 4.91 (IMPORTANT fix: Launcher Protection (the Home-screen-takeover reboot-resilience trigger from 4.87) now defaults OFF and self-heals off automatically on upgrade, after a real-device incident where it combined with an OEM's own restricted-home "Super Power Saving Mode" to leave no way back to Settings from either screen. The one-way "remove forever" button from 4.90 is now a plain reversible ON/OFF toggle instead, warning about this exact risk only when turning it ON. Kiosk's normal Lock-Schedule-driven trigger is completely unaffected either way)
 ===================================================================================
 
