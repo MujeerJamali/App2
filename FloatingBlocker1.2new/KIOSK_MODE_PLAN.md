@@ -560,3 +560,32 @@ real bug plus a genuinely new feature:
     that method already relies on. Only removes decisions #48-50's
     reboot/kill-resilience backup path; Kiosk's normal trigger (Lock
     Schedule locking via `KioskForceEntry`) is completely unaffected.
+
+## Real-device incident: forced-on Home takeover vs. OEM power saving
+
+56. **Reverted decision #48's "forced on by default" to opt-in only,
+    and made decision #55's one-way removal a reversible toggle
+    instead**, after exactly the failure this whole feature exists to
+    guard against collided with a second, independent one: on a
+    real device with no separate launcher app ever installed, the
+    OEM's own "Super Power Saving Mode" - itself a restricted-home,
+    limited-app-list screen much like Kiosk - engaged with no visible
+    exit, while `HomeGatekeeperActivity` was simultaneously forcing
+    itself as the only `CATEGORY_HOME` answer. Neither screen led back
+    to Settings, and there was no real launcher underneath either one
+    to fall back to - `HomeGatekeeperActivity`'s own fallback app list
+    (decision #48-50) only showed AIDE, the one other app installed.
+    `HomeGatekeeperStorage.isEnabledByUser()` now defaults to **false**:
+    `BlockEnforcer.applyHomeGatekeeperProtection` only registers while
+    explicitly turned on from MainActivity, and actively calls
+    `clearPackagePersistentPreferredActivities` whenever it's off -
+    self-healing in BOTH directions, so a device upgrading from an
+    older forced-on version gets it undone automatically on the very
+    next enforcement cycle, no action needed beyond installing the
+    update. The MainActivity button is now a plain reversible toggle
+    (not the one-way "delete forever" pattern decision #55 used) -
+    turning it on warns about this exact risk first; turning it off
+    needs no warning, since that's always the safe direction. Kiosk's
+    normal trigger (Lock Schedule locking via `KioskForceEntry`) was
+    never affected by any of this and keeps working exactly as before,
+    with or without this toggle on.

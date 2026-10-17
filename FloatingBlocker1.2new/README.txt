@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.91 (IMPORTANT fix: Launcher Protection (the Home-screen-takeover reboot-resilience trigger from 4.87) now defaults OFF and self-heals off automatically on upgrade, after a real-device incident where it combined with an OEM's own restricted-home "Super Power Saving Mode" to leave no way back to Settings from either screen. The one-way "remove forever" button from 4.90 is now a plain reversible ON/OFF toggle instead, warning about this exact risk only when turning it ON. Kiosk's normal Lock-Schedule-driven trigger is completely unaffected either way)
+===================================================================================
+
 Floating Blocker - version 4.90 (New one-time, irreversible "Permanently Remove App as Launcher" button - undoes HomeGatekeeperActivity's forced Home-screen takeover (the reboot/kill-resilience backup path from 4.87) for good; Kiosk's normal Lock-Schedule-driven trigger is unaffected)
 ===================================================================================
 

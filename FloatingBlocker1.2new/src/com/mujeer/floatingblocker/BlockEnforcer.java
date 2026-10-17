@@ -368,22 +368,32 @@ public class BlockEnforcer {
      * block its autostart" battery mode can't take away without the phone
      * having no home screen at all - see KIOSK_MODE_PLAN.md).
      *
-     * The very first time this runs, before HomeGatekeeperActivity has
-     * ever been registered, the live CATEGORY_HOME query below still
-     * correctly finds the device's REAL launcher - captured once into
-     * RealLauncherStorage so HomeGatekeeperActivity can still hand off to
-     * it later, once this app itself is what that same query would answer
-     * with. Idempotent and self-healing like every other permanent
-     * protection in this method.
+     * Opt-in only (decision #56) - a real-device incident showed this can
+     * combine badly with an OEM's own restricted-home power saving mode,
+     * with no way back to Settings from either screen, on a device that
+     * never had a separate real launcher to fall back to in the first
+     * place. HomeGatekeeperStorage.isEnabledByUser() defaults to false,
+     * so this does nothing at all unless the user explicitly turns it on
+     * from MainActivity, and self-heals in BOTH directions: registers
+     * while enabled, actively clears any existing registration while
+     * not - so a device upgrading from an older version where this was
+     * forced on gets it undone automatically on the very next cycle,
+     * with no action needed from the user beyond installing the update.
      *
-     * Skipped entirely once HomeGatekeeperStorage.isPermanentlyRemovedAsLauncher()
-     * is set - a one-way opt-out fired once from MainActivity. Simply not
-     * re-registering here is enough; the actual removal
-     * (DevicePolicyManager.clearPackagePersistentPreferredActivities) happens
-     * once, at the moment the user chooses that, not on every cycle.
+     * While enabled, the very first time this runs - before
+     * HomeGatekeeperActivity has ever been registered - the live
+     * CATEGORY_HOME query below still correctly finds the device's REAL
+     * launcher, captured once into RealLauncherStorage so
+     * HomeGatekeeperActivity can hand off to it later, once this app
+     * itself is what that same query would answer with.
      */
     private static void applyHomeGatekeeperProtection(Context context, DevicePolicyManager dpm, ComponentName admin) {
-        if (new HomeGatekeeperStorage(context).isPermanentlyRemovedAsLauncher()) {
+        if (!new HomeGatekeeperStorage(context).isEnabledByUser()) {
+            try {
+                dpm.clearPackagePersistentPreferredActivities(admin, context.getPackageName());
+            } catch (Exception e) {
+                // Best effort - nothing more to do if this fails.
+            }
             return;
         }
         RealLauncherStorage realLauncherStorage = new RealLauncherStorage(context);
