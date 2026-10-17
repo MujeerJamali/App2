@@ -375,8 +375,17 @@ public class BlockEnforcer {
      * it later, once this app itself is what that same query would answer
      * with. Idempotent and self-healing like every other permanent
      * protection in this method.
+     *
+     * Skipped entirely once HomeGatekeeperStorage.isPermanentlyRemovedAsLauncher()
+     * is set - a one-way opt-out fired once from MainActivity. Simply not
+     * re-registering here is enough; the actual removal
+     * (DevicePolicyManager.clearPackagePersistentPreferredActivities) happens
+     * once, at the moment the user chooses that, not on every cycle.
      */
     private static void applyHomeGatekeeperProtection(Context context, DevicePolicyManager dpm, ComponentName admin) {
+        if (new HomeGatekeeperStorage(context).isPermanentlyRemovedAsLauncher()) {
+            return;
+        }
         RealLauncherStorage realLauncherStorage = new RealLauncherStorage(context);
         if (!realLauncherStorage.hasCapturedRealLauncher()) {
             try {

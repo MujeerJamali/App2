@@ -51,6 +51,13 @@
     <string name="confirm_delete_kiosk_safety_message">This cannot be undone. You will never be able to use Kiosk Safety again, ever.</string>
     <string name="confirm_delete_kiosk_safety_yes">Yes, delete forever</string>
 
+    <!-- One-way opt-out of HomeGatekeeperActivity's forced Home takeover -->
+    <string name="remove_as_launcher_forever_button">🗑️ Permanently Remove App as Launcher</string>
+    <string name="confirm_remove_as_launcher_forever_title">Permanently remove this app as launcher?</string>
+    <string name="confirm_remove_as_launcher_forever_message">This undoes the reboot-resilience protection that makes Kiosk re-engage automatically even if this app gets killed and blocked from autostarting (e.g. by an aggressive battery saver mode) before you unlock. Kiosk will still work normally through its usual trigger - this only removes the backup path tied to your Home screen. This cannot be undone.</string>
+    <string name="confirm_remove_as_launcher_forever_yes">Yes, remove it forever</string>
+    <string name="msg_removed_as_launcher_forever">Done. This app will no longer take over your Home screen, ever again.</string>
+
     <!-- Active Punishments status screen -->
     <string name="view_punishments_button">View Active Punishments</string>
     <string name="punishments_screen_title">Active Punishments</string>

@@ -46,6 +46,8 @@ public class MainActivity extends Activity {
     private Button btnDeleteCustomPauseForever;
     private EditText editLockScheduleBreakerMinutes;
     private Button btnLockScheduleBreaker;
+    private Button btnRemoveAsLauncherForever;
+    private HomeGatekeeperStorage homeGatekeeperStorage;
     private Button btnExcludeBusinessErp;
     private PermanentAppExclusionStorage permanentExclusionStorage;
 
@@ -79,6 +81,7 @@ public class MainActivity extends Activity {
         lockScheduleStorage = new LockScheduleStorage(this);
         blocksPauseStorage = new BlocksPauseStorage(this);
         lockScheduleBreakerStorage = new LockScheduleBreakerStorage(this);
+        homeGatekeeperStorage = new HomeGatekeeperStorage(this);
         masterSafetyStorage = new MasterSafetyStorage(this);
         kioskSafetyStorage = new KioskSafetyStorage(this);
         permanentExclusionStorage = new PermanentAppExclusionStorage(this);
@@ -91,6 +94,7 @@ public class MainActivity extends Activity {
         btnDeleteSafetyForever = (Button) findViewById(R.id.btnDeleteSafetyForever);
         btnKioskSafety = (Button) findViewById(R.id.btnKioskSafety);
         btnDeleteKioskSafetyForever = (Button) findViewById(R.id.btnDeleteKioskSafetyForever);
+        btnRemoveAsLauncherForever = (Button) findViewById(R.id.btnRemoveAsLauncherForever);
         btnBatteryExemption = (Button) findViewById(R.id.btnBatteryExemption);
         btnScanRingingAlarm = (Button) findViewById(R.id.btnScanRingingAlarm);
         editCustomPauseMinutes = (EditText) findViewById(R.id.editCustomPauseMinutes);
@@ -101,6 +105,7 @@ public class MainActivity extends Activity {
         btnExcludeBusinessErp = (Button) findViewById(R.id.btnExcludeBusinessErp);
         btnDeleteSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnDeleteKioskSafetyForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
+        btnRemoveAsLauncherForever.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
         btnScanRingingAlarm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.color_danger)));
 
         Button btnBlocks = (Button) findViewById(R.id.btnBlocks);
@@ -154,6 +159,13 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(android.view.View v) {
                 onDeleteKioskSafetyForeverClicked();
+            }
+        });
+
+        btnRemoveAsLauncherForever.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                onRemoveAsLauncherForeverClicked();
             }
         });
 
@@ -431,6 +443,9 @@ public class MainActivity extends Activity {
                     kioskSafetyEngaged ? getColor(R.color.color_danger) : getColor(R.color.primary)));
             btnDeleteKioskSafetyForever.setEnabled(true);
         }
+
+        btnRemoveAsLauncherForever.setVisibility(homeGatekeeperStorage.isPermanentlyRemovedAsLauncher()
+                ? android.view.View.GONE : android.view.View.VISIBLE);
 
         refreshCustomPauseButton();
         refreshLockScheduleBreakerButton();
@@ -851,6 +866,43 @@ public class MainActivity extends Activity {
                     }
                 })
                 .setNegativeButton(R.string.confirm_delete_safety_cancel, null)
+                .show();
+    }
+
+    /**
+     * One-time, irreversible: undoes HomeGatekeeperActivity's forced
+     * CATEGORY_HOME registration (decisions #48-50) via
+     * DevicePolicyManager.clearPackagePersistentPreferredActivities, and
+     * records that in HomeGatekeeperStorage so
+     * BlockEnforcer.applyHomeGatekeeperProtection stops re-registering it
+     * on every future cycle - without that flag, the very next
+     * enforcement pass would just put it right back. Kiosk's normal
+     * trigger (Lock Schedule locking, via KioskForceEntry) is completely
+     * unaffected - this only removes the reboot/kill-resilience backup
+     * path tied to the Home screen itself.
+     */
+    private void onRemoveAsLauncherForeverClicked() {
+        if (homeGatekeeperStorage.isPermanentlyRemovedAsLauncher()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_remove_as_launcher_forever_title)
+                .setMessage(R.string.confirm_remove_as_launcher_forever_message)
+                .setPositiveButton(R.string.confirm_remove_as_launcher_forever_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        homeGatekeeperStorage.markPermanentlyRemovedAsLauncher();
+                        try {
+                            devicePolicyManager.clearPackagePersistentPreferredActivities(adminComponent, getPackageName());
+                        } catch (Exception e) {
+                            // Best effort - the stored flag still stops it from being
+                            // re-registered on the next enforcement cycle either way.
+                        }
+                        Toast.makeText(MainActivity.this, R.string.msg_removed_as_launcher_forever, Toast.LENGTH_LONG).show();
+                        refreshUi();
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
                 .show();
     }
 

@@ -547,3 +547,16 @@ real bug plus a genuinely new feature:
     export/import, same reasoning as the other runtime/operational
     storages already excluded (KioskRuntimeStorage, etc.) - this is
     self-expiring state, not durable user configuration.
+
+55. **One-way opt-out of HomeGatekeeperActivity's Home takeover**
+    (`HomeGatekeeperStorage`) - a one-time, irreversible button
+    ("Permanently Remove App as Launcher"), same pattern as Master
+    Safety/Kiosk Safety/Custom Pause's own "delete forever" buttons.
+    Fires `DevicePolicyManager.clearPackagePersistentPreferredActivities`
+    once and sets a flag that makes `BlockEnforcer.applyHomeGatekeeperProtection`
+    stop (re-)registering it on every future cycle - without that
+    flag, the very next enforcement pass would just put it right back,
+    same self-healing idempotence every other permanent protection in
+    that method already relies on. Only removes decisions #48-50's
+    reboot/kill-resilience backup path; Kiosk's normal trigger (Lock
+    Schedule locking via `KioskForceEntry`) is completely unaffected.

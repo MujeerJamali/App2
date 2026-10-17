@@ -24,6 +24,9 @@ the reverse of that), then installing this script's APK fresh, then
 redoing Device Owner provisioning from scratch. Not something to do
 without meaning to.
 
+Floating Blocker - version 4.90 (New one-time, irreversible "Permanently Remove App as Launcher" button - undoes HomeGatekeeperActivity's forced Home-screen takeover (the reboot/kill-resilience backup path from 4.87) for good; Kiosk's normal Lock-Schedule-driven trigger is unaffected)
+===================================================================================
+
 Floating Blocker - version 4.89 (Lock Schedule Breaker revised to take effect immediately instead of only starting the next day - same extend-only, ungated shape as the existing Blocks-only Custom Pause, now extended to Kiosk/Lock Schedule at the user's explicit request)
 ===================================================================================
 
