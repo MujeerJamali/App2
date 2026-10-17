@@ -6,9 +6,12 @@ import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.Bundle;
 import android.os.UserManager;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -20,25 +23,34 @@ import java.util.Set;
  * The whole enforcement engine, in one place. No more continuous polling -
  * apps are suspended directly at the OS level via Device Owner, and this
  * only needs to run at the exact moments something should change (a
- * Block's schedule starting/ending), woken up by AlarmManager, or right
- * after the user edits something in the app.
+ * Block's schedule starting/ending, Lock Schedule locking/unlocking),
+ * woken up by AlarmManager, or right after the user edits something in
+ * the app.
  *
- * Suspended apps literally cannot be opened at all while suspended -
- * Android shows its own "not available right now" message. There is no
+ * Blocks are blocklist-based (decision #42): while active, the apps on
+ * that Block's own blockedPackages get suspended - unioned across every
+ * simultaneously-active Block (decision #46) - and everything else is
+ * left alone. Suspended apps literally cannot be opened at all - Android
+ * shows its own "not available right now" message. There is no
  * detection, no back-pressing, no window to catch - the app just never
- * launches in the first place.
+ * launches in the first place. Tier-1 and the live-detected default
+ * launcher (see KioskAllowList) are never suspended regardless of any
+ * Block's list.
  *
  * Holiday Breaks (one-time, non-recurring date+time windows that pause
  * specific Blocks) are factored in here too - a Block on an active
  * Holiday Break is treated as inactive regardless of its own schedule.
  *
- * Newly installed apps are detected here too (see
- * checkForNewlyInstalledApps) via comparing installed-package snapshots
- * over time, NOT via a PACKAGE_ADDED broadcast - that broadcast cannot
- * reliably reach a manifest-registered receiver on this targetSdkVersion,
- * confirmed against Android's own documentation.
+ * Lock Schedule's own locked state independently drives the automatic
+ * Kiosk lockdown (lock task pinning) - that still needs its own positive
+ * allow-list regardless of Blocks being blocklists (Android's lock-task
+ * API has no "pin to everything except these" mode), derived live by
+ * KioskAllowList as the complement of whatever's currently blocked. See
+ * applyKioskLockdown and KioskAllowList's class doc for the details.
  */
 public class BlockEnforcer {
+
+    private static final String TAG = "BlockEnforcer";
 
     /** Re-applies the correct suspend/unsuspend state for every managed app, right now. */
     public static void applyNow(Context context) {
@@ -49,25 +61,70 @@ public class BlockEnforcer {
         ComponentName admin = new ComponentName(context, FloatingBlockerDeviceAdminReceiver.class);
         String ownPackage = context.getPackageName();
 
+        // Breadcrumb logging through each step - if this ever hangs again,
+        // whatever's the LAST line printed in LogCat before it stops
+        // pinpoints exactly which step is stuck, the same way the missed-
+        // alarms freeze (fixed in 4.59) was eventually found.
+        Log.d(TAG, "applyNow: start");
         applyPermanentDeviceOwnerProtections(context, dpm, admin, ownPackage);
+        Log.d(TAG, "applyNow: after applyPermanentDeviceOwnerProtections");
+        applyLocationPermissionState(context, dpm, admin, ownPackage);
+        Log.d(TAG, "applyNow: after applyLocationPermissionState");
+        applyHomeLocationTransition(context);
+        Log.d(TAG, "applyNow: after applyHomeLocationTransition");
         releaseStrictPrivateDnsIfLocked(context, dpm, admin);
+        Log.d(TAG, "applyNow: after releaseStrictPrivateDnsIfLocked");
         applyDebuggingFeaturesLock(context, dpm, admin);
+        Log.d(TAG, "applyNow: after applyDebuggingFeaturesLock");
+        applyTimeChangeLock(context, dpm, admin);
+        Log.d(TAG, "applyNow: after applyTimeChangeLock");
         applyBootstrapToolsLock(context, dpm, admin);
-        checkForNewlyInstalledApps(context, ownPackage);
-        cleanUpExpiredBreaks(new HolidayBreaksStorage(context));
+        Log.d(TAG, "applyNow: after applyBootstrapToolsLock");
+        cleanUpExpiredBreaks(context, new HolidayBreaksStorage(context));
+        Log.d(TAG, "applyNow: after cleanUpExpiredBreaks");
+        checkForMissedAlarms(context);
+        Log.d(TAG, "applyNow: after checkForMissedAlarms");
+        checkForMissedConfirmations(context);
+        Log.d(TAG, "applyNow: after checkForMissedConfirmations");
 
-        List<Block> blocks = new BlocksStorage(context).loadBlocks();
+        List<Block> allBlocks = new BlocksStorage(context).loadBlocks();
         Set<String> allManaged = new HashSet<String>();
-        for (Block b : blocks) {
+        for (Block b : allBlocks) {
             allManaged.addAll(b.blockedPackages);
         }
         allManaged.remove(ownPackage);
 
-        Set<String> desiredSuspended = computeActiveBlockedPackages(context);
+        Set<String> permanentlyExcluded = new PermanentAppExclusionStorage(context).loadExcludedPackages();
+        Set<String> tier1 = KioskAllowList.computeTier1(context);
+        String launcherPackage = KioskAllowList.getCurrentLauncherPackage(context);
+        KioskAllowList.Result allowListResult = KioskAllowList.computeCurrentAllowList(context);
+
+        Set<String> desiredSuspended = new HashSet<String>();
+        if (allowListResult.blockLayerActive) {
+            desiredSuspended.addAll(allowListResult.activeBlockedPackages);
+        }
         desiredSuspended.remove(ownPackage);
+        // Tier-1 and the live-detected launcher are never suspended,
+        // regardless of what any Block's blocklist says (decision #46's
+        // "nothing can block them" + the launcher safety guard).
+        desiredSuspended.removeAll(tier1);
+        if (launcherPackage != null) {
+            desiredSuspended.remove(launcherPackage);
+        }
+        // Permanently-excluded packages are never suspended, regardless of
+        // whether some Block still nominally lists one.
+        desiredSuspended.removeAll(permanentlyExcluded);
 
         Set<String> toUnsuspend = new HashSet<String>(allManaged);
         toUnsuspend.removeAll(desiredSuspended);
+        // Explicitly unsuspend every permanently-excluded package on every
+        // pass, regardless of whether it's still tracked in allManaged -
+        // relying only on the set-difference above silently stops working
+        // the moment a package is no longer tracked by any Block at all,
+        // since it then can never appear in allManaged to begin with. This
+        // also means an excluded package self-heals if it's ever
+        // re-suspended by any other path in the future (a reinstall, etc.).
+        toUnsuspend.addAll(permanentlyExcluded);
 
         if (!desiredSuspended.isEmpty()) {
             try {
@@ -84,50 +141,168 @@ public class BlockEnforcer {
                 // Already unsuspended, or never was - fine either way.
             }
         }
+        Log.d(TAG, "applyNow: after suspend/unsuspend calls");
+
+        applyKioskLockdown(context, dpm, admin, allowListResult);
+        Log.d(TAG, "applyNow: after applyKioskLockdown");
+
+        // Runs last, deliberately - if a user ever put one of these browser
+        // packages into a Block of their own, the Block-schedule-based
+        // unsuspend right above this could otherwise win the race and
+        // briefly leave it unsuspended. This always has the final say.
+        applyContentFilteringProtections(context, dpm, admin, ownPackage);
+        Log.d(TAG, "applyNow: done");
     }
 
     /**
-     * The set of packages that SHOULD be blocked right now, per the exact
-     * same rules applyNow() uses to decide what to suspend: union of
-     * currently-active Blocks' package lists, skipping any Block currently
-     * on a Holiday Break, and empty entirely if Master Safety or Blocks
-     * Pause is currently overriding everything. Exposed publicly so other
-     * enforcement layers (the DNS VPN's per-app internet cutoff) can check
-     * "is this package currently supposed to be blocked" using the exact
-     * same logic, instead of a second, possibly-inconsistent copy.
+     * Engages/releases the automatic Kiosk lockdown (lock task pinning) -
+     * decisions #2/#9/#12/#17/#20/#21/#26. Tied purely to Lock Schedule's
+     * own locked state (via allowListResult.kioskLayerActive, which
+     * already accounts for Master Safety and the Kiosk Safety toggle) -
+     * NOT to whether a Block happens to be active, matching decision #2.
+     * Edge-triggered: only forces entry on the unlocked-to-locked
+     * transition itself (see KioskRuntimeStorage), not on every
+     * enforcement cycle while already pinned - and clears the lock task
+     * allowlist (forcing the system out of lock task mode even without an
+     * explicit stopLockTask() call from inside the pinned Activity) the
+     * moment it's no longer supposed to be engaged, same backstop pattern
+     * KioskTimeoutReceiver used to use for the old manual flow.
      */
-    public static Set<String> computeActiveBlockedPackages(Context context) {
-        List<Block> blocks = new BlocksStorage(context).loadBlocks();
-        HolidayBreaksStorage holidayBreaksStorage = new HolidayBreaksStorage(context);
-        List<HolidayBreak> holidayBreaks = holidayBreaksStorage.loadBreaks();
-        MasterSafetyStorage safetyStorage = new MasterSafetyStorage(context);
-        BlocksPauseStorage pauseStorage = new BlocksPauseStorage(context);
+    private static void applyKioskLockdown(Context context, DevicePolicyManager dpm, ComponentName admin,
+                                            KioskAllowList.Result allowListResult) {
+        KioskRuntimeStorage runtime = new KioskRuntimeStorage(context);
+        boolean shouldBePinned = allowListResult.kioskLayerActive;
+        boolean wasPinned = runtime.wasPinnedLastCheck();
 
-        Set<String> desiredSuspended = new HashSet<String>();
-        boolean overridden = safetyStorage.isEngaged() || pauseStorage.isPaused();
-        if (overridden) {
-            return desiredSuspended;
+        if (shouldBePinned) {
+            Set<String> lockTaskPackages = new HashSet<String>(allowListResult.pinList);
+            lockTaskPackages.add(context.getPackageName());
+            try {
+                dpm.setLockTaskPackages(admin, lockTaskPackages.toArray(new String[0]));
+                // See KIOSK_MODE_PLAN.md decision #13 for the per-flag
+                // reasoning behind exactly this set - HOME/OVERVIEW/
+                // NOTIFICATIONS deliberately left off.
+                dpm.setLockTaskFeatures(admin,
+                        DevicePolicyManager.LOCK_TASK_FEATURE_SYSTEM_INFO
+                                | DevicePolicyManager.LOCK_TASK_FEATURE_GLOBAL_ACTIONS
+                                | DevicePolicyManager.LOCK_TASK_FEATURE_KEYGUARD);
+            } catch (Exception e) {
+                // Best effort - if this fails, forced entry below would just
+                // open an unpinned screen instead, not worth aborting over.
+            }
+            if (!wasPinned) {
+                KioskForceEntry.forceEntry(context);
+            }
+        } else if (wasPinned) {
+            try {
+                dpm.setLockTaskPackages(admin, new String[0]);
+            } catch (Exception e) {
+                // Non-fatal - KioskSessionActivity's own check also exits on its next tick.
+            }
         }
+        runtime.setPinnedLastCheck(shouldBePinned);
+    }
 
+    /**
+     * Catches up on any Alarm occurrence whose full 10-minute ring window
+     * has already elapsed but was never resolved - most notably because the
+     * phone was powered off through the whole window, so neither
+     * AlarmRingReceiver nor the punishment-deadline alarm ever got to run.
+     * Walks forward one occurrence at a time from each Alarm's last
+     * resolved occurrence, punishing every fully-elapsed one it finds,
+     * and stops as soon as it reaches one that's still within its live
+     * grace period (that one is left for the normal live path to resolve).
+     */
+    private static void checkForMissedAlarms(Context context) {
         long now = System.currentTimeMillis();
-        Set<String> blockIdsOnBreak = new HashSet<String>();
-        for (HolidayBreak h : holidayBreaks) {
-            if (h.isActiveNow(now)) {
-                blockIdsOnBreak.addAll(h.affectedBlockIds);
+        long ringMillis = Alarm.RING_MINUTES * 60L * 1000L;
+        AlarmRuntimeStorage runtime = new AlarmRuntimeStorage(context);
+        for (Alarm alarm : new AlarmsStorage(context).loadAlarms()) {
+            long cursor = runtime.getLastHandledOccurrence(alarm.id);
+            Log.d(TAG, "checkForMissedAlarms: alarm=" + alarm.id + " cursor=" + cursor);
+            if (cursor <= 0) {
+                // Never resolved even once (e.g. a brand-new Alarm that
+                // hasn't had a chance to ring yet) - there's no legitimate
+                // prior occurrence to catch up on, since nothing "missed"
+                // before this Alarm was ever tracked. Seeding straight to
+                // now avoids walking forward one occurrence at a time from
+                // epoch (1970) all the way to today - which is exactly
+                // what the loop below would otherwise do, treating
+                // thousands of theoretical pre-creation occurrences as
+                // missed and freezing the app for a very long time while
+                // it wrongly punishes Blocks for alarms that never
+                // actually happened.
+                runtime.setLastHandledOccurrence(alarm.id, now);
+                continue;
+            }
+            // Hard safety cap, defense-in-depth against any other edge case
+            // (not just the epoch-start one already fixed above) that could
+            // otherwise make this loop grind through an implausible number
+            // of iterations - e.g. a corrupted/absurd stored cursor value.
+            // A phone realistically never stays off long enough to need
+            // anywhere close to this many catch-up occurrences for one Alarm.
+            final int MAX_CATCHUP_ITERATIONS = 1000;
+            int iterations = 0;
+            while (true) {
+                long next = alarm.nextOccurrenceAfter(cursor);
+                if (next <= 0 || next > now || now < next + ringMillis) {
+                    break;
+                }
+                if (++iterations > MAX_CATCHUP_ITERATIONS) {
+                    Log.e(TAG, "checkForMissedAlarms: alarm=" + alarm.id
+                            + " hit the " + MAX_CATCHUP_ITERATIONS + "-iteration safety cap - "
+                            + "bailing out instead of continuing to walk forward");
+                    runtime.setLastHandledOccurrence(alarm.id, now);
+                    break;
+                }
+                // A Holiday Break active at the occurrence's own time, or
+                // currently being far enough from home, means it never
+                // should have rung in the first place (same rule
+                // AlarmRingReceiver applies live) - not just unpunished,
+                // but not counted as missed at all.
+                if (AlarmPunisher.isSuppressed(context, alarm.id, next)) {
+                    runtime.setLastHandledOccurrence(alarm.id, next);
+                } else {
+                    AlarmPunisher.resolveMissed(context, alarm, next);
+                }
+                cursor = next;
             }
         }
+    }
 
-        int nowMinutes = LockScheduleStorage.currentMinutesOfDay();
-        int nowDay = LockScheduleStorage.currentDayOfWeek();
-        for (Block b : blocks) {
-            if (blockIdsOnBreak.contains(b.id)) {
-                continue; // this Block is on a Holiday Break right now - skip it
+    /** Confirmation equivalent of checkForMissedAlarms - same walk-forward catch-up logic, same safety cap. */
+    private static void checkForMissedConfirmations(Context context) {
+        long now = System.currentTimeMillis();
+        long confirmMillis = Confirmation.CONFIRM_MINUTES * 60L * 1000L;
+        ConfirmationRuntimeStorage runtime = new ConfirmationRuntimeStorage(context);
+        for (Confirmation confirmation : new ConfirmationsStorage(context).loadConfirmations()) {
+            long cursor = runtime.getLastHandledOccurrence(confirmation.id);
+            if (cursor <= 0) {
+                runtime.setLastHandledOccurrence(confirmation.id, now);
+                continue;
             }
-            if (b.isActiveNow(nowMinutes, nowDay)) {
-                desiredSuspended.addAll(b.blockedPackages);
+            final int MAX_CATCHUP_ITERATIONS = 1000;
+            int iterations = 0;
+            while (true) {
+                long next = confirmation.nextOccurrenceAfter(cursor);
+                if (next <= 0 || next > now || now < next + confirmMillis) {
+                    break;
+                }
+                if (++iterations > MAX_CATCHUP_ITERATIONS) {
+                    Log.e(TAG, "checkForMissedConfirmations: confirmation=" + confirmation.id
+                            + " hit the " + MAX_CATCHUP_ITERATIONS + "-iteration safety cap - "
+                            + "bailing out instead of continuing to walk forward");
+                    runtime.setLastHandledOccurrence(confirmation.id, now);
+                    break;
+                }
+                if (ConfirmationPunisher.isSuppressed(context, confirmation.id, next)) {
+                    runtime.setLastHandledOccurrence(confirmation.id, next);
+                } else {
+                    ConfirmationPunisher.resolveMissed(context, confirmation, next);
+                }
+                cursor = next;
             }
         }
-        return desiredSuspended;
     }
 
     /**
@@ -180,61 +355,203 @@ public class BlockEnforcer {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET);
         } catch (Exception e) { /* best effort */ }
         try {
-            dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_VPN);
-        } catch (Exception e) { /* best effort */ }
-        try {
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER);
         } catch (Exception e) { /* best effort */ }
-
-        applyVpnLockdownAndServiceState(context, dpm, admin, ownPackage);
+        clearStaleHomeGatekeeperRegistration(context, dpm, admin);
     }
 
     /**
-     * VPN Safety is a real kill switch, not a soft pause: when engaged, the
-     * VPN service is fully stopped and the always-on assignment is cleared
-     * entirely at the OS level - meaning normal internet access works
-     * exactly as if this app didn't have a VPN at all. (Lockdown was
-     * deliberately never enabled here in the first place - see the "false"
-     * below - so this isn't undoing a lockdown; it's just releasing the
-     * always-on assignment so nothing points at this service anymore.)
+     * Decisions #48-50/#55-56 (HomeGatekeeperActivity, a forced
+     * CATEGORY_HOME takeover meant as a Kiosk reboot-resilience backup
+     * trigger) are REMOVED ENTIRELY as of this version - a real-device
+     * incident showed it's fundamentally broken on any device with no
+     * separate real launcher app installed: Android has no other
+     * CATEGORY_HOME candidate to fall back to, so even clearing the
+     * Device Owner "persistent preferred activity" registration (what
+     * decision #56's toggle did) doesn't help - the Activity's mere
+     * presence in the manifest is enough for Android to keep using it,
+     * since declaring the capability, not being preferred, is what
+     * makes an app a candidate at all. A SharedPreferences flag can
+     * never undo a manifest declaration. No in-app toggle can fix this -
+     * only removing the Activity (and its CATEGORY_HOME intent-filter)
+     * from the app entirely, which this version does.
+     *
+     * This one-time cleanup call remains, every cycle, ONLY so that a
+     * device upgrading from an older version that forced the
+     * registration on - including one stuck in exactly the failure
+     * mode above - gets it cleared automatically the instant this
+     * version's code runs, with no dependency on Home even working in
+     * the meantime (BootReceiver calls reapplyAndReschedule
+     * unconditionally on every boot). Safe to call even though
+     * HomeGatekeeperActivity no longer exists as a class - this just
+     * clears whatever ComponentName the OS has stored from before.
      */
-    private static void applyVpnLockdownAndServiceState(Context context, DevicePolicyManager dpm, ComponentName admin, String ownPackage) {
-        boolean vpnSafetyEngaged = new VpnSafetyStorage(context).isEngaged();
-        Intent vpnIntent = new Intent(context, DnsVpnService.class);
-
-        if (vpnSafetyEngaged) {
-            try {
-                dpm.setAlwaysOnVpnPackage(admin, null, false); // fully release - no forced VPN
-            } catch (Exception e) { /* best effort */ }
-            try {
-                context.stopService(vpnIntent);
-            } catch (Exception e) { /* best effort */ }
-        } else {
-            try {
-                // false = NOT lockdown. Lockdown requires ALL traffic from every
-                // other app to go through this VPN's tun interface or be dropped -
-                // it does not distinguish "covered by one of our routes" from
-                // "we chose not to route it". Since the Builder only routes the
-                // single virtual DNS address (see DnsVpnService's class comment
-                // for why - this app deliberately does NOT relay general traffic),
-                // lockdown would silently blackhole every other app's actual web
-                // traffic while DNS itself kept working - internet looks totally
-                // dead even though the filter is functioning perfectly. Always-on
-                // (without lockdown) still forces this service to be the assigned
-                // VPN and to relaunch automatically; it just also lets traffic this
-                // app never claimed fall back to the real network, which is exactly
-                // what the DNS-only design has always assumed. The trade-off: if
-                // this service is ever killed, DNS quietly reverts to the network's
-                // own unfiltered resolver instead of Android blocking all internet -
-                // fails open, not closed. Tamper-resistance instead comes from
-                // DISALLOW_CONFIG_VPN, uninstall-blocked, and this service being
-                // restarted (START_STICKY / BootReceiver) rather than from lockdown.
-                dpm.setAlwaysOnVpnPackage(admin, ownPackage, false);
-            } catch (Exception e) { /* best effort - VPN feature just won't be enforced if this fails */ }
-            try {
-                context.startService(vpnIntent);
-            } catch (Exception e) { /* best effort */ }
+    private static void clearStaleHomeGatekeeperRegistration(Context context, DevicePolicyManager dpm, ComponentName admin) {
+        try {
+            dpm.clearPackagePersistentPreferredActivities(admin, context.getPackageName());
+        } catch (Exception e) {
+            // Best effort - nothing more to do if this fails.
         }
+    }
+
+    /**
+     * Location access is only ever needed for the optional home-location
+     * override (see HomeLocationChecker) - granted silently via Device
+     * Owner (no runtime prompt needed) only while that feature is turned
+     * on, and released back to the normal default otherwise, so this app
+     * doesn't hold location access for no reason when the feature isn't
+     * in use. ACCESS_BACKGROUND_LOCATION matters here specifically because
+     * the periodic checks that need this run from a BroadcastReceiver, not
+     * a foreground screen.
+     */
+    private static void applyLocationPermissionState(Context context, DevicePolicyManager dpm, ComponentName admin, String ownPackage) {
+        boolean needed = new HomeLocationStorage(context).isEnabled();
+        int state = needed ? DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED : DevicePolicyManager.PERMISSION_GRANT_STATE_DEFAULT;
+        try {
+            dpm.setPermissionGrantState(admin, ownPackage, android.Manifest.permission.ACCESS_FINE_LOCATION, state);
+        } catch (Exception e) { /* best effort */ }
+        try {
+            dpm.setPermissionGrantState(admin, ownPackage, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION, state);
+        } catch (Exception e) { /* best effort - not every OS version/OEM exposes this the same way */ }
+    }
+
+    /**
+     * Detects the exact moment the location override turns on or off (see
+     * HomeLocationStorage.wasOverrideActiveLastCheck) and snapshots or
+     * restores everything Lock Schedule normally protects accordingly (see
+     * SettingsSnapshotStorage) - so any change made while "unlocked
+     * because far from home" is temporary, reverting the instant the
+     * override ends. Runs early in applyNow(), before anything else in
+     * this same cycle reads Blocks/Holiday Breaks/Alarms/etc., so a
+     * restore takes effect immediately rather than one cycle late.
+     */
+    private static void applyHomeLocationTransition(Context context) {
+        HomeLocationStorage storage = new HomeLocationStorage(context);
+        boolean farNow = HomeLocationChecker.isFarFromHome(context);
+        boolean wasFar = storage.wasOverrideActiveLastCheck();
+        if (farNow && !wasFar) {
+            SettingsSnapshotStorage.saveSnapshot(context);
+        } else if (!farNow && wasFar) {
+            SettingsSnapshotStorage.restoreSnapshot(context);
+        }
+        storage.setOverrideActiveLastCheck(farNow);
+    }
+
+    private static final String CHROME_PACKAGE = "com.android.chrome";
+
+    /**
+     * Known browser package names, kept as a belt-and-suspenders backup to
+     * the live detection below (in case some browser's own http intent
+     * filter is built unusually and doesn't get caught by that). Includes
+     * Chrome's own Beta/Dev/Canary channels, since those are separate app
+     * packages that would NOT receive the policy pushed to the stable
+     * com.android.chrome package below.
+     */
+    private static final String[] KNOWN_OTHER_BROWSER_PACKAGES = {
+            "org.mozilla.firefox",
+            "org.mozilla.firefox.beta",
+            "org.mozilla.focus",
+            "org.mozilla.klar",
+            "com.opera.browser",
+            "com.opera.browser.beta",
+            "com.opera.mini.native",
+            "com.opera.gx",
+            "com.opera.touch",
+            "com.sec.android.app.sbrowser",
+            "com.sec.android.app.sbrowser.beta",
+            "com.brave.browser",
+            "com.brave.browser_beta",
+            "com.microsoft.emmx",
+            "com.duckduckgo.mobile.android",
+            "com.UCMobile.intl",
+            "com.vivaldi.browser",
+            "com.kiwibrowser.browser",
+            "com.mi.globalbrowser",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "com.chrome.canary",
+            "org.torproject.torbrowser",
+            "com.ecosia.android",
+            "com.yandex.browser",
+            "com.jio.web",
+            "com.heytap.browser",
+    };
+
+    /**
+     * Apps that are known to sometimes register themselves as able to open
+     * a generic http(s) link (usually to show link previews or open pages
+     * in their own embedded viewer) without actually being a standalone
+     * browser - never auto-suspend these via the live detection below,
+     * however it turns out to be applying: doing so could silently break
+     * something the user relies on with no obvious explanation why.
+     */
+    private static final Set<String> BROWSER_DETECTION_EXCLUDE = new HashSet<String>(java.util.Arrays.asList(
+            "com.google.android.googlequicksearchbox", // Google app / Assistant
+            "com.google.android.gm",                    // Gmail
+            "com.google.android.apps.docs",             // Google Drive
+            "com.google.android.apps.messaging",        // Google Messages
+            "com.google.android.apps.maps",             // Google Maps
+            "com.android.vending"                       // Play Store
+    ));
+
+    /**
+     * Adult-content blocking with none of DNS / VPN / Accessibility Service
+     * / Usage Stats involved: managed policies pushed straight into Chrome
+     * via setApplicationRestrictions (the same mechanism real enterprise
+     * MDM apps use - Chrome itself reads and enforces these, so it keeps
+     * working even inside Incognito or a tab this app never sees), plus
+     * every other browser kept permanently suspended so Chrome can't just
+     * be swapped out. "Every other browser" is detected live each cycle -
+     * any app that resolves a plain, host-agnostic http:// link is, by
+     * Android's own definition, a browser (the same mechanism behind the
+     * "Open with..." chooser) - rather than relying only on a fixed list
+     * of package names, so a newly installed or previously-unrecognized
+     * browser from Play Store gets caught automatically too. All of this
+     * is re-applied every cycle, same as the other permanent protections
+     * above - cheap, and self-healing if anything ever gets cleared or a
+     * new browser shows up.
+     */
+    private static void applyContentFilteringProtections(Context context, DevicePolicyManager dpm, ComponentName admin, String ownPackage) {
+        try {
+            Set<String> blockedDomains = new BlockedWebsitesStorage(context).loadDomains();
+            Bundle restrictions = new Bundle();
+            if (!blockedDomains.isEmpty()) {
+                restrictions.putStringArray("URLBlocklist", blockedDomains.toArray(new String[0]));
+            }
+            restrictions.putInt("SafeSitesFilterBehavior", 1); // 1 = block mature/explicit sites
+            restrictions.putBoolean("ForceGoogleSafeSearch", true);
+            restrictions.putInt("ForceYouTubeRestrict", 2); // 2 = Strict restricted mode
+            restrictions.putInt("IncognitoModeAvailability", 1); // 1 = disabled
+            dpm.setApplicationRestrictions(admin, CHROME_PACKAGE, restrictions);
+        } catch (Exception e) {
+            // Best effort - Chrome may not be installed, or this OEM build may ignore these keys.
+        }
+
+        Set<String> browsersToSuspend = detectBrowserPackages(context, ownPackage);
+        browsersToSuspend.addAll(java.util.Arrays.asList(KNOWN_OTHER_BROWSER_PACKAGES));
+        try {
+            dpm.setPackagesSuspended(admin, browsersToSuspend.toArray(new String[0]), true);
+        } catch (Exception e) {
+            // Best effort - fine for any package here that isn't installed.
+        }
+    }
+
+    private static Set<String> detectBrowserPackages(Context context, String ownPackage) {
+        Set<String> result = new HashSet<String>();
+        try {
+            PackageManager pm = context.getPackageManager();
+            Intent probe = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("http://example.com"));
+            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(probe, 0);
+            for (ResolveInfo info : resolveInfos) {
+                String pkg = info.activityInfo.packageName;
+                if (!pkg.equals(ownPackage) && !pkg.equals(CHROME_PACKAGE) && !BROWSER_DETECTION_EXCLUDE.contains(pkg)) {
+                    result.add(pkg);
+                }
+            }
+        } catch (Exception e) {
+            // Best effort - the known-package list above still covers the common cases either way.
+        }
+        return result;
     }
 
     /**
@@ -266,113 +583,65 @@ public class BlockEnforcer {
     }
 
     /**
-     * Reliable new-install detection - NOT broadcast-based. A manifest-registered
-     * receiver for PACKAGE_ADDED cannot work here: Android's own official docs
-     * confirm this specific broadcast is not exempted from the API 26+
-     * background-execution restrictions, and our targetSdkVersion is 29. A
-     * dynamically-registered receiver would only work while some part of the
-     * app happens to be open, which is not reliable either since we don't run
-     * a persistent background service.
-     *
-     * Instead, this compares "what's installed now" against "what was
-     * installed last time this ran" every time the app wakes up anyway (every
-     * Block/Break transition, and at minimum every ~1 minute via the
-     * periodic safety net in scheduleNextAlarm, automatically throttled back
-     * during genuine idle periods by Android's own Doze system). Anything new gets added to
-     * every existing Block's block-list immediately.
+     * Every enforcement decision in this whole app (Blocks, Lock Schedule
+     * itself, Alarm triggers, punishment windows) runs on the device's own
+     * wall-clock time. Being able to hand-set that clock is a hole big
+     * enough to walk any of it back through - wind the clock past a locked
+     * window, or past an Alarm's trigger, and the schedule never actually
+     * applied at all. Locked the same way and on the same signal as the
+     * debugging-features lock above: only while Lock Schedule is currently
+     * locked, released the instant it isn't. The OS still keeps itself on
+     * network/GPS time throughout - this only blocks a HAND-set date, time,
+     * or timezone via Settings.
      */
-    // A real new-install event realistically adds one app, maybe two or
-    // three in a burst - never dozens at once. If the diff against the
-    // stored snapshot claims more than this many apps just "appeared", the
-    // snapshot itself is far more likely stale or corrupted (a bad/empty
-    // read at the wrong moment, JSON corruption, etc.) than that many apps
-    // were genuinely installed simultaneously. This exists specifically
-    // because of a real bug: right after updating this app itself, this
-    // check could occasionally see a spuriously empty "previously
-    // installed" snapshot, making literally every app on the phone look
-    // newly installed at once - and every one of them got silently added
-    // to every Block. Treating an implausibly large diff as a corrupted
-    // snapshot (re-baseline silently, block nothing) instead of trusting
-    // it outright closes that off regardless of what exactly corrupted it.
-    private static final int MAX_PLAUSIBLE_NEW_INSTALLS_PER_CHECK = 5;
-
-    private static void checkForNewlyInstalledApps(Context context, String ownPackage) {
-        InstalledPackagesSnapshotStorage snapshotStorage = new InstalledPackagesSnapshotStorage(context);
-        Set<String> currentlyInstalled = getInstalledLaunchablePackages(context, ownPackage);
-
-        if (!snapshotStorage.hasEverSnapshotted()) {
-            // First run ever - just record the baseline. Don't treat every
-            // already-installed app as "newly installed".
-            snapshotStorage.saveSnapshot(currentlyInstalled);
-            return;
-        }
-
-        Set<String> previouslyInstalled = snapshotStorage.loadSnapshot();
-        Set<String> newlyInstalled = new HashSet<String>(currentlyInstalled);
-        newlyInstalled.removeAll(previouslyInstalled);
-
-        if (newlyInstalled.size() > MAX_PLAUSIBLE_NEW_INSTALLS_PER_CHECK) {
-            // Implausible - see the comment above. Treat this exactly like a
-            // first run: re-baseline against what's actually installed right
-            // now, but don't touch any Block's app list.
-            snapshotStorage.saveSnapshot(currentlyInstalled);
-            return;
-        }
-
-        if (!newlyInstalled.isEmpty()) {
-            BlocksStorage blocksStorage = new BlocksStorage(context);
-            List<Block> blocks = blocksStorage.loadBlocks();
-            boolean changed = false;
-            for (Block b : blocks) {
-                for (String pkg : newlyInstalled) {
-                    if (b.blockedPackages.add(pkg)) {
-                        changed = true;
-                    }
-                }
+    private static void applyTimeChangeLock(Context context, DevicePolicyManager dpm, ComponentName admin) {
+        boolean shouldBeLocked = new LockScheduleStorage(context).isCurrentlyLocked();
+        try {
+            if (shouldBeLocked) {
+                dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_DATE_TIME);
+            } else {
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_DATE_TIME);
             }
-            if (changed) {
-                blocksStorage.saveBlocks(blocks);
-            }
+        } catch (Exception e) {
+            // Best effort - if this specific restriction can't be applied, everything else still runs.
         }
-
-        snapshotStorage.saveSnapshot(currentlyInstalled);
     }
 
-    private static Set<String> getInstalledLaunchablePackages(Context context, String ownPackage) {
-        Set<String> result = new HashSet<String>();
-        PackageManager pm = context.getPackageManager();
-        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
-        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> resolveInfos = pm.queryIntentActivities(mainIntent, 0);
-        for (ResolveInfo info : resolveInfos) {
-            String pkg = info.activityInfo.packageName;
-            if (!pkg.equals(ownPackage)) {
-                result.add(pkg);
-            }
-        }
-        return result;
-    }
-
-    /** Removes any Holiday Break whose end time has already passed, and returns what's left. */
-    private static List<HolidayBreak> cleanUpExpiredBreaks(HolidayBreaksStorage storage) {
+    /**
+     * Removes any Holiday Break whose end time has already passed, and
+     * returns what's left. Also clears any leftover punishment-widen
+     * state (see BlockPunishmentStorage) for the Blocks each just-expired
+     * Break covered - punishment can only ever be applied to a Block
+     * OUTSIDE an active Break, so anything still attached when the Break
+     * ends must predate it, and should be considered forgiven along with
+     * everything else the Break covered rather than silently resurfacing
+     * the instant it ends.
+     */
+    private static List<HolidayBreak> cleanUpExpiredBreaks(Context context, HolidayBreaksStorage storage) {
         List<HolidayBreak> all = storage.loadBreaks();
         long now = System.currentTimeMillis();
         List<HolidayBreak> stillValid = new ArrayList<HolidayBreak>();
-        boolean anyExpired = false;
+        List<HolidayBreak> justExpired = new ArrayList<HolidayBreak>();
         for (HolidayBreak h : all) {
             if (h.endMillis <= now) {
-                anyExpired = true;
+                justExpired.add(h);
             } else {
                 stillValid.add(h);
             }
         }
-        if (anyExpired) {
+        if (!justExpired.isEmpty()) {
             storage.saveBreaks(stillValid);
+            BlockPunishmentStorage punishmentStorage = new BlockPunishmentStorage(context);
+            for (HolidayBreak h : justExpired) {
+                for (String blockId : h.affectedBlockIds) {
+                    punishmentStorage.clearWidenedFor(blockId);
+                }
+            }
         }
         return stillValid;
     }
 
-    /** Schedules exactly one future wake-up, at the next moment any Block's schedule changes. */
+    /** Schedules exactly one future wake-up, at the next moment any Block's schedule, or Lock Schedule itself, changes. */
     public static void scheduleNextAlarm(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
@@ -386,22 +655,23 @@ public class BlockEnforcer {
 
         List<Block> blocks = new BlocksStorage(context).loadBlocks();
         List<HolidayBreak> holidayBreaks = new HolidayBreaksStorage(context).loadBreaks();
-        long nextTransition = computeNextTransitionMillis(blocks, holidayBreaks);
+        List<TimeRange> lockScheduleRanges = new LockScheduleStorage(context).loadRanges();
+        long nextTransition = computeNextTransitionMillis(context, blocks, holidayBreaks, lockScheduleRanges);
 
-        // Guarantee a check at minimum every ~1 minute (for new-install
-        // detection) whenever there's at least one Block to add new installs
-        // to. 1 minute is Android's own documented ceiling for how often
-        // setExactAndAllowWhileIdle can fire during normal (screen-on) use -
-        // asking for less than that wouldn't get delivered any faster
-        // anyway. While the phone is genuinely idle (Doze), Android
-        // automatically throttles this back to roughly every 15 minutes on
-        // its own regardless of what we request here - that protection is
-        // built into the OS, not something we need to manage ourselves.
-        long nextAlarm = nextTransition;
-        if (!blocks.isEmpty()) {
-            long periodicCheck = System.currentTimeMillis() + (60 * 1000L);
-            nextAlarm = (nextTransition > 0) ? Math.min(nextTransition, periodicCheck) : periodicCheck;
-        }
+        // Guarantee a check at minimum every ~1 minute - unconditionally,
+        // for the permanent, not-tied-to-any-Block protections (Device
+        // Owner restrictions, Chrome content policy, other-browser lock)
+        // so those stay self-healing even for a user with zero Blocks
+        // configured. 1 minute is Android's own documented ceiling for how
+        // often setExactAndAllowWhileIdle can fire during normal
+        // (screen-on) use - asking for less than that wouldn't get
+        // delivered any faster anyway. While the phone is genuinely idle
+        // (Doze), Android automatically throttles this back to roughly
+        // every 15 minutes on its own regardless of what we request here -
+        // that protection is built into the OS, not something we need to
+        // manage ourselves.
+        long periodicCheck = System.currentTimeMillis() + (60 * 1000L);
+        long nextAlarm = (nextTransition > 0) ? Math.min(nextTransition, periodicCheck) : periodicCheck;
 
         if (nextAlarm > 0) {
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextAlarm, pi);
@@ -414,8 +684,16 @@ public class BlockEnforcer {
         scheduleNextAlarm(context);
     }
 
-    /** Finds the soonest upcoming Block-schedule or Holiday-Break boundary. Returns -1 if there's nothing scheduled at all. */
-    private static long computeNextTransitionMillis(List<Block> blocks, List<HolidayBreak> holidayBreaks) {
+    /**
+     * Finds the soonest upcoming Block-schedule, Lock-Schedule,
+     * Holiday-Break, or Lock-Schedule-Breaker boundary - including the
+     * fixed daily 2:00/2:10 AM safety-carve-out boundaries (decision
+     * #10), so the Kiosk lockdown's engage/release (decisions #2/#12/#26)
+     * fires right on time instead of waiting for the ~1 minute periodic
+     * safety net below. Returns -1 if there's nothing scheduled at all.
+     */
+    private static long computeNextTransitionMillis(Context context, List<Block> blocks, List<HolidayBreak> holidayBreaks,
+                                                      List<TimeRange> lockScheduleRanges) {
         long now = System.currentTimeMillis();
         long best = -1;
 
@@ -428,33 +706,62 @@ public class BlockEnforcer {
             }
         }
 
+        long breakerUnlockedUntil = new LockScheduleBreakerStorage(context).getUnlockedUntilMillis();
+        if (breakerUnlockedUntil > now && (best == -1 || breakerUnlockedUntil < best)) {
+            best = breakerUnlockedUntil;
+        }
+
         for (Block b : blocks) {
             for (TimeRange r : b.ranges) {
-                for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
-                    Calendar dayCal = Calendar.getInstance();
-                    dayCal.add(Calendar.DAY_OF_YEAR, dayOffset);
-                    int dow = dayCal.get(Calendar.DAY_OF_WEEK);
-                    if (!r.days.contains(dow)) {
-                        continue;
-                    }
+                best = earliestBoundaryAfter(r, now, best);
+            }
+        }
+        for (TimeRange r : lockScheduleRanges) {
+            best = earliestBoundaryAfter(r, now, best);
+        }
+        // The hardcoded daily safety window itself (120/130 minutes past
+        // midnight) - not part of any saved TimeRange, so it needs its
+        // own boundary check independent of the loops above.
+        for (int dayOffset = 0; dayOffset <= 1; dayOffset++) {
+            Calendar dayCal = Calendar.getInstance();
+            dayCal.add(Calendar.DAY_OF_YEAR, dayOffset);
+            long startMillis = atMinuteOfDay(dayCal, 120);
+            long endMillis = atMinuteOfDay(dayCal, 130);
+            if (startMillis > now && (best == -1 || startMillis < best)) {
+                best = startMillis;
+            }
+            if (endMillis > now && (best == -1 || endMillis < best)) {
+                best = endMillis;
+            }
+        }
+        return best;
+    }
 
-                    boolean overnight = r.startMinute >= r.endMinute;
+    /** Earliest start/end boundary of TimeRange r strictly after now, folded into the running best-so-far. */
+    private static long earliestBoundaryAfter(TimeRange r, long now, long best) {
+        for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
+            Calendar dayCal = Calendar.getInstance();
+            dayCal.add(Calendar.DAY_OF_YEAR, dayOffset);
+            int dow = dayCal.get(Calendar.DAY_OF_WEEK);
+            if (!r.days.contains(dow)) {
+                continue;
+            }
 
-                    long startMillis = atMinuteOfDay(dayCal, r.startMinute);
-                    if (startMillis > now && (best == -1 || startMillis < best)) {
-                        best = startMillis;
-                    }
+            boolean overnight = r.startMinute >= r.endMinute;
 
-                    Calendar endDayCal = dayCal;
-                    if (overnight) {
-                        endDayCal = (Calendar) dayCal.clone();
-                        endDayCal.add(Calendar.DAY_OF_YEAR, 1);
-                    }
-                    long endMillis = atMinuteOfDay(endDayCal, r.endMinute);
-                    if (endMillis > now && (best == -1 || endMillis < best)) {
-                        best = endMillis;
-                    }
-                }
+            long startMillis = atMinuteOfDay(dayCal, r.startMinute);
+            if (startMillis > now && (best == -1 || startMillis < best)) {
+                best = startMillis;
+            }
+
+            Calendar endDayCal = dayCal;
+            if (overnight) {
+                endDayCal = (Calendar) dayCal.clone();
+                endDayCal.add(Calendar.DAY_OF_YEAR, 1);
+            }
+            long endMillis = atMinuteOfDay(endDayCal, r.endMinute);
+            if (endMillis > now && (best == -1 || endMillis < best)) {
+                best = endMillis;
             }
         }
         return best;

@@ -30,9 +30,11 @@ public class LockScheduleStorage {
     private static final String PREFS_NAME = "floating_blocker_lock_schedule_prefs";
     private static final String KEY_RANGES = "lock_ranges_json";
 
+    private final Context context;
     private final SharedPreferences prefs;
 
     public LockScheduleStorage(Context context) {
+        this.context = context;
         prefs = DeviceProtectedPrefs.get(context, PREFS_NAME);
     }
 
@@ -76,14 +78,51 @@ public class LockScheduleStorage {
         return c.get(Calendar.DAY_OF_WEEK);
     }
 
+    /** Hardcoded daily safety carve-out: 2:00 AM - 2:10 AM is unconditionally
+     * treated as unlocked, no matter what ranges are configured - applies
+     * everywhere isCurrentlyLocked() is checked (every editing gate, the
+     * debugging/bootstrap-tools/time-change locks, and the Kiosk trigger
+     * itself), since all of those call through here rather than reading
+     * the saved ranges directly. Not configurable via the normal Lock
+     * Schedule screen - this is a fixed guarantee, not a user setting. */
+    private static boolean isInDailySafetyWindow(int nowMinutes) {
+        return nowMinutes >= 120 && nowMinutes < 130;
+    }
+
+    /**
+     * The start of the "app-day" containing momentMillis, where the day
+     * boundary is 2:00 AM instead of midnight - so e.g. 1:30 AM still
+     * belongs to the previous app-day, but 2:00 AM onward belongs to the
+     * new one. Used by HolidayBreakEditActivity's "can create during a
+     * locked period if the start is a genuinely later day" gate, kept
+     * consistent with the daily safety window above.
+     */
+    public static long appDayStartMillis(long momentMillis) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(momentMillis);
+        c.add(Calendar.HOUR_OF_DAY, -2);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        c.add(Calendar.HOUR_OF_DAY, 2);
+        return c.getTimeInMillis();
+    }
+
     /** True if we are currently inside one of the saved ranges (i.e. things are locked). */
     public boolean isCurrentlyLocked() {
+        int nowMinutes = currentMinutesOfDay();
+        if (isInDailySafetyWindow(nowMinutes)) {
+            return false;
+        }
+        if (new LockScheduleBreakerStorage(context).isBreakerActive(System.currentTimeMillis())) {
+            return false;
+        }
         List<TimeRange> ranges = loadRanges();
         if (ranges.isEmpty()) {
             // Never configured yet - stay open so setup is possible at all.
             return false;
         }
-        int nowMinutes = currentMinutesOfDay();
         int nowDay = currentDayOfWeek();
         for (TimeRange r : ranges) {
             if (r.contains(nowMinutes, nowDay)) {
@@ -93,8 +132,18 @@ public class LockScheduleStorage {
         return false;
     }
 
-    /** Editing (this schedule, Blocks, apps within Blocks) is only allowed while not locked. */
+    /**
+     * Editing (this schedule, Blocks, apps within Blocks) is only allowed
+     * while not locked - OR while far enough from a configured home
+     * location that Lock Schedule doesn't apply at all right now (see
+     * HomeLocationChecker). Deliberately NOT used by the anti-tamper
+     * checks in BlockEnforcer (debugging-features lock, bootstrap-tools
+     * lock) or by changing an already-set home location itself - those
+     * stay governed by the true schedule via isCurrentlyLocked() directly,
+     * regardless of location, so this override can never be used to
+     * un-protect the app or redefine what "home" means while away.
+     */
     public boolean isEditingAllowed() {
-        return !isCurrentlyLocked();
+        return !isCurrentlyLocked() || HomeLocationChecker.isFarFromHome(context);
     }
 }

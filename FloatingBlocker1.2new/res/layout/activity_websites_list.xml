@@ -6,17 +6,17 @@
     android:padding="16dp">
 
     <TextView
+        style="@style/ScreenDescription"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/websites_desc"
-        android:paddingBottom="16dp" />
+        android:text="@string/websites_desc" />
 
     <TextView
         android:id="@+id/txtLockedMessage"
+        style="@style/LockedMessageBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/msg_websites_locked"
-        android:paddingBottom="16dp"
         android:visibility="gone" />
 
     <LinearLayout

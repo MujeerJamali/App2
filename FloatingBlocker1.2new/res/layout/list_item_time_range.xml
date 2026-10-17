@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/ListCardRow"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
+    android:layout_marginBottom="6dp"
+    android:padding="10dp"
     android:gravity="center_vertical">
 
     <TextView
@@ -12,7 +13,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp" />
+        android:textSize="15sp"
+        android:textColor="@color/text_primary" />
 
     <Button
         android:id="@+id/btnRemoveRange"

@@ -1,0 +1,618 @@
+# Multi-App Kiosk Mode - Design Discussion (not yet implemented)
+
+This file tracks the design decisions made in discussion, before any of this
+is coded. Nothing in this document is implemented yet - it exists so the
+decisions survive even if the conversation gets summarized/compacted.
+
+## Already shipped (context - not part of this new work)
+
+- Blocks are currently **blocklist** semantics (list what's blocked). A full
+  whitelist conversion was built once already, then fully reverted at the
+  user's request ("abandon everything, I don't want kiosk mode"). That
+  revert is the current baseline (v4.78+) this new round builds on top of.
+- Time-lock (`DISALLOW_CONFIG_DATE_TIME`) tied to Lock Schedule's locked
+  state - shipped standalone as v4.79, independent of Kiosk mode.
+- USB debugging + Termux/Shizuku suspension tied to Lock Schedule's locked
+  state - pre-existing, independent of this effort.
+- Safe Mode boot disable, Factory Reset disable, Disallow Add User - already
+  permanent/unconditional, not tied to Lock Schedule at all.
+- Confirmations (non-ringing Alarm sibling), 4x one-time Clear Punishment,
+  Stop All Ringing, Pause All 1hr, Pause Until 11pm, reusable custom-duration
+  Pause + its own Delete Forever button - all shipped (up to v4.84).
+
+## Decisions made this round (in order asked)
+
+1. **Whitelist conversion**: Blocks convert from blocklist to whitelist
+   semantics (a Block's app list means "only these are allowed" while that
+   Block is active, not "these are blocked").
+
+2. **Kiosk trigger signal**: automatic Kiosk lockdown is tied to **Lock
+   Schedule's own locked/unlocked window** - not to "is any Block currently
+   active" (which was the original proposal; rejected in favor of Lock
+   Schedule specifically).
+
+3. **When Lock Schedule is locked but no Block happens to be active**: Kiosk
+   still engages, but the allow-list in that case is just the baseline
+   always-allowed set (see #5) - not fully open, not fully empty either.
+
+4. **New "Always Allowed Apps" list**: a user-managed whitelist tier,
+   separate from any individual Block's own whitelist, viewable/editable
+   through its own dedicated screen. Used as the fallback/floor whitelist
+   whenever Lock Schedule is locked (combined with whatever Block, if any,
+   is currently active).
+
+5. **Hardcoded, unconditional tier - unlocked 24/7, nothing can block them,
+   not even Lock Schedule locked time**:
+   - This app itself (Self-Control / `com.mujeer.floatingblocker`)
+   - Business ERP / "store app" (`com.mujeer.businesserp`)
+   - The phone's current default Dialer (detected live via
+     `TelecomManager.getDefaultDialerPackage()`, not a fixed package name)
+   - The phone's current default SMS/messaging app (detected live via
+     `Telephony.Sms.getDefaultSmsPackage()`, not a fixed package name)
+
+   These are a separate, fixed tier from the "Always Allowed Apps" list in
+   #4 - they're unconditional (true 24/7, including outside Lock Schedule's
+   locked time, though outside locked time nothing is restricted anyway),
+   while #4 is Lock-Schedule-locked-time-specific and user-editable.
+
+6. **Editing the "Always Allowed Apps" list (#4)**: gated the normal way -
+   only changeable during **unlocked** Lock Schedule time, matching how
+   every other restriction-weakening edit works elsewhere in this app
+   (adding to a whitelist weakens restriction, so it's gated; by the same
+   logic removing from it is presumably always allowed, mirroring how
+   Block app-list edits already work under whitelist semantics).
+
+7. **Visibility of the hardcoded tier (#5) on the Always Allowed Apps
+   screen**: yes - shown there too, listed but not removable (not actually
+   editable anyway), so everything reachable is visible in one place
+   instead of some of it being invisible/implicit.
+
+8. **Manual Kiosk Mode removal**: confirmed - the existing pick-apps/
+   pick-a-duration/start-a-session flow is removed entirely, replaced by
+   the automatic Lock-Schedule-triggered lockdown designed here.
+
+9. **Kiosk Safety toggle**: a new, separate reusable on/off toggle
+   (independent of Master Safety, which is already permanently deleted)
+   that disables *only* the automatic Kiosk lockdown if something goes
+   wrong - plus its own one-way "delete this safety forever" button,
+   confirmed as still wanted.
+
+10. **New: guaranteed daily unlocked window, 2:00 AM - 2:10 AM**, overriding
+    Lock Schedule's locked state **everywhere it's checked** - every Block/
+    Alarm/Confirmation edit gate, the Kiosk trigger itself, the Time-lock on
+    Settings, the USB-debugging/Termux/Shizuku lock - regardless of
+    whatever ranges are actually configured in Lock Schedule. This is a
+    hardcoded, non-configurable safety carve-out, not something the user
+    sets via the normal Lock Schedule screen. Explicitly: "No matter
+    whatever schedule is."
+
+## Resolved (previously open)
+
+11. **OS-hardening sequencing**: resolved as (a) - USB debugging/ADB stays
+    exactly as it already is, tied to Lock Schedule's locked/unlocked state
+    (blocked while locked, open while unlocked). It is NOT being made
+    permanently always-blocked. No change needed here at all - existing
+    behavior is kept as-is.
+
+12. **Force immediate entry**: reconfirmed - yes, the moment Lock Schedule
+    becomes locked, forcibly jump into the Kiosk lockdown screen, even
+    mid-use of another app.
+
+13. **Lock-task feature set** - decided per-flag:
+    - `SYSTEM_INFO`: on (status bar clock/battery - no risk, baseline).
+    - `HOME`: **off**. Would require designating one of our own apps as an
+      actual Home/launcher activity; if that's ever even slightly
+      misconfigured, pressing Home could land on the REAL system launcher
+      instead of our screen - full escape. Not worth the risk.
+    - `OVERVIEW`/Recents: **off** (Android requires HOME to be on before
+      this can be anyway). Recents is a system UI surface with its own
+      OEM-added gestures (split-screen, clear-all, etc.) that's hard to
+      fully audit on ColorOS.
+    - `NOTIFICATIONS` (the real system shade): **off**. Pulling down the
+      real shade on ColorOS exposes whatever Quick Settings tiles are
+      bundled in there, including Super Power Saving Mode (the one that
+      caused the white-screen freeze bug earlier this session). Building
+      a custom in-app alternative instead (see #14 below).
+    - `GLOBAL_ACTIONS` (long-press power button menu - power off/restart/
+      emergency call): **on**.
+    - `KEYGUARD` (require the real PIN/pattern on wake before returning to
+      the pinned kiosk screen): **on**. Security-only, doesn't loosen or
+      tighten the kiosk itself either way.
+
+14. **Custom in-app alternatives to the risky OS features**, instead of
+    enabling them:
+    - **In-app "Recent" list**: track "most recently launched" ourselves
+      among the kiosk's allowed apps, show that in our own screen. No
+      special permission needed - this is just our own bookkeeping.
+    - **In-app "Notifications" screen**: render notifications ourselves
+      using Android's Notification Listener API, instead of exposing the
+      real system shade. Requires a ONE-TIME manual grant (Settings →
+      Special app access → Notification access) - not something Device
+      Owner can silently grant, needs doing once while unlocked, persists
+      after that. **Scope: only show notifications from apps that are
+      actually reachable in the kiosk** (the whitelist - Business ERP,
+      Dialer, SMS, Self-Control, Always Allowed list) - not notifications
+      from blocked apps, since seeing "you got a message" with no way to
+      act on it would just be pointless FOMO-bait.
+
+## Known issue to resolve (not yet decided how)
+
+- **Bluetooth toggle doesn't actually work**, even though the WiFi toggle
+  in the existing (pre-redesign) Kiosk quick-toggles does. Root cause is
+  almost certainly a real Android platform restriction, not a simple bug:
+  - `WifiManager.setWifiEnabled()` has a DOCUMENTED special carve-out for
+    Device Owner/Profile Owner apps - it keeps working for us specifically
+    because we're Device Owner, even though Android deprecated it for
+    regular apps.
+  - `BluetoothAdapter.enable()`/`.disable()` never got an equivalent
+    Device-Owner carve-out. Since Android 13 (API 33) these are documented
+    to fail (return false, or throw `SecurityException`) for any app that
+    isn't holding `BLUETOOTH_PRIVILEGED` - a signature/system-only
+    permission a Device Owner app cannot be granted the normal way. Our
+    existing try/catch just swallows this and shows the "toggle failed"
+    toast, which matches exactly what was observed.
+  - **Decided: drop the Bluetooth toggle entirely.** Silent toggling isn't
+    realistically possible on this Android version without a system-level
+    permission a Device Owner app can't hold. The WiFi toggle stays (it
+    keeps working fine via the documented Device-Owner carve-out).
+
+15. **"Always Allowed Apps" picker scope**: shows all installed apps, no
+    filtering/restriction.
+
+16. **Migration: full app-wide fresh-start reset**, not a partial/surgical
+    migration. On this update's first run:
+    - Blocks, Holiday Breaks, Alarms, Confirmations, and all punishment
+      history (widen windows) are wiped completely clean - not just app
+      lists; the records themselves are gone. Names, schedules, everything.
+    - **Lock Schedule's own configured hours are ALSO wiped** ("everything"
+      - confirmed explicitly, not just the records governed by it). Until
+      reconfigured, nothing is locked at all, and the new Kiosk lockdown
+      has no trigger.
+    - The six existing one-time/single-use safety-valve features are
+      **deleted from the codebase entirely** (not reset-to-unused, actually
+      removed as features): all four Clear Punishment buttons, both
+      one-time Pause buttons (1 Hour, Until 11 PM), AND **Stop All Ringing**.
+      The first five are genuinely superseded (the new reusable
+      custom-duration Pause button already overrides any punishment
+      widen-window too, for as long as it's active). Stop All Ringing is
+      NOT superseded by anything - it force-stops a stuck Alarm ring
+      without a barcode scan, and nothing in the new design replaces that.
+      **Explicitly accepted gap**: if barcodes are ever lost or the camera
+      breaks while an Alarm is ringing, there will be no way out except
+      a successful barcode scan. Confirmed anyway, deliberately.
+
+17. **Blocks remain fully independent of Lock Schedule** - two separate
+    layers, not one:
+    - Blocks run 24/7 on their own schedule, independent of Lock Schedule's
+      locked/unlocked state. A Block suspends non-whitelisted apps whenever
+      *that Block* is active, per its own configured schedule, regardless of
+      whether Lock Schedule happens to be locked or unlocked at that moment.
+    - Lock Schedule going locked is a separate, additional trigger: it pins
+      the device into the Kiosk lockdown screen. While pinned, the allow-list
+      is (active Block's whitelist, if any) union Tier-1 (#5) union Tier-2/
+      Always Allowed Apps (#4).
+    - Lock Schedule unlocked means no Kiosk pinning at all, regardless of
+      Block state - but an independently-active Block still suspends its
+      non-whitelisted apps as normal, since Blocks don't care about Lock
+      Schedule. This refines/confirms #3: #3 only described the locked case;
+      this makes explicit that Blocks and Lock Schedule are two independent
+      layers that merely combine their effects while Lock Schedule is locked.
+
+18. **Kiosk screen layout**: one single Activity (`KioskSessionActivity`)
+    with tabs inside it - "Apps" (the allowed-apps grid, the main surface),
+    "Recent", and "Notifications" - rather than three separate Activities
+    navigated to from a home screen. Keeps one source of truth for "which
+    apps are allowed" feeding all three tabs, and avoids Activity-transition
+    edge cases on the pinned screen.
+
+19. **Kiosk Safety toggle placement (#9)**: lives on the main screen's
+    existing Safety section, alongside Battery Exemption etc. - not on a
+    dedicated sub-screen. Since Self-Control itself is Tier-1 (reachable
+    24/7, even while a Kiosk lockdown is actively pinning the device),
+    exposure is identical either way; what differs is tap-count during an
+    actual malfunction, so the main screen (fewest taps) wins as the safety
+    net it's meant to be.
+
+20. **Kiosk Safety toggle gating**: none - it works unconditionally at any
+    time, including while Lock Schedule is locked and Kiosk is actively
+    pinning, mirroring how the old Master Safety toggle had no gating
+    either (unlike the Pause buttons, which do block while locked). This is
+    deliberate: it's a safety net for a real malfunction, and a malfunction
+    is exactly as likely to happen during locked time as any other time.
+    Once the feature is built and tested as reliable, the existing
+    one-way "delete this safety forever" button (#9) is used to remove the
+    escape hatch permanently.
+
+21. **Forced entry when the device was asleep through the transition**:
+    confirmed - if Lock Schedule's locked window begins while the screen is
+    off/locked, Kiosk still forces itself onto the screen the instant the
+    device is unlocked (first thing the user sees), not just when a Block/
+    Lock Schedule transition happens to catch an app already in the
+    foreground. Reinforces #12 (force immediate entry) to cover the
+    screen-off case explicitly.
+
+22. **"Recent" tab scope**: only tracks apps launched from within the Kiosk
+    grid itself (we log it ourselves at the same point we fire the launch
+    Intent) - not whatever happened to be in the foreground the instant
+    pinning kicked in. Simpler (no `UsageStatsManager`/task-querying needed)
+    and sufficient, since forced immediate entry (#12/#21) leaves little
+    room for that case to matter anyway.
+
+23. **Recent list filtering**: an entry is hidden from the "Recent" tab the
+    moment its app is no longer in the currently active allow-list -
+    not shown greyed-out or tappable-with-a-toast. The Recent tab always
+    reflects only what's actually reachable right now.
+
+24. **Notifications tab tap action**: tapping a notification opens the
+    source app, same as a real system notification would - not a
+    read-only display.
+
+25. **Notifications tab dismiss behavior**: dismissing/clearing a
+    notification in-app only hides it from our own list - it does NOT
+    cancel the real system notification. The real notification (and
+    whatever the source app itself does with it) is left untouched.
+
+26. **Exiting Kiosk pinning**: fully automatic - the moment Lock Schedule
+    transitions to unlocked, `stopLockTask()` fires and the device drops
+    back to the real home screen, no button/explicit action needed.
+    Symmetric with how entry is automatic (#2): Lock Schedule is the one
+    trigger for both directions. The Kiosk Safety toggle (#19/#20) already
+    covers the "something's wrong, let me out" case, so no separate manual
+    exit button is needed on the Kiosk screen itself.
+
+27. **Fresh-start reset trigger (#16) mechanics**: a permanent "migration
+    done" flag, set once the wipe has run and never cleared - not a
+    version-code check. Fires exactly once, ever, on the first run after
+    this update. A future update that needs its own reset would need its
+    own separate flag, not a reuse of this one.
+
+28. **Allowed-apps grid ordering**: Tier-1 (#5, the hardcoded always-on
+    apps) are pinned first, in a fixed position - everything else (Tier-2
+    Always Allowed Apps + the active Block's whitelist, if any) is sorted
+    alphabetically after them. No usage-based/dynamic reordering.
+
+29. **Multiple overlapping active Blocks**: when more than one Block is
+    active at the same time, only apps that appear on *every* currently-
+    active Block's whitelist stay allowed - not the combined/union of all
+    of them. Example: Block A (9am-5pm) allows Camera + Calculator; Block
+    B (1pm-6pm) allows Maps + Calculator; during the 1pm-5pm overlap, only
+    Calculator is allowed from either Block (plus Tier-1/Tier-2 as always).
+    This keeps the same invariant the old blocklist Blocks already had:
+    stacking more active Blocks can only ever narrow access, never widen
+    it. Falls back to Tier-1 union Tier-2 only if the overlapping Blocks
+    share nothing in common - same floor as the "no Block active" case (#3).
+
+30. **Overlapping Block schedules at edit time**: allowed freely, no
+    warning/validation when saving a Block whose schedule overlaps
+    another's - the standard approach for this kind of record (same as
+    Holiday Breaks/Alarms/Confirmations: independent entries, no
+    cross-record validation). No need to prevent it either, since #29
+    already defines exactly what happens when schedules do overlap.
+
+31. **Always Allowed Apps (#4) auto-pruning**: an entry is removed
+    automatically once its app is uninstalled from the device - not kept
+    around in case it's reinstalled later. If reinstalled, it has to be
+    added back through the picker.
+
+32. **Missing default Dialer/SMS app (#5)**: if `getDefaultDialerPackage()`
+    or `getDefaultSmsPackage()` returns null (no default chosen), the Kiosk
+    screen prompts the user to pick one, rather than silently skipping that
+    Tier-1 slot. Ensures those two Tier-1 slots stay filled instead of
+    quietly going missing.
+
+33. **When the default-picker prompt (#32) can fire**: ~~any time, including
+    while Kiosk is actively pinned~~ - **corrected by #37**: the picker
+    (`RoleManager`'s role-request intent / `ACTION_CHANGE_DEFAULT`) is a
+    system-level UI outside our own app, so the same lock-task restriction
+    that blocks the Settings deep-link in #37 blocks this too. Resolved the
+    same way: it only works while Lock Schedule is unlocked, with a note to
+    come back once unlocked if tapped while pinned. The original reasoning
+    (not a restriction-weakening edit, just filling an existing Tier-1 slot)
+    still holds - this correction is purely about an OS-level constraint,
+    not a change of intent.
+
+34. **Kiosk screen timing display**: shows a countdown to when Lock
+    Schedule will next unlock, AND, if a Block is currently active, when
+    that Block's own schedule ends (so the user can see when the allowed-
+    apps grid is about to change, not just when Kiosk itself will release).
+
+35. **Timing display with multiple overlapping active Blocks (#29)**: all
+    of their end times are listed out individually, not just the soonest
+    one - so the user can see the full picture of what's changing and when.
+
+36. **Notifications tab before permission is granted**: shows a "Grant
+    notification access" prompt/button that deep-links straight to the
+    system Settings screen for it (Settings -> Special app access ->
+    Notification access), rather than staying empty/hidden and leaving the
+    user to discover the setting on their own.
+
+37. **Grant-access button while Kiosk is pinned**: resolved as (a) - the
+    button only appears/works while Lock Schedule is unlocked (Kiosk not
+    actively pinning); if tapped while pinned it shows a note to come back
+    once unlocked. Not (b) briefly calling `stopLockTask()` to let Settings
+    open and re-pinning afterward - that would mean the app itself
+    deliberately breaking its own pin, which is a bigger risk than the
+    inconvenience of waiting for an unlocked window. This is a narrow,
+    OS-level exception to #36/#33's general "doesn't need to wait" stance:
+    lock task mode won't let the app launch the system Settings app at all
+    while pinned, regardless of intent.
+
+38. **Allow-list refresh while Kiosk is pinned**: both - event-driven via
+    the existing `BlockAlarmReceiver` (Block start/end alarms) as the
+    primary mechanism, plus a lightweight periodic recheck (e.g. every
+    minute) that only runs while the Kiosk screen is actually on-screen and
+    pinned. The periodic check costs nothing extra (no background wakeup,
+    only ticks while already visible) and catches a delayed/missed alarm -
+    which matters more here than elsewhere, since a stale allow-list while
+    physically pinned can't be worked around by switching apps.
+
+39. **Always Allowed Apps screen entry point**: its own button on the main
+    screen, under the existing "Manage" section - same pattern as Blocks,
+    Websites, Alarms, Confirmations, Holiday Breaks etc. (each already gets
+    its own top-level button there). Not a sub-screen reached from inside
+    Lock Schedule's screen, to stay consistent with how every other list/
+    management screen is organized.
+
+40. **WiFi quick-toggle in the new Kiosk screen**: carried over from the
+    existing `KioskSessionActivity` (Bluetooth already dropped per the
+    known-issue resolution above) - placed as a small control on the
+    "Apps" tab itself (e.g. a header toggle above the grid), not its own
+    tab. A single toggle doesn't justify a dedicated tab, and the point of
+    a "quick" toggle is minimal navigation to reach it.
+
+41. **Websites blocking feature scope**: out of scope for this round -
+    `WebsitesListActivity` stays exactly as it is, untouched, still
+    blocklist semantics. Not converted to whitelist alongside app Blocks
+    (#1). May be revisited in a future round, but not part of this one.
+
+## Revision after real-device testing: Blocks revert to blocklist authoring
+
+Decisions #42-47 below REVERSE decision #1 and everything downstream of
+it that depended on Blocks being user-authored as whitelists (Tier-2/
+Tier-3 as originally specified, decision #29's intersection rule). Kept
+from the original design unchanged: Tier-1, the Lock-Schedule-driven
+Kiosk trigger itself (#2), the tabbed Kiosk screen, the safety-net
+toggle, the migration wipe, and everything else not explicitly revised
+here.
+
+42. **Blocks go back to blocklist authoring**: a Block's app list means
+    "these are blocked" while active again, not "only these are
+    allowed" - reverses #1. Picking a handful of distracting apps to
+    block is far less tedious than listing every app you want to keep
+    using, which is what real testing surfaced as the problem with
+    whitelist authoring.
+
+43. **Suspension reverts to direct blocklist semantics**: while a Block
+    is active, suspend exactly the union of every currently-active
+    Block's blocked-package list - the original, pre-redesign
+    `BlockEnforcer` mechanism. No more "suspend everything not on an
+    allow-list" sweep.
+
+44. **Kiosk pinning's allow-list is now derived, not authored**:
+    Android's lock-task API (`setLockTaskPackages`) only accepts a
+    positive list - there's no OS-level "pin to everything except
+    these" mode, so this requirement doesn't go away just because
+    Blocks are blocklists again. The pin-list is computed live as
+    Tier-1 union (every installed launchable app NOT in the union of
+    currently-active Blocks' blocklists) - never stored, never shown
+    as its own editable list.
+
+45. **No Block active (Lock Schedule still locked)**: the derived
+    pin-list is literally every installed launchable app - the same
+    universe shown in the Add App picker. Kiosk still pins (no real
+    home screen/recents reachable) but every app is reachable from the
+    grid itself. Replaces the old Tier-1+Tier-2 floor from #3/#17 - there
+    is no separate floor list anymore.
+
+46. **Multiple simultaneously-active Blocks combine via union**, not
+    intersection - an app blocked by ANY active Block stays blocked.
+    Reverses #29. This is the original pre-redesign behavior, and it
+    preserves the same invariant #29 was protecting for free: the
+    derived pin-list is the complement of that union, so stacking more
+    active Blocks can only ever shrink it, never grow it.
+
+47. **Tier-2 ("Always Allowed Apps") is removed entirely** - redundant
+    under blocklist semantics (not-blocked already means allowed by
+    default), and contradictory if an app were both blocklisted by an
+    active Block and also sitting in an unconditional override list.
+    Only Tier-1 (Self-Control itself, Business ERP, live default
+    Dialer/SMS) remains as the hardcoded, unconditional set. Implies
+    removing `AlwaysAllowedAppsStorage`/`AlwaysAllowedAppsListActivity`
+    and their main-screen entry point once this is implemented.
+
+## Reboot-resilience: HomeGatekeeperActivity
+
+Real-device testing found that Kiosk doesn't reliably survive a reboot.
+Root cause: `BlockEnforcer.applyKioskLockdown()`'s edge-trigger
+(`KioskRuntimeStorage.wasPinnedLastCheck()`) is stored in reboot-surviving
+device-protected prefs, so after a reboot during an already-locked
+window it still reads `true` from before the reboot and concludes
+"nothing changed, already pinned" - so it never calls
+`KioskForceEntry.forceEntry()`. Worse, this is really one instance of a
+bigger class of problem: the same stale-flag failure happens whenever
+`KioskSessionActivity`'s process dies for ANY reason while it should stay
+pinned - an OEM killing it under memory pressure, a user force-stopping
+the app, or (worst case) an aggressive OEM "super battery saver" mode
+that kills the app and blocks it from ever autostarting again until
+manually reopened. In that last case, Blocks/Kiosk enforcement is
+completely dark until the user manually reopens the app - a real,
+exploitable gap for a self-control app, since the same person being
+restricted is also the Device Owner admin with full access to their own
+OEM's battery settings.
+
+48. **HomeGatekeeperActivity is registered as the forced,
+    user-unchangeable answer to Android's `CATEGORY_HOME` resolution**,
+    via Device Owner's `addPersistentPreferredActivity` (see
+    `BlockEnforcer.applyHomeGatekeeperProtection`, called every cycle
+    from the existing permanent-protections block). This is a
+    fundamentally different trigger than `BOOT_COMPLETED`/`AlarmManager`:
+    a phone cannot have NO home screen, so this is the one thing an
+    OEM's "kill this app, block its autostart" mode can't suppress
+    without a much bigger, OEM-visible failure than just one app not
+    running. Every boot and every Home press now re-checks Lock
+    Schedule inline, with no dependency on anything backgroundable, and
+    (belt-and-suspenders) calls `BlockEnforcer.reapplyAndReschedule()`
+    itself first so suspension/lock-task state can never be stale by
+    the time it decides anything. Does not replace the existing
+    `KioskForceEntry`/`AlarmManager`-driven path - purely additive
+    defense in depth.
+
+49. **RealLauncherStorage captures the device's actual original
+    launcher exactly once**, read live via `resolveActivity()` on the
+    very first run of #48 (before this app has ever registered itself
+    as the `CATEGORY_HOME` answer, so that query still correctly finds
+    the real one). `HomeGatekeeperActivity` forwards to it whenever
+    nothing should be restricted, so normal unlocked use is otherwise
+    unaffected - the user never sees this app's own Home resolution,
+    only a near-instant pass-through. `KioskAllowList.getCurrentLauncherPackage`
+    (the existing "never suspend the launcher" safety guard) now reads
+    from this storage first too, since a live query after #48 is
+    registered would just answer with our own gatekeeper. Falls back to
+    a plain, unrestricted list of every installed app if the stored
+    launcher ever stops resolving (uninstalled/disabled) - a safety net,
+    not expected to be hit in practice.
+
+50. **Still not airtight, and can't be**: this closes the specific gap
+    of "the app isn't running to re-engage Kiosk," but nothing in
+    software can fully defend a Device-Owner-based restriction app
+    against the same person who holds admin rights over the OS
+    underneath it (the classic Ulysses-pact problem - see discussion in
+    this session's transcript). A hardware force-reset (holding power
+    10-20+ seconds) is baked into every phone's firmware and cannot be
+    blocked by any app. The only fully airtight answer discussed was
+    moving the binding into the physical world (a time-locked box for
+    the phone itself) - out of scope for this change, noted here as a
+    deliberate, acknowledged limit rather than an oversight.
+
+## Holiday Break fix + Lock Schedule Breaker (fresh real-device audit)
+
+A fresh correctness audit (prompted by finding the TimeRange
+overnight/single-day gotcha - see the separate conversation about a
+Thu-only 10:50pm-11:02am range, which is a UI/UX quirk of TimeRange
+itself rather than a code bug, and is not fixed here) turned up one
+real bug plus a genuinely new feature:
+
+51. **Fixed: cancelling a Holiday Break early never cleared its
+    affected Blocks' punishment-widen state**, unlike
+    `cleanUpExpiredBreaks()` on natural expiry, which already does via
+    `BlockPunishmentStorage.clearWidenedFor()`. Without this, a widen
+    window that predated the Break and was only being suppressed by it
+    (via `computeActiveBlocks()`'s on-a-Break skip) would resurface the
+    instant the Break was cancelled early, suspending that Block's apps
+    with no new offense - exactly the bug the expiry path's cleanup was
+    written to prevent, just missing on its sibling path.
+    `HolidayBreaksListActivity`'s cancel handler now runs the same
+    `clearWidenedFor()` loop.
+
+52. **New: Lock Schedule Breaker** (`LockScheduleBreakerStorage`) - a
+    full break of Lock Schedule itself, for a user-chosen duration.
+    Distinct from the existing Blocks-only Pause (`BlocksPauseStorage`,
+    which never touches Kiosk/editing gates - see
+    `isBlockLayerSuppressed` vs `isKioskLayerSuppressed`): this one
+    plugs directly into `LockScheduleStorage.isCurrentlyLocked()`, so
+    it uniformly loosens everything keyed off that single method -
+    Kiosk pinning, every editing gate, the anti-tamper locks in
+    `BlockEnforcer` that call it directly, and Alarm/Confirmation
+    punishment suppression - while leaving Blocks' own independent
+    suspension (decision #42) completely untouched, matching the
+    feature's literal name.
+
+53. **Revised to take effect immediately, not "starting tomorrow"**:
+    first built with a mandatory next-app-day delay (mirroring Holiday
+    Breaks' own "later app day" gate) as deliberate friction against
+    impulsive use, since this is the single most powerful lever in the
+    app. Explicitly reversed on request to take effect right away
+    instead. Rebuilt to mirror `BlocksPauseStorage`'s own temporary-
+    override shape exactly - extend-only, self-expiring, "not gated on
+    Lock Schedule's unlocked state, same reasoning as every other
+    safety valve in this app" (that class's own doc comment) - rather
+    than invent a second, differently-shaped escape valve. This is the
+    same immediate/ungated trade-off the app already accepts for
+    Blocks via Custom Pause, now extended to a second, more powerful
+    lever (Kiosk/Lock Schedule) at the user's explicit choice -
+    `LockScheduleStorage.appDayStartMillis` is no longer used by this
+    feature at all, only by HolidayBreakEditActivity's own gate.
+
+54. **One active window at a time, extend-only, cancel always
+    allowed**: using the button again while already active just
+    extends the same window further (never shortens it) rather than
+    refusing, same rule as `BlocksPauseStorage.setTemporaryOverrideUntilMillis`.
+    Cancelling is always allowed, any time, with no gate at all, since
+    cancelling only ever restores restriction sooner, never weakens
+    anything (same add/remove asymmetry used everywhere else in this
+    app). Its end boundary is folded into
+    `BlockEnforcer.computeNextTransitionMillis` so the next
+    AlarmManager wake-up lands exactly on it, same as Holiday Break
+    boundaries already do. Deliberately excluded from BackupManager's
+    export/import, same reasoning as the other runtime/operational
+    storages already excluded (KioskRuntimeStorage, etc.) - this is
+    self-expiring state, not durable user configuration.
+
+55. **One-way opt-out of HomeGatekeeperActivity's Home takeover**
+    (`HomeGatekeeperStorage`) - a one-time, irreversible button
+    ("Permanently Remove App as Launcher"), same pattern as Master
+    Safety/Kiosk Safety/Custom Pause's own "delete forever" buttons.
+    Fires `DevicePolicyManager.clearPackagePersistentPreferredActivities`
+    once and sets a flag that makes `BlockEnforcer.applyHomeGatekeeperProtection`
+    stop (re-)registering it on every future cycle - without that
+    flag, the very next enforcement pass would just put it right back,
+    same self-healing idempotence every other permanent protection in
+    that method already relies on. Only removes decisions #48-50's
+    reboot/kill-resilience backup path; Kiosk's normal trigger (Lock
+    Schedule locking via `KioskForceEntry`) is completely unaffected.
+
+## Real-device incident: forced-on Home takeover vs. OEM power saving
+
+56. **Reverted decision #48's "forced on by default" to opt-in only,
+    and made decision #55's one-way removal a reversible toggle
+    instead**, after exactly the failure this whole feature exists to
+    guard against collided with a second, independent one: on a
+    real device with no separate launcher app ever installed, the
+    OEM's own "Super Power Saving Mode" - itself a restricted-home,
+    limited-app-list screen much like Kiosk - engaged with no visible
+    exit, while `HomeGatekeeperActivity` was simultaneously forcing
+    itself as the only `CATEGORY_HOME` answer. Neither screen led back
+    to Settings, and there was no real launcher underneath either one
+    to fall back to - `HomeGatekeeperActivity`'s own fallback app list
+    (decision #48-50) only showed AIDE, the one other app installed.
+    `HomeGatekeeperStorage.isEnabledByUser()` now defaults to **false**:
+    `BlockEnforcer.applyHomeGatekeeperProtection` only registers while
+    explicitly turned on from MainActivity, and actively calls
+    `clearPackagePersistentPreferredActivities` whenever it's off -
+    self-healing in BOTH directions, so a device upgrading from an
+    older forced-on version gets it undone automatically on the very
+    next enforcement cycle, no action needed beyond installing the
+    update. The MainActivity button is now a plain reversible toggle
+    (not the one-way "delete forever" pattern decision #55 used) -
+    turning it on warns about this exact risk first; turning it off
+    needs no warning, since that's always the safe direction. Kiosk's
+    normal trigger (Lock Schedule locking via `KioskForceEntry`) was
+    never affected by any of this and keeps working exactly as before,
+    with or without this toggle on.
+
+57. **Decision #56's toggle could never have actually fixed decision
+    #56's own incident, and HomeGatekeeperActivity (decisions
+    #48-50/#55-56) is now removed entirely.** The real device stayed
+    stuck even after installing the opt-in version and explicitly
+    toggling it off, because the toggle only controlled whether
+    `addPersistentPreferredActivity` was called - it did nothing about
+    the Activity's `CATEGORY_HOME` `<intent-filter>` still being
+    declared in the manifest. Declaring the capability, not being
+    *preferred*, is what makes Android consider an app a `CATEGORY_HOME`
+    candidate at all; being the Device Owner's preferred choice only
+    matters when there's more than one candidate to choose between. On
+    a device with no separate real launcher installed - exactly the
+    device that hit this - our app was the *only* candidate, so Android
+    kept using it regardless of any Device Owner preference setting. A
+    `SharedPreferences` flag can never undo a manifest declaration; only
+    removing the Activity (and its intent-filter) from the app can.
+    `BlockEnforcer` still calls `clearPackagePersistentPreferredActivities`
+    every cycle, unconditionally, with no flag gating it - purely so a
+    device upgrading from ANY earlier version (#48 through #56) has its
+    stale registration cleared automatically the moment this version's
+    code runs, with no dependency on Home resolution working in the
+    meantime (`BootReceiver` triggers this unconditionally on every
+    boot, before the user needs to reach any UI at all). Kiosk's normal
+    trigger (Lock Schedule locking via `KioskForceEntry`) was never
+    part of this feature and is completely unaffected - it never
+    depended on Home resolution to begin with.

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Core brand palette - a calm, serious slate blue rather than
+         anything alarming, since this app is meant to feel like a firm
+         but steady hand, not a punishment. -->
+    <color name="primary">#34495E</color>
+    <color name="primary_dark">#263544</color>
+    <color name="accent">#4A6FA5</color>
+
+    <!-- Semantic state colors, reused everywhere something is explicitly
+         "on/good" vs "off/paused" vs "needs attention". -->
+    <color name="color_success">#2E7D32</color>
+    <color name="color_danger">#B71C1C</color>
+    <color name="color_warning">#B7791C</color>
+    <color name="color_warning_bg">#FCF1DD</color>
+    <color name="color_warning_border">#EAD3A0</color>
+
+    <!-- Surfaces -->
+    <color name="background">#F2F4F7</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_border">#E1E4EA</color>
+    <color name="divider">#E1E4EA</color>
+
+    <!-- Text -->
+    <color name="text_primary">#1F2430</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="text_on_primary">#FFFFFF</color>
+</resources>

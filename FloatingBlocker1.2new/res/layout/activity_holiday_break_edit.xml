@@ -17,11 +17,11 @@
 
         <TextView
             android:id="@+id/txtLockedMessage"
+            style="@style/LockedMessageBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/msg_holiday_breaks_locked"
-            android:paddingTop="12dp"
-            android:paddingBottom="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <TextView
@@ -87,6 +87,20 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/select_blocks_button" />
+
+        <Button
+            android:id="@+id/btnSelectAlarms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/select_alarms_button" />
+
+        <Button
+            android:id="@+id/btnSelectConfirmations"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/select_confirmations_button" />
 
         <Button
             android:id="@+id/btnSaveBreak"
